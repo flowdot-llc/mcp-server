@@ -1,0 +1,54 @@
+{
+  "name": "@flowdot.ai/mcp-server",
+  "version": "1.0.0",
+  "description": "FlowDot MCP Server - Connect Claude Desktop, Cursor, and other AI tools to FlowDot workflows",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "flowdot-mcp": "./bin/flowdot-mcp.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build",
+    "build:mcpb": "node scripts/build-mcpb.js"
+  },
+  "keywords": [
+    "mcp",
+    "flowdot",
+    "ai",
+    "workflow",
+    "claude",
+    "cursor",
+    "automation"
+  ],
+  "author": "FlowDot",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flowdot-llc/mcp-server"
+  },
+  "homepage": "https://flowdot.ai/docs/mcp",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/acorn": "^4.0.6",
+    "acorn": "^8.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
