@@ -799,6 +799,20 @@ export interface ToggleCommunityInputsResult {
 }
 
 // ============================================
+// Team Types
+// ============================================
+
+export interface Team {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  role: 'owner' | 'admin' | 'manager' | 'editor' | 'viewer';
+  member_count: number;
+  created_at: string;
+}
+
+// ============================================
 // Knowledge Base Types
 // ============================================
 
@@ -809,6 +823,8 @@ export interface DocumentCategory {
   description: string | null;
   color: string;
   document_count: number;
+  team_id: number | null;
+  team_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -832,6 +848,15 @@ export interface KnowledgeDocument {
     name: string;
     color: string;
   } | null;
+  team_id: number | null;
+  team: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
+  is_team_document: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
   processed_at: string | null;
   created_at: string;
 }
@@ -846,6 +871,8 @@ export interface KnowledgeQueryResult {
   document_id: number;
   document_title: string;
   document_hash: string | null;
+  is_team_document: boolean;
+  team_id: number | null;
   metadata: Record<string, unknown> | null;
 }
 
@@ -872,6 +899,7 @@ export interface CreateKnowledgeCategoryInput {
   name: string;
   description?: string;
   color?: string;
+  team_id?: number;
 }
 
 export interface UpdateKnowledgeCategoryInput {
@@ -884,6 +912,7 @@ export interface UploadTextDocumentInput {
   title: string;
   content: string;
   category_id?: number;
+  team_id?: number;
   mime_type?: 'text/plain' | 'text/markdown' | 'application/json';
 }
 
@@ -891,6 +920,7 @@ export interface UploadDocumentFromUrlInput {
   url: string;
   title?: string;
   category_id?: number;
+  team_id?: number;
 }
 
 export interface UploadDocumentResult {
@@ -905,11 +935,37 @@ export interface UploadDocumentResult {
 
 export interface KnowledgeDocumentListFilters {
   category_id?: number;
+  team_id?: number | 'personal';
   status?: 'pending' | 'processing' | 'ready' | 'failed';
 }
 
 export interface KnowledgeQueryInput {
   query: string;
   category_id?: number;
+  team_id?: number;
+  include_personal?: boolean;
+  include_team?: boolean;
   top_k?: number;
+}
+
+export interface KnowledgeCategoryListFilters {
+  team_id?: number;
+  personal?: boolean;
+}
+
+export interface TransferDocumentInput {
+  team_id?: number | null;
+  category_id?: number | null;
+}
+
+export interface TransferDocumentResult {
+  message: string;
+  document: {
+    id: number;
+    hash: string;
+    title: string;
+    team_id: number | null;
+    team_name: string | null;
+    category_id: number | null;
+  };
 }

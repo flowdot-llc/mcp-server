@@ -2,6 +2,7 @@
  * Upload Text Document Tool
  *
  * Uploads text content directly as a document to the knowledge base.
+ * Can upload to personal or team knowledge base.
  */
 
 import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -10,7 +11,7 @@ import { FlowDotApiClient } from '../api-client.js';
 export const uploadTextDocumentToolDef: Tool = {
   name: 'upload_text_document',
   description:
-    'Upload text content directly as a document to your knowledge base. Ideal for creating documents from AI-generated content, notes, or any text. The document will be processed and chunked for RAG queries.',
+    'Upload text content directly as a document to your knowledge base. Ideal for creating documents from AI-generated content, notes, or any text. The document will be processed and chunked for RAG queries. Can upload to personal or team knowledge base.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -24,7 +25,11 @@ export const uploadTextDocumentToolDef: Tool = {
       },
       category_id: {
         type: 'number',
-        description: 'Optional: Category ID to organize the document',
+        description: 'Optional: Category ID to organize the document. Must belong to the same scope (personal or team).',
+      },
+      team_id: {
+        type: 'number',
+        description: 'Optional: Team ID to upload the document to. If omitted, uploads to personal knowledge base. Use list_user_teams to see available teams.',
       },
       mime_type: {
         type: 'string',
@@ -42,6 +47,7 @@ export async function handleUploadTextDocument(
     title: string;
     content: string;
     category_id?: number;
+    team_id?: number;
     mime_type?: 'text/plain' | 'text/markdown' | 'application/json';
   }
 ): Promise<CallToolResult> {
@@ -50,6 +56,7 @@ export async function handleUploadTextDocument(
       title: args.title,
       content: args.content,
       category_id: args.category_id,
+      team_id: args.team_id,
       mime_type: args.mime_type,
     });
 
@@ -60,11 +67,18 @@ export async function handleUploadTextDocument(
       `**ID:** ${result.id}`,
       `**Hash:** ${result.hash}`,
       `**Status:** ${result.status}`,
-      '',
-      result.message || 'Document created and queued for processing.',
-      '',
-      'The document will be processed in the background. Use list_knowledge_documents to check the status.',
     ];
+
+    if (args.team_id) {
+      lines.push(`**Location:** Team knowledge base (Team ID: ${args.team_id})`);
+    } else {
+      lines.push(`**Location:** Personal knowledge base`);
+    }
+
+    lines.push('');
+    lines.push(result.message || 'Document created and queued for processing.');
+    lines.push('');
+    lines.push('The document will be processed in the background. Use list_knowledge_documents to check the status.');
 
     return {
       content: [{ type: 'text', text: lines.join('\n') }],

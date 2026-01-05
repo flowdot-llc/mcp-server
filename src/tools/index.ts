@@ -133,6 +133,11 @@ import { voteInputPresetTool, handleVoteInputPreset } from './vote-input-preset.
 import { toggleCommunityInputsTool, handleToggleCommunityInputs } from './toggle-community-inputs.js';
 
 // ============================================
+// Team Tools (teams:read)
+// ============================================
+import { listUserTeamsToolDef, handleListUserTeams } from './list-user-teams.js';
+
+// ============================================
 // Knowledge Base Tools (knowledge:read / knowledge:manage)
 // ============================================
 import { listKnowledgeCategoriesToolDef, handleListKnowledgeCategories } from './list-knowledge-categories.js';
@@ -144,6 +149,7 @@ import { getKnowledgeDocumentToolDef, handleGetKnowledgeDocument } from './get-k
 import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-text-document.js';
 import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
 import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
+import { transferDocumentOwnershipToolDef, handleTransferDocumentOwnership } from './transfer-document-ownership.js';
 import { reprocessDocumentToolDef, handleReprocessDocument } from './reprocess-document.js';
 import { deleteKnowledgeDocumentToolDef, handleDeleteKnowledgeDocument } from './delete-knowledge-document.js';
 import { queryKnowledgeBaseToolDef, handleQueryKnowledgeBase } from './query-knowledge-base.js';
@@ -236,7 +242,9 @@ const tools = [
   deleteInputPresetTool,
   voteInputPresetTool,
   toggleCommunityInputsTool,
-  // Knowledge Base (13)
+  // Teams (1)
+  listUserTeamsToolDef,
+  // Knowledge Base (15)
   listKnowledgeCategoriesToolDef,
   createKnowledgeCategoryToolDef,
   updateKnowledgeCategoryToolDef,
@@ -246,6 +254,7 @@ const tools = [
   uploadTextDocumentToolDef,
   uploadDocumentFromUrlToolDef,
   moveDocumentToCategoryToolDef,
+  transferDocumentOwnershipToolDef,
   reprocessDocumentToolDef,
   deleteKnowledgeDocumentToolDef,
   queryKnowledgeBaseToolDef,
@@ -604,16 +613,26 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
         return handleToggleCommunityInputs(api, args as { workflow_id: string; enabled: boolean });
 
       // ============================================
+      // Team Tools
+      // ============================================
+      case 'list_user_teams':
+        return handleListUserTeams(api);
+
+      // ============================================
       // Knowledge Base Tools
       // ============================================
       case 'list_knowledge_categories':
-        return handleListKnowledgeCategories(api);
+        return handleListKnowledgeCategories(api, args as {
+          team_id?: number;
+          personal?: boolean;
+        });
 
       case 'create_knowledge_category':
         return handleCreateKnowledgeCategory(api, args as {
           name: string;
           description?: string;
           color?: string;
+          team_id?: number;
         });
 
       case 'update_knowledge_category':
@@ -630,6 +649,7 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
       case 'list_knowledge_documents':
         return handleListKnowledgeDocuments(api, args as {
           category_id?: number;
+          team_id?: number | 'personal';
           status?: 'pending' | 'processing' | 'ready' | 'failed';
         });
 
@@ -641,6 +661,7 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
           title: string;
           content: string;
           category_id?: number;
+          team_id?: number;
           mime_type?: 'text/plain' | 'text/markdown' | 'application/json';
         });
 
@@ -649,11 +670,19 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
           url: string;
           title?: string;
           category_id?: number;
+          team_id?: number;
         });
 
       case 'move_document_to_category':
         return handleMoveDocumentToCategory(api, args as {
           document_id: number;
+          category_id?: number | null;
+        });
+
+      case 'transfer_document_ownership':
+        return handleTransferDocumentOwnership(api, args as {
+          document_id: number;
+          team_id?: number | null;
           category_id?: number | null;
         });
 
@@ -667,6 +696,9 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
         return handleQueryKnowledgeBase(api, args as {
           query: string;
           category_id?: number;
+          team_id?: number;
+          include_personal?: boolean;
+          include_team?: boolean;
           top_k?: number;
         });
 

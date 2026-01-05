@@ -72,6 +72,8 @@ import {
   VoteInputPresetResult,
   InputPresetListFilters,
   ToggleCommunityInputsResult,
+  // Team Types
+  Team,
   // Knowledge Base Types
   DocumentCategory,
   KnowledgeDocument,
@@ -84,6 +86,9 @@ import {
   UploadDocumentResult,
   KnowledgeDocumentListFilters,
   KnowledgeQueryInput,
+  KnowledgeCategoryListFilters,
+  TransferDocumentInput,
+  TransferDocumentResult,
 } from './types.js';
 
 export class FlowDotApiClient {
@@ -1030,14 +1035,31 @@ export class FlowDotApiClient {
   }
 
   // ============================================
+  // Teams (teams:read)
+  // ============================================
+
+  /**
+   * List teams the user belongs to.
+   */
+  async listUserTeams(): Promise<Team[]> {
+    return this.request<Team[]>('/teams');
+  }
+
+  // ============================================
   // Knowledge Base (knowledge:read / knowledge:manage)
   // ============================================
 
   /**
    * List knowledge base categories.
+   * @param filters - Optional filters for team_id or personal categories
    */
-  async listKnowledgeCategories(): Promise<DocumentCategory[]> {
-    return this.request<DocumentCategory[]>('/knowledge/categories');
+  async listKnowledgeCategories(filters?: KnowledgeCategoryListFilters): Promise<DocumentCategory[]> {
+    const params = new URLSearchParams();
+    if (filters?.team_id) params.set('team_id', filters.team_id.toString());
+    if (filters?.personal) params.set('personal', '1');
+
+    const queryString = params.toString();
+    return this.request<DocumentCategory[]>(`/knowledge/categories${queryString ? `?${queryString}` : ''}`);
   }
 
   /**
@@ -1081,10 +1103,12 @@ export class FlowDotApiClient {
 
   /**
    * List knowledge base documents.
+   * @param filters - Optional filters for category, team, and status
    */
   async listKnowledgeDocuments(filters?: KnowledgeDocumentListFilters): Promise<KnowledgeDocument[]> {
     const params = new URLSearchParams();
     if (filters?.category_id) params.set('category_id', filters.category_id.toString());
+    if (filters?.team_id !== undefined) params.set('team_id', filters.team_id.toString());
     if (filters?.status) params.set('status', filters.status);
 
     const queryString = params.toString();
@@ -1127,6 +1151,21 @@ export class FlowDotApiClient {
     return this.request<SuccessResult>(`/knowledge/documents/${documentId}/category`, {
       method: 'PUT',
       body: JSON.stringify({ category_id: categoryId }),
+    });
+  }
+
+  /**
+   * Transfer document ownership between personal and team.
+   * @param documentId - The document ID to transfer
+   * @param input - Transfer options (team_id and optional category_id)
+   */
+  async transferDocumentOwnership(
+    documentId: number,
+    input: TransferDocumentInput
+  ): Promise<TransferDocumentResult> {
+    return this.request<TransferDocumentResult>(`/knowledge/documents/${documentId}/transfer`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
     });
   }
 
