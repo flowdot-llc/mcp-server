@@ -113,6 +113,22 @@ import { updateInputPresetTool, handleUpdateInputPreset } from './update-input-p
 import { deleteInputPresetTool, handleDeleteInputPreset } from './delete-input-preset.js';
 import { voteInputPresetTool, handleVoteInputPreset } from './vote-input-preset.js';
 import { toggleCommunityInputsTool, handleToggleCommunityInputs } from './toggle-community-inputs.js';
+// ============================================
+// Knowledge Base Tools (knowledge:read / knowledge:manage)
+// ============================================
+import { listKnowledgeCategoriesToolDef, handleListKnowledgeCategories } from './list-knowledge-categories.js';
+import { createKnowledgeCategoryToolDef, handleCreateKnowledgeCategory } from './create-knowledge-category.js';
+import { updateKnowledgeCategoryToolDef, handleUpdateKnowledgeCategory } from './update-knowledge-category.js';
+import { deleteKnowledgeCategoryToolDef, handleDeleteKnowledgeCategory } from './delete-knowledge-category.js';
+import { listKnowledgeDocumentsToolDef, handleListKnowledgeDocuments } from './list-knowledge-documents.js';
+import { getKnowledgeDocumentToolDef, handleGetKnowledgeDocument } from './get-knowledge-document.js';
+import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-text-document.js';
+import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
+import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
+import { reprocessDocumentToolDef, handleReprocessDocument } from './reprocess-document.js';
+import { deleteKnowledgeDocumentToolDef, handleDeleteKnowledgeDocument } from './delete-knowledge-document.js';
+import { queryKnowledgeBaseToolDef, handleQueryKnowledgeBase } from './query-knowledge-base.js';
+import { getKnowledgeStorageToolDef, handleGetKnowledgeStorage } from './get-knowledge-storage.js';
 // All available tools
 const tools = [
     // Core (4)
@@ -200,6 +216,20 @@ const tools = [
     deleteInputPresetTool,
     voteInputPresetTool,
     toggleCommunityInputsTool,
+    // Knowledge Base (13)
+    listKnowledgeCategoriesToolDef,
+    createKnowledgeCategoryToolDef,
+    updateKnowledgeCategoryToolDef,
+    deleteKnowledgeCategoryToolDef,
+    listKnowledgeDocumentsToolDef,
+    getKnowledgeDocumentToolDef,
+    uploadTextDocumentToolDef,
+    uploadDocumentFromUrlToolDef,
+    moveDocumentToCategoryToolDef,
+    reprocessDocumentToolDef,
+    deleteKnowledgeDocumentToolDef,
+    queryKnowledgeBaseToolDef,
+    getKnowledgeStorageToolDef,
 ];
 /**
  * Register all tools with the MCP server.
@@ -395,6 +425,35 @@ export function registerTools(server, api) {
                 return handleVoteInputPreset(api, args);
             case 'toggle_community_inputs':
                 return handleToggleCommunityInputs(api, args);
+            // ============================================
+            // Knowledge Base Tools
+            // ============================================
+            case 'list_knowledge_categories':
+                return handleListKnowledgeCategories(api);
+            case 'create_knowledge_category':
+                return handleCreateKnowledgeCategory(api, args);
+            case 'update_knowledge_category':
+                return handleUpdateKnowledgeCategory(api, args);
+            case 'delete_knowledge_category':
+                return handleDeleteKnowledgeCategory(api, args);
+            case 'list_knowledge_documents':
+                return handleListKnowledgeDocuments(api, args);
+            case 'get_knowledge_document':
+                return handleGetKnowledgeDocument(api, args);
+            case 'upload_text_document':
+                return handleUploadTextDocument(api, args);
+            case 'upload_document_from_url':
+                return handleUploadDocumentFromUrl(api, args);
+            case 'move_document_to_category':
+                return handleMoveDocumentToCategory(api, args);
+            case 'reprocess_document':
+                return handleReprocessDocument(api, args);
+            case 'delete_knowledge_document':
+                return handleDeleteKnowledgeDocument(api, args);
+            case 'query_knowledge_base':
+                return handleQueryKnowledgeBase(api, args);
+            case 'get_knowledge_storage':
+                return handleGetKnowledgeStorage(api);
             default:
                 return {
                     content: [

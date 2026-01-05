@@ -3,7 +3,7 @@
  *
  * Handles communication with the FlowDot Hub API using MCP tokens.
  */
-import { Workflow, Execution, ExecuteWorkflowResult, AgentChatResult, WorkflowMetrics, WorkflowComment, ExecutionHistoryItem, WorkflowDetails, WorkflowInputSchemaResult, CreateWorkflowResult, WorkflowGraph, ValidationResult, NodeType, NodeTypesResponse, WorkflowNode, WorkflowConnection, AddNodeResult, AddConnectionResult, SuccessResult, PublicWorkflow, PaginatedResult, RetryExecutionResult, CustomNode, CustomNodeComment, CustomNodeListFilters, CustomNodeSearchFilters, CreateCustomNodeInput, UpdateCustomNodeInput, VoteCustomNodeResult, FavoriteCustomNodeResult, CreateCustomNodeCommentResult, App, AppComment, AppWorkflow, AppListFilters, AppSearchFilters, CreateAppInput, UpdateAppInput, CreateAppResult, CloneAppResult, VoteAppResult, FavoriteAppResult, CreateAppCommentResult, LinkAppWorkflowResult, WorkflowPublicUrlResult, SharedResult, SharedResultDetails, SharedResultComment, CreateSharedResultInput, CreateSharedResultResult, CreateCommentResult, SharedResultListFilters, VoteWorkflowResult, VoteSharedResultResult, InputPreset, InputPresetListResult, CreateInputPresetInput, UpdateInputPresetInput, CreateInputPresetResult, VoteInputPresetResult, InputPresetListFilters, ToggleCommunityInputsResult } from './types.js';
+import { Workflow, Execution, ExecuteWorkflowResult, AgentChatResult, WorkflowMetrics, WorkflowComment, ExecutionHistoryItem, WorkflowDetails, WorkflowInputSchemaResult, CreateWorkflowResult, WorkflowGraph, ValidationResult, NodeType, NodeTypesResponse, WorkflowNode, WorkflowConnection, AddNodeResult, AddConnectionResult, SuccessResult, PublicWorkflow, PaginatedResult, RetryExecutionResult, CustomNode, CustomNodeComment, CustomNodeListFilters, CustomNodeSearchFilters, CreateCustomNodeInput, UpdateCustomNodeInput, VoteCustomNodeResult, FavoriteCustomNodeResult, CreateCustomNodeCommentResult, App, AppComment, AppWorkflow, AppListFilters, AppSearchFilters, CreateAppInput, UpdateAppInput, CreateAppResult, CloneAppResult, VoteAppResult, FavoriteAppResult, CreateAppCommentResult, LinkAppWorkflowResult, WorkflowPublicUrlResult, SharedResult, SharedResultDetails, SharedResultComment, CreateSharedResultInput, CreateSharedResultResult, CreateCommentResult, SharedResultListFilters, VoteWorkflowResult, VoteSharedResultResult, InputPreset, InputPresetListResult, CreateInputPresetInput, UpdateInputPresetInput, CreateInputPresetResult, VoteInputPresetResult, InputPresetListFilters, ToggleCommunityInputsResult, DocumentCategory, KnowledgeDocument, KnowledgeQueryResponse, KnowledgeStorage, CreateKnowledgeCategoryInput, UpdateKnowledgeCategoryInput, UploadTextDocumentInput, UploadDocumentFromUrlInput, UploadDocumentResult, KnowledgeDocumentListFilters, KnowledgeQueryInput } from './types.js';
 export declare class FlowDotApiClient {
     private hubUrl;
     private apiToken;
@@ -345,5 +345,61 @@ export declare class FlowDotApiClient {
      * Toggle community inputs (input presets) for a workflow.
      */
     toggleCommunityInputs(workflowId: string, enabled: boolean): Promise<ToggleCommunityInputsResult>;
+    /**
+     * List knowledge base categories.
+     */
+    listKnowledgeCategories(): Promise<DocumentCategory[]>;
+    /**
+     * Get a specific knowledge base category.
+     */
+    getKnowledgeCategory(categoryId: number): Promise<DocumentCategory>;
+    /**
+     * Create a new knowledge base category.
+     */
+    createKnowledgeCategory(input: CreateKnowledgeCategoryInput): Promise<DocumentCategory>;
+    /**
+     * Update a knowledge base category.
+     */
+    updateKnowledgeCategory(categoryId: number, updates: UpdateKnowledgeCategoryInput): Promise<DocumentCategory>;
+    /**
+     * Delete a knowledge base category.
+     */
+    deleteKnowledgeCategory(categoryId: number): Promise<SuccessResult>;
+    /**
+     * List knowledge base documents.
+     */
+    listKnowledgeDocuments(filters?: KnowledgeDocumentListFilters): Promise<KnowledgeDocument[]>;
+    /**
+     * Get a specific knowledge base document.
+     */
+    getKnowledgeDocument(documentId: string | number): Promise<KnowledgeDocument>;
+    /**
+     * Upload text content as a document.
+     */
+    uploadTextDocument(input: UploadTextDocumentInput): Promise<UploadDocumentResult>;
+    /**
+     * Upload a document from a URL.
+     */
+    uploadDocumentFromUrl(input: UploadDocumentFromUrlInput): Promise<UploadDocumentResult>;
+    /**
+     * Move a document to a different category.
+     */
+    moveDocumentToCategory(documentId: number, categoryId: number | null): Promise<SuccessResult>;
+    /**
+     * Reprocess a failed or pending document.
+     */
+    reprocessDocument(documentId: number): Promise<SuccessResult>;
+    /**
+     * Delete a knowledge base document.
+     */
+    deleteKnowledgeDocument(documentId: number): Promise<SuccessResult>;
+    /**
+     * Query the knowledge base using RAG.
+     */
+    queryKnowledgeBase(input: KnowledgeQueryInput): Promise<KnowledgeQueryResponse>;
+    /**
+     * Get knowledge base storage usage.
+     */
+    getKnowledgeStorage(): Promise<KnowledgeStorage>;
 }
 //# sourceMappingURL=api-client.d.ts.map

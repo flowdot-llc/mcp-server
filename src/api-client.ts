@@ -72,6 +72,18 @@ import {
   VoteInputPresetResult,
   InputPresetListFilters,
   ToggleCommunityInputsResult,
+  // Knowledge Base Types
+  DocumentCategory,
+  KnowledgeDocument,
+  KnowledgeQueryResponse,
+  KnowledgeStorage,
+  CreateKnowledgeCategoryInput,
+  UpdateKnowledgeCategoryInput,
+  UploadTextDocumentInput,
+  UploadDocumentFromUrlInput,
+  UploadDocumentResult,
+  KnowledgeDocumentListFilters,
+  KnowledgeQueryInput,
 } from './types.js';
 
 export class FlowDotApiClient {
@@ -1015,5 +1027,141 @@ export class FlowDotApiClient {
       method: 'POST',
       body: JSON.stringify({ enabled }),
     });
+  }
+
+  // ============================================
+  // Knowledge Base (knowledge:read / knowledge:manage)
+  // ============================================
+
+  /**
+   * List knowledge base categories.
+   */
+  async listKnowledgeCategories(): Promise<DocumentCategory[]> {
+    return this.request<DocumentCategory[]>('/knowledge/categories');
+  }
+
+  /**
+   * Get a specific knowledge base category.
+   */
+  async getKnowledgeCategory(categoryId: number): Promise<DocumentCategory> {
+    return this.request<DocumentCategory>(`/knowledge/categories/${categoryId}`);
+  }
+
+  /**
+   * Create a new knowledge base category.
+   */
+  async createKnowledgeCategory(input: CreateKnowledgeCategoryInput): Promise<DocumentCategory> {
+    return this.request<DocumentCategory>('/knowledge/categories', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Update a knowledge base category.
+   */
+  async updateKnowledgeCategory(
+    categoryId: number,
+    updates: UpdateKnowledgeCategoryInput
+  ): Promise<DocumentCategory> {
+    return this.request<DocumentCategory>(`/knowledge/categories/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  /**
+   * Delete a knowledge base category.
+   */
+  async deleteKnowledgeCategory(categoryId: number): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/knowledge/categories/${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * List knowledge base documents.
+   */
+  async listKnowledgeDocuments(filters?: KnowledgeDocumentListFilters): Promise<KnowledgeDocument[]> {
+    const params = new URLSearchParams();
+    if (filters?.category_id) params.set('category_id', filters.category_id.toString());
+    if (filters?.status) params.set('status', filters.status);
+
+    const queryString = params.toString();
+    const endpoint = `/knowledge/documents${queryString ? `?${queryString}` : ''}`;
+
+    return this.request<KnowledgeDocument[]>(endpoint);
+  }
+
+  /**
+   * Get a specific knowledge base document.
+   */
+  async getKnowledgeDocument(documentId: string | number): Promise<KnowledgeDocument> {
+    return this.request<KnowledgeDocument>(`/knowledge/documents/${documentId}`);
+  }
+
+  /**
+   * Upload text content as a document.
+   */
+  async uploadTextDocument(input: UploadTextDocumentInput): Promise<UploadDocumentResult> {
+    return this.request<UploadDocumentResult>('/knowledge/documents/upload-text', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Upload a document from a URL.
+   */
+  async uploadDocumentFromUrl(input: UploadDocumentFromUrlInput): Promise<UploadDocumentResult> {
+    return this.request<UploadDocumentResult>('/knowledge/documents/upload-from-url', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Move a document to a different category.
+   */
+  async moveDocumentToCategory(documentId: number, categoryId: number | null): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/knowledge/documents/${documentId}/category`, {
+      method: 'PUT',
+      body: JSON.stringify({ category_id: categoryId }),
+    });
+  }
+
+  /**
+   * Reprocess a failed or pending document.
+   */
+  async reprocessDocument(documentId: number): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/knowledge/documents/${documentId}/reprocess`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Delete a knowledge base document.
+   */
+  async deleteKnowledgeDocument(documentId: number): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/knowledge/documents/${documentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Query the knowledge base using RAG.
+   */
+  async queryKnowledgeBase(input: KnowledgeQueryInput): Promise<KnowledgeQueryResponse> {
+    return this.request<KnowledgeQueryResponse>('/knowledge/query', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Get knowledge base storage usage.
+   */
+  async getKnowledgeStorage(): Promise<KnowledgeStorage> {
+    return this.request<KnowledgeStorage>('/knowledge/storage');
   }
 }

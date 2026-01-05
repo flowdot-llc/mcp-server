@@ -785,5 +785,123 @@ export class FlowDotApiClient {
             body: JSON.stringify({ enabled }),
         });
     }
+    // ============================================
+    // Knowledge Base (knowledge:read / knowledge:manage)
+    // ============================================
+    /**
+     * List knowledge base categories.
+     */
+    async listKnowledgeCategories() {
+        return this.request('/knowledge/categories');
+    }
+    /**
+     * Get a specific knowledge base category.
+     */
+    async getKnowledgeCategory(categoryId) {
+        return this.request(`/knowledge/categories/${categoryId}`);
+    }
+    /**
+     * Create a new knowledge base category.
+     */
+    async createKnowledgeCategory(input) {
+        return this.request('/knowledge/categories', {
+            method: 'POST',
+            body: JSON.stringify(input),
+        });
+    }
+    /**
+     * Update a knowledge base category.
+     */
+    async updateKnowledgeCategory(categoryId, updates) {
+        return this.request(`/knowledge/categories/${categoryId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+    /**
+     * Delete a knowledge base category.
+     */
+    async deleteKnowledgeCategory(categoryId) {
+        return this.request(`/knowledge/categories/${categoryId}`, {
+            method: 'DELETE',
+        });
+    }
+    /**
+     * List knowledge base documents.
+     */
+    async listKnowledgeDocuments(filters) {
+        const params = new URLSearchParams();
+        if (filters?.category_id)
+            params.set('category_id', filters.category_id.toString());
+        if (filters?.status)
+            params.set('status', filters.status);
+        const queryString = params.toString();
+        const endpoint = `/knowledge/documents${queryString ? `?${queryString}` : ''}`;
+        return this.request(endpoint);
+    }
+    /**
+     * Get a specific knowledge base document.
+     */
+    async getKnowledgeDocument(documentId) {
+        return this.request(`/knowledge/documents/${documentId}`);
+    }
+    /**
+     * Upload text content as a document.
+     */
+    async uploadTextDocument(input) {
+        return this.request('/knowledge/documents/upload-text', {
+            method: 'POST',
+            body: JSON.stringify(input),
+        });
+    }
+    /**
+     * Upload a document from a URL.
+     */
+    async uploadDocumentFromUrl(input) {
+        return this.request('/knowledge/documents/upload-from-url', {
+            method: 'POST',
+            body: JSON.stringify(input),
+        });
+    }
+    /**
+     * Move a document to a different category.
+     */
+    async moveDocumentToCategory(documentId, categoryId) {
+        return this.request(`/knowledge/documents/${documentId}/category`, {
+            method: 'PUT',
+            body: JSON.stringify({ category_id: categoryId }),
+        });
+    }
+    /**
+     * Reprocess a failed or pending document.
+     */
+    async reprocessDocument(documentId) {
+        return this.request(`/knowledge/documents/${documentId}/reprocess`, {
+            method: 'POST',
+        });
+    }
+    /**
+     * Delete a knowledge base document.
+     */
+    async deleteKnowledgeDocument(documentId) {
+        return this.request(`/knowledge/documents/${documentId}`, {
+            method: 'DELETE',
+        });
+    }
+    /**
+     * Query the knowledge base using RAG.
+     */
+    async queryKnowledgeBase(input) {
+        return this.request('/knowledge/query', {
+            method: 'POST',
+            body: JSON.stringify(input),
+        });
+    }
+    /**
+     * Get knowledge base storage usage.
+     */
+    async getKnowledgeStorage() {
+        return this.request('/knowledge/storage');
+    }
 }
 //# sourceMappingURL=api-client.js.map

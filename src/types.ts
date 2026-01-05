@@ -797,3 +797,119 @@ export interface ToggleCommunityInputsResult {
   community_inputs_enabled: boolean;
   message: string;
 }
+
+// ============================================
+// Knowledge Base Types
+// ============================================
+
+export interface DocumentCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  color: string;
+  document_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeDocument {
+  id: number;
+  hash: string;
+  title: string;
+  original_filename: string;
+  mime_type: string;
+  file_size_bytes: number;
+  formatted_size: string;
+  status: 'pending' | 'processing' | 'ready' | 'failed';
+  processing_error: string | null;
+  chunk_count: number;
+  token_count: number;
+  has_embeddings: boolean;
+  metadata: Record<string, unknown> | null;
+  category: {
+    id: number;
+    name: string;
+    color: string;
+  } | null;
+  processed_at: string | null;
+  created_at: string;
+}
+
+export interface KnowledgeQueryResult {
+  chunk_id: number;
+  content: string;
+  token_count: number;
+  chunk_index: number;
+  relevance: number | null;
+  similarity: number | null;
+  document_id: number;
+  document_title: string;
+  document_hash: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface KnowledgeQueryResponse {
+  query: string;
+  result_count: number;
+  results: KnowledgeQueryResult[];
+}
+
+export interface KnowledgeStorage {
+  knowledge_storage_bytes: number;
+  knowledge_storage_mb: number;
+  total_storage_bytes: number;
+  total_storage_mb: number;
+  storage_limit_bytes: number;
+  storage_limit_mb: number;
+  usage_percentage: number;
+  document_count: number;
+  ready_document_count: number;
+  category_count: number;
+}
+
+export interface CreateKnowledgeCategoryInput {
+  name: string;
+  description?: string;
+  color?: string;
+}
+
+export interface UpdateKnowledgeCategoryInput {
+  name?: string;
+  description?: string;
+  color?: string;
+}
+
+export interface UploadTextDocumentInput {
+  title: string;
+  content: string;
+  category_id?: number;
+  mime_type?: 'text/plain' | 'text/markdown' | 'application/json';
+}
+
+export interface UploadDocumentFromUrlInput {
+  url: string;
+  title?: string;
+  category_id?: number;
+}
+
+export interface UploadDocumentResult {
+  id: number;
+  hash: string;
+  title: string;
+  original_filename?: string;
+  file_size_bytes?: number;
+  status: string;
+  message: string;
+}
+
+export interface KnowledgeDocumentListFilters {
+  category_id?: number;
+  status?: 'pending' | 'processing' | 'ready' | 'failed';
+}
+
+export interface KnowledgeQueryInput {
+  query: string;
+  category_id?: number;
+  top_k?: number;
+}

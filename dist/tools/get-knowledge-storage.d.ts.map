@@ -1,0 +1,1 @@
+{"version":3,"file":"get-knowledge-storage.d.ts","sourceRoot":"","sources":["../../src/tools/get-knowledge-storage.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH,OAAO,EAAE,IAAI,EAAE,cAAc,EAAE,MAAM,oCAAoC,CAAC;AAC1E,OAAO,EAAE,gBAAgB,EAAE,MAAM,kBAAkB,CAAC;AAEpD,eAAO,MAAM,0BAA0B,EAAE,IASxC,CAAC;AAEF,wBAAsB,yBAAyB,CAC7C,GAAG,EAAE,gBAAgB,GACpB,OAAO,CAAC,cAAc,CAAC,CAyCzB"}

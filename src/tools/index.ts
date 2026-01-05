@@ -132,6 +132,23 @@ import { deleteInputPresetTool, handleDeleteInputPreset } from './delete-input-p
 import { voteInputPresetTool, handleVoteInputPreset } from './vote-input-preset.js';
 import { toggleCommunityInputsTool, handleToggleCommunityInputs } from './toggle-community-inputs.js';
 
+// ============================================
+// Knowledge Base Tools (knowledge:read / knowledge:manage)
+// ============================================
+import { listKnowledgeCategoriesToolDef, handleListKnowledgeCategories } from './list-knowledge-categories.js';
+import { createKnowledgeCategoryToolDef, handleCreateKnowledgeCategory } from './create-knowledge-category.js';
+import { updateKnowledgeCategoryToolDef, handleUpdateKnowledgeCategory } from './update-knowledge-category.js';
+import { deleteKnowledgeCategoryToolDef, handleDeleteKnowledgeCategory } from './delete-knowledge-category.js';
+import { listKnowledgeDocumentsToolDef, handleListKnowledgeDocuments } from './list-knowledge-documents.js';
+import { getKnowledgeDocumentToolDef, handleGetKnowledgeDocument } from './get-knowledge-document.js';
+import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-text-document.js';
+import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
+import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
+import { reprocessDocumentToolDef, handleReprocessDocument } from './reprocess-document.js';
+import { deleteKnowledgeDocumentToolDef, handleDeleteKnowledgeDocument } from './delete-knowledge-document.js';
+import { queryKnowledgeBaseToolDef, handleQueryKnowledgeBase } from './query-knowledge-base.js';
+import { getKnowledgeStorageToolDef, handleGetKnowledgeStorage } from './get-knowledge-storage.js';
+
 // All available tools
 const tools = [
   // Core (4)
@@ -219,6 +236,20 @@ const tools = [
   deleteInputPresetTool,
   voteInputPresetTool,
   toggleCommunityInputsTool,
+  // Knowledge Base (13)
+  listKnowledgeCategoriesToolDef,
+  createKnowledgeCategoryToolDef,
+  updateKnowledgeCategoryToolDef,
+  deleteKnowledgeCategoryToolDef,
+  listKnowledgeDocumentsToolDef,
+  getKnowledgeDocumentToolDef,
+  uploadTextDocumentToolDef,
+  uploadDocumentFromUrlToolDef,
+  moveDocumentToCategoryToolDef,
+  reprocessDocumentToolDef,
+  deleteKnowledgeDocumentToolDef,
+  queryKnowledgeBaseToolDef,
+  getKnowledgeStorageToolDef,
 ];
 
 /**
@@ -571,6 +602,76 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'toggle_community_inputs':
         return handleToggleCommunityInputs(api, args as { workflow_id: string; enabled: boolean });
+
+      // ============================================
+      // Knowledge Base Tools
+      // ============================================
+      case 'list_knowledge_categories':
+        return handleListKnowledgeCategories(api);
+
+      case 'create_knowledge_category':
+        return handleCreateKnowledgeCategory(api, args as {
+          name: string;
+          description?: string;
+          color?: string;
+        });
+
+      case 'update_knowledge_category':
+        return handleUpdateKnowledgeCategory(api, args as {
+          category_id: number;
+          name?: string;
+          description?: string;
+          color?: string;
+        });
+
+      case 'delete_knowledge_category':
+        return handleDeleteKnowledgeCategory(api, args as { category_id: number });
+
+      case 'list_knowledge_documents':
+        return handleListKnowledgeDocuments(api, args as {
+          category_id?: number;
+          status?: 'pending' | 'processing' | 'ready' | 'failed';
+        });
+
+      case 'get_knowledge_document':
+        return handleGetKnowledgeDocument(api, args as { document_id: number | string });
+
+      case 'upload_text_document':
+        return handleUploadTextDocument(api, args as {
+          title: string;
+          content: string;
+          category_id?: number;
+          mime_type?: 'text/plain' | 'text/markdown' | 'application/json';
+        });
+
+      case 'upload_document_from_url':
+        return handleUploadDocumentFromUrl(api, args as {
+          url: string;
+          title?: string;
+          category_id?: number;
+        });
+
+      case 'move_document_to_category':
+        return handleMoveDocumentToCategory(api, args as {
+          document_id: number;
+          category_id?: number | null;
+        });
+
+      case 'reprocess_document':
+        return handleReprocessDocument(api, args as { document_id: number });
+
+      case 'delete_knowledge_document':
+        return handleDeleteKnowledgeDocument(api, args as { document_id: number });
+
+      case 'query_knowledge_base':
+        return handleQueryKnowledgeBase(api, args as {
+          query: string;
+          category_id?: number;
+          top_k?: number;
+        });
+
+      case 'get_knowledge_storage':
+        return handleGetKnowledgeStorage(api);
 
       default:
         return {
