@@ -58,7 +58,7 @@ export async function handleQueryKnowledgeBase(
     const lines = [
       `## Knowledge Base Results (${response.result_count} matches)`,
       '',
-      `**Query:** "${response.query}"`,
+      `**Query:** "${args.query}"`,
       '',
     ];
 
