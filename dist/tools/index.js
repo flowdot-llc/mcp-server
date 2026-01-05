@@ -38,6 +38,7 @@ import { getWorkflowTagsTool, handleGetWorkflowTags } from './get-workflow-tags.
 import { setWorkflowTagsTool, handleSetWorkflowTags } from './set-workflow-tags.js';
 import { searchWorkflowsTool, handleSearchWorkflows } from './search-workflows.js';
 import { getPublicWorkflowsTool, handleGetPublicWorkflows } from './get-public-workflows.js';
+import { searchTool, handleSearch } from './search.js';
 // ============================================
 // Workflow Building Tools (workflows:build)
 // ============================================
@@ -137,6 +138,7 @@ const tools = [
     getWorkflowTagsTool,
     setWorkflowTagsTool,
     searchWorkflowsTool,
+    searchTool,
     getPublicWorkflowsTool,
     // Workflow Building (4)
     createWorkflowTool,
@@ -262,6 +264,8 @@ export function registerTools(server, api) {
                 return handleSetWorkflowTags(api, args);
             case 'search_workflows':
                 return handleSearchWorkflows(api, args);
+            case 'search':
+                return handleSearch(api, args);
             case 'get_public_workflows':
                 return handleGetPublicWorkflows(api, args);
             // ============================================
