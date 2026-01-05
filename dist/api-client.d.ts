@@ -3,7 +3,7 @@
  *
  * Handles communication with the FlowDot Hub API using MCP tokens.
  */
-import { Workflow, Execution, ExecuteWorkflowResult, AgentChatResult, WorkflowMetrics, WorkflowComment, ExecutionHistoryItem, WorkflowDetails, WorkflowInputSchemaResult, CreateWorkflowResult, WorkflowGraph, ValidationResult, NodeType, NodeTypesResponse, WorkflowNode, WorkflowConnection, AddNodeResult, AddConnectionResult, SuccessResult, PublicWorkflow, PaginatedResult, RetryExecutionResult, CustomNode, CustomNodeComment, CustomNodeListFilters, CustomNodeSearchFilters, CreateCustomNodeInput, UpdateCustomNodeInput, VoteCustomNodeResult, FavoriteCustomNodeResult, CreateCustomNodeCommentResult, App, AppComment, AppWorkflow, AppListFilters, AppSearchFilters, CreateAppInput, UpdateAppInput, CreateAppResult, CloneAppResult, VoteAppResult, FavoriteAppResult, CreateAppCommentResult, LinkAppWorkflowResult, WorkflowPublicUrlResult, SharedResult, SharedResultDetails, SharedResultComment, CreateSharedResultInput, CreateSharedResultResult, CreateCommentResult, SharedResultListFilters, VoteWorkflowResult, VoteSharedResultResult, InputPreset, InputPresetListResult, CreateInputPresetInput, UpdateInputPresetInput, CreateInputPresetResult, VoteInputPresetResult, InputPresetListFilters, ToggleCommunityInputsResult, DocumentCategory, KnowledgeDocument, KnowledgeQueryResponse, KnowledgeStorage, CreateKnowledgeCategoryInput, UpdateKnowledgeCategoryInput, UploadTextDocumentInput, UploadDocumentFromUrlInput, UploadDocumentResult, KnowledgeDocumentListFilters, KnowledgeQueryInput } from './types.js';
+import { Workflow, Execution, ExecuteWorkflowResult, AgentChatResult, WorkflowMetrics, WorkflowComment, ExecutionHistoryItem, WorkflowDetails, WorkflowInputSchemaResult, CreateWorkflowResult, WorkflowGraph, ValidationResult, NodeType, NodeTypesResponse, WorkflowNode, WorkflowConnection, AddNodeResult, AddConnectionResult, SuccessResult, PublicWorkflow, PaginatedResult, RetryExecutionResult, CustomNode, CustomNodeComment, CustomNodeListFilters, CustomNodeSearchFilters, CreateCustomNodeInput, UpdateCustomNodeInput, VoteCustomNodeResult, FavoriteCustomNodeResult, CreateCustomNodeCommentResult, App, AppComment, AppWorkflow, AppListFilters, AppSearchFilters, CreateAppInput, UpdateAppInput, CreateAppResult, CloneAppResult, VoteAppResult, FavoriteAppResult, CreateAppCommentResult, LinkAppWorkflowResult, WorkflowPublicUrlResult, SharedResult, SharedResultDetails, SharedResultComment, CreateSharedResultInput, CreateSharedResultResult, CreateCommentResult, SharedResultListFilters, VoteWorkflowResult, VoteSharedResultResult, InputPreset, InputPresetListResult, CreateInputPresetInput, UpdateInputPresetInput, CreateInputPresetResult, VoteInputPresetResult, InputPresetListFilters, ToggleCommunityInputsResult, Team, DocumentCategory, KnowledgeDocument, KnowledgeQueryResponse, KnowledgeStorage, CreateKnowledgeCategoryInput, UpdateKnowledgeCategoryInput, UploadTextDocumentInput, UploadDocumentFromUrlInput, UploadDocumentResult, KnowledgeDocumentListFilters, KnowledgeQueryInput, KnowledgeCategoryListFilters, TransferDocumentInput, TransferDocumentResult } from './types.js';
 export declare class FlowDotApiClient {
     private hubUrl;
     private apiToken;
@@ -346,9 +346,14 @@ export declare class FlowDotApiClient {
      */
     toggleCommunityInputs(workflowId: string, enabled: boolean): Promise<ToggleCommunityInputsResult>;
     /**
-     * List knowledge base categories.
+     * List teams the user belongs to.
      */
-    listKnowledgeCategories(): Promise<DocumentCategory[]>;
+    listUserTeams(): Promise<Team[]>;
+    /**
+     * List knowledge base categories.
+     * @param filters - Optional filters for team_id or personal categories
+     */
+    listKnowledgeCategories(filters?: KnowledgeCategoryListFilters): Promise<DocumentCategory[]>;
     /**
      * Get a specific knowledge base category.
      */
@@ -367,6 +372,7 @@ export declare class FlowDotApiClient {
     deleteKnowledgeCategory(categoryId: number): Promise<SuccessResult>;
     /**
      * List knowledge base documents.
+     * @param filters - Optional filters for category, team, and status
      */
     listKnowledgeDocuments(filters?: KnowledgeDocumentListFilters): Promise<KnowledgeDocument[]>;
     /**
@@ -385,6 +391,12 @@ export declare class FlowDotApiClient {
      * Move a document to a different category.
      */
     moveDocumentToCategory(documentId: number, categoryId: number | null): Promise<SuccessResult>;
+    /**
+     * Transfer document ownership between personal and team.
+     * @param documentId - The document ID to transfer
+     * @param input - Transfer options (team_id and optional category_id)
+     */
+    transferDocumentOwnership(documentId: number, input: TransferDocumentInput): Promise<TransferDocumentResult>;
     /**
      * Reprocess a failed or pending document.
      */

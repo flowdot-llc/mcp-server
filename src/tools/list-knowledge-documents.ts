@@ -105,14 +105,12 @@ export async function handleListKnowledgeDocuments(
       return docLines;
     };
 
-    // Show personal documents
-    if (personalDocs.length > 0 && args.team_id !== 'personal' || args.team_id === undefined) {
-      if (!args.team_id || args.team_id === 'personal') {
-        lines.push('### Personal Documents');
-        lines.push('');
-        for (const doc of personalDocs) {
-          lines.push(...formatDoc(doc));
-        }
+    // Show personal documents if no team filter or explicitly 'personal'
+    if (personalDocs.length > 0 && (args.team_id === undefined || args.team_id === 'personal')) {
+      lines.push('### Personal Documents');
+      lines.push('');
+      for (const doc of personalDocs) {
+        lines.push(...formatDoc(doc));
       }
     }
 

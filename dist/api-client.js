@@ -786,13 +786,29 @@ export class FlowDotApiClient {
         });
     }
     // ============================================
+    // Teams (teams:read)
+    // ============================================
+    /**
+     * List teams the user belongs to.
+     */
+    async listUserTeams() {
+        return this.request('/teams');
+    }
+    // ============================================
     // Knowledge Base (knowledge:read / knowledge:manage)
     // ============================================
     /**
      * List knowledge base categories.
+     * @param filters - Optional filters for team_id or personal categories
      */
-    async listKnowledgeCategories() {
-        return this.request('/knowledge/categories');
+    async listKnowledgeCategories(filters) {
+        const params = new URLSearchParams();
+        if (filters?.team_id)
+            params.set('team_id', filters.team_id.toString());
+        if (filters?.personal)
+            params.set('personal', '1');
+        const queryString = params.toString();
+        return this.request(`/knowledge/categories${queryString ? `?${queryString}` : ''}`);
     }
     /**
      * Get a specific knowledge base category.
@@ -828,11 +844,14 @@ export class FlowDotApiClient {
     }
     /**
      * List knowledge base documents.
+     * @param filters - Optional filters for category, team, and status
      */
     async listKnowledgeDocuments(filters) {
         const params = new URLSearchParams();
         if (filters?.category_id)
             params.set('category_id', filters.category_id.toString());
+        if (filters?.team_id !== undefined)
+            params.set('team_id', filters.team_id.toString());
         if (filters?.status)
             params.set('status', filters.status);
         const queryString = params.toString();
@@ -870,6 +889,17 @@ export class FlowDotApiClient {
         return this.request(`/knowledge/documents/${documentId}/category`, {
             method: 'PUT',
             body: JSON.stringify({ category_id: categoryId }),
+        });
+    }
+    /**
+     * Transfer document ownership between personal and team.
+     * @param documentId - The document ID to transfer
+     * @param input - Transfer options (team_id and optional category_id)
+     */
+    async transferDocumentOwnership(documentId, input) {
+        return this.request(`/knowledge/documents/${documentId}/transfer`, {
+            method: 'PUT',
+            body: JSON.stringify(input),
         });
     }
     /**

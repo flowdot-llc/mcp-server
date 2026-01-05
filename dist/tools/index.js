@@ -114,6 +114,10 @@ import { deleteInputPresetTool, handleDeleteInputPreset } from './delete-input-p
 import { voteInputPresetTool, handleVoteInputPreset } from './vote-input-preset.js';
 import { toggleCommunityInputsTool, handleToggleCommunityInputs } from './toggle-community-inputs.js';
 // ============================================
+// Team Tools (teams:read)
+// ============================================
+import { listUserTeamsToolDef, handleListUserTeams } from './list-user-teams.js';
+// ============================================
 // Knowledge Base Tools (knowledge:read / knowledge:manage)
 // ============================================
 import { listKnowledgeCategoriesToolDef, handleListKnowledgeCategories } from './list-knowledge-categories.js';
@@ -125,6 +129,7 @@ import { getKnowledgeDocumentToolDef, handleGetKnowledgeDocument } from './get-k
 import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-text-document.js';
 import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
 import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
+import { transferDocumentOwnershipToolDef, handleTransferDocumentOwnership } from './transfer-document-ownership.js';
 import { reprocessDocumentToolDef, handleReprocessDocument } from './reprocess-document.js';
 import { deleteKnowledgeDocumentToolDef, handleDeleteKnowledgeDocument } from './delete-knowledge-document.js';
 import { queryKnowledgeBaseToolDef, handleQueryKnowledgeBase } from './query-knowledge-base.js';
@@ -216,7 +221,9 @@ const tools = [
     deleteInputPresetTool,
     voteInputPresetTool,
     toggleCommunityInputsTool,
-    // Knowledge Base (13)
+    // Teams (1)
+    listUserTeamsToolDef,
+    // Knowledge Base (15)
     listKnowledgeCategoriesToolDef,
     createKnowledgeCategoryToolDef,
     updateKnowledgeCategoryToolDef,
@@ -226,6 +233,7 @@ const tools = [
     uploadTextDocumentToolDef,
     uploadDocumentFromUrlToolDef,
     moveDocumentToCategoryToolDef,
+    transferDocumentOwnershipToolDef,
     reprocessDocumentToolDef,
     deleteKnowledgeDocumentToolDef,
     queryKnowledgeBaseToolDef,
@@ -426,10 +434,15 @@ export function registerTools(server, api) {
             case 'toggle_community_inputs':
                 return handleToggleCommunityInputs(api, args);
             // ============================================
+            // Team Tools
+            // ============================================
+            case 'list_user_teams':
+                return handleListUserTeams(api);
+            // ============================================
             // Knowledge Base Tools
             // ============================================
             case 'list_knowledge_categories':
-                return handleListKnowledgeCategories(api);
+                return handleListKnowledgeCategories(api, args);
             case 'create_knowledge_category':
                 return handleCreateKnowledgeCategory(api, args);
             case 'update_knowledge_category':
@@ -446,6 +459,8 @@ export function registerTools(server, api) {
                 return handleUploadDocumentFromUrl(api, args);
             case 'move_document_to_category':
                 return handleMoveDocumentToCategory(api, args);
+            case 'transfer_document_ownership':
+                return handleTransferDocumentOwnership(api, args);
             case 'reprocess_document':
                 return handleReprocessDocument(api, args);
             case 'delete_knowledge_document':

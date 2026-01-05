@@ -117,7 +117,7 @@ export async function handleQueryKnowledgeBase(
       sources.set(result.document_hash || result.document_title, {
         title: result.document_title,
         isTeam: result.is_team_document,
-        teamId: result.team_id,
+        teamId: result.team_id ?? undefined,
       });
 
       // Calculate relevance indicator
