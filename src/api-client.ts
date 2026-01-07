@@ -52,6 +52,18 @@ import {
   FavoriteAppResult,
   CreateAppCommentResult,
   LinkAppWorkflowResult,
+  // App Code Editing Types
+  EditAppCodeInput,
+  AppendAppCodeInput,
+  PrependAppCodeInput,
+  InsertAppCodeInput,
+  AppCodeEditResult,
+  // Multi-File App Types
+  AppFile,
+  CreateAppFileInput,
+  UpdateAppFileInput,
+  RenameAppFileInput,
+  AppFileResult,
   // Sharing Types
   WorkflowPublicUrlResult,
   SharedResult,
@@ -123,7 +135,19 @@ export class FlowDotApiClient {
     const data = (await response.json()) as ApiResponse<T>;
 
     if (!response.ok || !data.success) {
-      const errorMessage = data.error || data.message || `API error: ${response.status}`;
+      let errorMessage = data.error || data.message || `API error: ${response.status}`;
+
+      // Include debug info if available
+      if (data.debug) {
+        const debug = data.debug as Record<string, unknown>;
+        if (debug.hints && Array.isArray(debug.hints) && debug.hints.length > 0) {
+          errorMessage += ' | Hints: ' + debug.hints.join('; ');
+        }
+        if (debug.code_preview) {
+          errorMessage += ` | Code starts with: "${String(debug.code_preview).substring(0, 50)}..."`;
+        }
+      }
+
       throw new Error(errorMessage);
     }
 
@@ -825,6 +849,119 @@ export class FlowDotApiClient {
       method: 'DELETE',
     });
   }
+
+  // ============================================
+  // App Code Editing (apps:manage scope)
+  // ============================================
+
+  /**
+   * Edit app code using string replacement (find and replace).
+   * Replaces old_string with new_string in the app's code.
+   */
+  async editAppCode(appId: string, input: EditAppCodeInput): Promise<AppCodeEditResult> {
+    return this.request<AppCodeEditResult>(`/apps/${appId}/code/edit`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Append content to the end of app code.
+   */
+  async appendAppCode(appId: string, input: AppendAppCodeInput): Promise<AppCodeEditResult> {
+    return this.request<AppCodeEditResult>(`/apps/${appId}/code/append`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Prepend content to the beginning of app code.
+   */
+  async prependAppCode(appId: string, input: PrependAppCodeInput): Promise<AppCodeEditResult> {
+    return this.request<AppCodeEditResult>(`/apps/${appId}/code/prepend`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Insert content after a specific pattern in app code.
+   */
+  async insertAppCode(appId: string, input: InsertAppCodeInput): Promise<AppCodeEditResult> {
+    return this.request<AppCodeEditResult>(`/apps/${appId}/code/insert`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  // ============================================
+  // Multi-File App Operations (apps:manage scope)
+  // ============================================
+
+  /**
+   * List all files in a multi-file app.
+   */
+  async listAppFiles(appId: string): Promise<AppFile[]> {
+    return this.request<AppFile[]>(`/apps/${appId}/files`);
+  }
+
+  /**
+   * Get a specific file from a multi-file app.
+   */
+  async getAppFile(appId: string, filePath: string): Promise<AppFile> {
+    return this.request<AppFile>(`/apps/${appId}/files/${encodeURIComponent(filePath)}`);
+  }
+
+  /**
+   * Create a new file in a multi-file app.
+   */
+  async createAppFile(appId: string, input: CreateAppFileInput): Promise<AppFileResult> {
+    return this.request<AppFileResult>(`/apps/${appId}/files`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Update an existing file in a multi-file app.
+   */
+  async updateAppFile(appId: string, filePath: string, input: UpdateAppFileInput): Promise<AppFileResult> {
+    return this.request<AppFileResult>(`/apps/${appId}/files/${encodeURIComponent(filePath)}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Delete a file from a multi-file app.
+   */
+  async deleteAppFile(appId: string, filePath: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/apps/${appId}/files/${encodeURIComponent(filePath)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Rename a file in a multi-file app.
+   */
+  async renameAppFile(appId: string, filePath: string, input: RenameAppFileInput): Promise<AppFileResult> {
+    return this.request<AppFileResult>(`/apps/${appId}/files/${encodeURIComponent(filePath)}/rename`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Set a file as the entry point for a multi-file app.
+   */
+  async setAppEntryFile(appId: string, filePath: string): Promise<AppFileResult> {
+    return this.request<AppFileResult>(`/apps/${appId}/files/${encodeURIComponent(filePath)}/set-entry`, {
+      method: 'POST',
+    });
+  }
+
+  // convertAppToMultiFile removed - all apps are multi-file by default
 
   // ============================================
   // Sharing & Public URLs (sharing:read / sharing:manage)

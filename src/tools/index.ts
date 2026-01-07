@@ -107,6 +107,20 @@ import { cloneAppTool, handleCloneApp } from './clone-app.js';
 import { linkAppWorkflowTool, handleLinkAppWorkflow } from './link-app-workflow.js';
 import { unlinkAppWorkflowTool, handleUnlinkAppWorkflow } from './unlink-app-workflow.js';
 import { getAppTemplateTool, handleGetAppTemplate } from './get-app-template.js';
+// App Code Editing Tools (surgical operations)
+import { editAppCodeTool, handleEditAppCode } from './edit-app-code.js';
+import { appendAppCodeTool, handleAppendAppCode } from './append-app-code.js';
+import { prependAppCodeTool, handlePrependAppCode } from './prepend-app-code.js';
+import { insertAppCodeTool, handleInsertAppCode } from './insert-app-code.js';
+// Multi-File App Tools
+import { listAppFilesTool, handleListAppFiles } from './list-app-files.js';
+import { getAppFileTool, handleGetAppFile } from './get-app-file.js';
+import { createAppFileTool, handleCreateAppFile } from './create-app-file.js';
+import { updateAppFileTool, handleUpdateAppFile } from './update-app-file.js';
+import { deleteAppFileTool, handleDeleteAppFile } from './delete-app-file.js';
+import { renameAppFileTool, handleRenameAppFile } from './rename-app-file.js';
+import { setAppEntryFileTool, handleSetAppEntryFile } from './set-app-entry-file.js';
+// convert-app-to-multifile removed - all apps are multi-file by default
 
 // ============================================
 // Sharing & Public URLs Tools (sharing:read / sharing:manage)
@@ -211,7 +225,7 @@ const tools = [
   voteCustomNodeTool,
   favoriteCustomNodeTool,
   addCustomNodeCommentTool,
-  // App Operations (12)
+  // App Operations (16 - includes 4 surgical code editing tools)
   listAppsTool,
   searchAppsTool,
   getAppTool,
@@ -224,6 +238,19 @@ const tools = [
   linkAppWorkflowTool,
   unlinkAppWorkflowTool,
   getAppTemplateTool,
+  // App Code Editing (surgical operations)
+  editAppCodeTool,
+  appendAppCodeTool,
+  prependAppCodeTool,
+  insertAppCodeTool,
+  // Multi-File App Operations (7)
+  listAppFilesTool,
+  getAppFileTool,
+  createAppFileTool,
+  updateAppFileTool,
+  deleteAppFileTool,
+  renameAppFileTool,
+  setAppEntryFileTool,
   // Sharing & Public URLs (9)
   getWorkflowPublicUrlTool,
   listSharedResultsTool,
@@ -516,6 +543,75 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'get_app_template':
         return handleGetAppTemplate(args as { template?: string });
+
+      // ============================================
+      // App Code Editing Tools (surgical operations)
+      // ============================================
+      case 'edit_app_code':
+        return handleEditAppCode(api, args as {
+          app_id: string;
+          old_string: string;
+          new_string: string;
+          field?: 'code' | 'mobile_code';
+          replace_all?: boolean;
+        });
+
+      case 'append_app_code':
+        return handleAppendAppCode(api, args as {
+          app_id: string;
+          content: string;
+          field?: 'code' | 'mobile_code';
+        });
+
+      case 'prepend_app_code':
+        return handlePrependAppCode(api, args as {
+          app_id: string;
+          content: string;
+          field?: 'code' | 'mobile_code';
+        });
+
+      case 'insert_app_code':
+        return handleInsertAppCode(api, args as {
+          app_id: string;
+          after_pattern: string;
+          content: string;
+          field?: 'code' | 'mobile_code';
+        });
+
+      // ============================================
+      // Multi-File App Operations Tools
+      // ============================================
+      case 'list_app_files':
+        return handleListAppFiles(api, args as { app_id: string });
+
+      case 'get_app_file':
+        return handleGetAppFile(api, args as { app_id: string; file_path: string });
+
+      case 'create_app_file':
+        return handleCreateAppFile(api, args as {
+          app_id: string;
+          path: string;
+          content: string;
+          type?: 'component' | 'hook' | 'utility' | 'page' | 'context' | 'style';
+          is_entry?: boolean;
+        });
+
+      case 'update_app_file':
+        return handleUpdateAppFile(api, args as {
+          app_id: string;
+          file_path: string;
+          content: string;
+          type?: 'component' | 'hook' | 'utility' | 'page' | 'context' | 'style';
+        });
+
+      case 'delete_app_file':
+        return handleDeleteAppFile(api, args as { app_id: string; file_path: string });
+
+      case 'rename_app_file':
+        return handleRenameAppFile(api, args as { app_id: string; file_path: string; new_path: string });
+
+      case 'set_app_entry_file':
+        return handleSetAppEntryFile(api, args as { app_id: string; file_path: string });
 
       // ============================================
       // Sharing & Public URLs Tools

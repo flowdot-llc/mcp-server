@@ -8,6 +8,9 @@ export const createAppTool = {
     name: 'create_app',
     description: `Create a new FlowDot app. Apps are React frontend applications that can optionally use workflows as backends.
 
+All apps are multi-file by default. When created, an initial App.jsx entry file is automatically generated.
+Use create_app_file, update_app_file, and other file tools to manage additional files.
+
 ## EXECUTION ENVIRONMENT
 Apps run in a sandboxed browser iframe with:
 - React 18 (global - use React.useState, React.useEffect, etc.)
@@ -66,11 +69,7 @@ Use get_app_template to see example code and patterns.`,
             },
             code: {
                 type: 'string',
-                description: 'React code for the app (JSX/TSX)',
-            },
-            mobile_code: {
-                type: 'string',
-                description: 'Mobile-specific React code (optional)',
+                description: 'Initial React code for App.jsx entry file (optional - defaults to Hello World)',
             },
             config: {
                 type: 'object',
@@ -102,8 +101,6 @@ export async function handleCreateApp(client, args) {
             input.description = String(args.description);
         if (args.code)
             input.code = String(args.code);
-        if (args.mobile_code)
-            input.mobile_code = String(args.mobile_code);
         if (args.config)
             input.config = args.config;
         if (args.category)
@@ -118,20 +115,24 @@ export async function handleCreateApp(client, args) {
 **Name:** ${result.name}
 **ID:** ${result.id}
 **Created:** ${result.created_at}
+**Entry File:** App.jsx (automatically created)
 
 ## Next Steps
 
-1. **Add code** (if not provided):
-   Use update_app to add or modify the React code.
+1. **Edit entry file**:
+   Use update_app_file or update_app to modify the App.jsx code.
 
-2. **Link workflows**:
+2. **Add more files**:
+   Use create_app_file to add components, utilities, or other files.
+
+3. **Link workflows**:
    Use link_app_workflow to connect workflows that the app can invoke:
    \`link_app_workflow(app_id: "${result.id}", workflow_hash: "YOUR_WORKFLOW_HASH")\`
 
-3. **Test locally**:
+4. **Test locally**:
    Preview your app in the FlowDot UI at https://flowdot.ai/apps/${result.id}
 
-4. **Publish**:
+5. **Publish**:
    When ready, use publish_app to make it public:
    \`publish_app(app_id: "${result.id}")\`
 

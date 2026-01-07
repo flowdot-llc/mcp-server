@@ -67,6 +67,7 @@ export interface ApiResponse<T> {
   error?: string;
   message?: string;
   count?: number;
+  debug?: Record<string, unknown>;
 }
 
 // ============================================
@@ -506,6 +507,9 @@ export interface App {
   category: string | null;
   tags: string[];
   is_public: boolean;
+  is_multi_file: boolean;
+  router_enabled?: boolean;
+  routes?: Route[] | null;
   mobile_compatible: boolean;
   user_name?: string;
   user_hash?: string | null;
@@ -518,12 +522,28 @@ export interface App {
   is_verified: boolean;
   is_featured: boolean;
   workflows?: AppWorkflow[];
+  files?: AppFile[];
   is_favorited?: boolean;
   user_vote?: number | null;
   can_edit?: boolean;
   created_at: string;
   updated_at: string;
   published_at: string | null;
+}
+
+export interface Route {
+  path: string;
+  component: string;
+  exact?: boolean;
+}
+
+export interface AppFile {
+  path: string;
+  content: string;
+  type: 'component' | 'hook' | 'utility' | 'page' | 'context' | 'style';
+  is_entry: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AppWorkflow {
@@ -622,6 +642,64 @@ export interface LinkAppWorkflowResult {
   description: string | null;
   signature: WorkflowSignature | null;
   alias: string | null;
+}
+
+// App Code Editing Types (Surgical Operations)
+export interface EditAppCodeInput {
+  old_string: string;
+  new_string: string;
+  field?: 'code' | 'mobile_code';
+  replace_all?: boolean;
+}
+
+export interface AppendAppCodeInput {
+  content: string;
+  field?: 'code' | 'mobile_code';
+}
+
+export interface PrependAppCodeInput {
+  content: string;
+  field?: 'code' | 'mobile_code';
+}
+
+export interface InsertAppCodeInput {
+  content: string;
+  after_pattern: string;
+  field?: 'code' | 'mobile_code';
+}
+
+export interface AppCodeEditResult {
+  id: string;
+  field: string;
+  previous_length: number;
+  new_length: number;
+  updated_at: string;
+}
+
+// Multi-File App Types
+export interface CreateAppFileInput {
+  path: string;
+  content: string;
+  type?: 'component' | 'hook' | 'utility' | 'page' | 'context' | 'style';
+  is_entry?: boolean;
+}
+
+export interface UpdateAppFileInput {
+  content: string;
+  type?: 'component' | 'hook' | 'utility' | 'page' | 'context' | 'style';
+}
+
+export interface RenameAppFileInput {
+  new_path: string;
+}
+
+export interface AppFileResult {
+  path: string;
+  content: string;
+  type: string;
+  is_entry: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================
