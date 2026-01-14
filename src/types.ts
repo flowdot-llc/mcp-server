@@ -1163,6 +1163,34 @@ export interface UpdateToolkitInput {
   tags?: string[];
 }
 
+export interface CreateToolkitToolInput {
+  name: string;
+  title: string;
+  description: string;
+  tool_type: 'http' | 'workflow';
+  input_schema: Record<string, unknown>;
+  output_schema?: Record<string, unknown>;
+  endpoint_config?: ToolkitEndpointConfig;
+  workflow_hash?: string;
+  credential_keys?: string[];
+  timeout_ms?: number;
+  is_enabled?: boolean;
+}
+
+export interface UpdateToolkitToolInput {
+  name?: string;
+  title?: string;
+  description?: string;
+  tool_type?: 'http' | 'workflow';
+  input_schema?: Record<string, unknown>;
+  output_schema?: Record<string, unknown>;
+  endpoint_config?: ToolkitEndpointConfig;
+  workflow_hash?: string;
+  credential_keys?: string[];
+  timeout_ms?: number;
+  is_enabled?: boolean;
+}
+
 export interface ToolkitSearchFilters {
   query?: string;
   category?: string;

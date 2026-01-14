@@ -14,6 +14,8 @@ import {
   ToolkitSearchFilters,
   CreateToolkitInput,
   UpdateToolkitInput,
+  CreateToolkitToolInput,
+  UpdateToolkitToolInput,
   InvokeToolkitToolInput,
   ToolkitCredentialStatus,
 } from '../types.js';
@@ -1344,6 +1346,286 @@ ${tool.tool_type === 'workflow' && tool.workflow_hash ? `
     const message = error instanceof Error ? error.message : 'Unknown error';
     return {
       content: [{ type: 'text', text: `Error getting tool: ${message}` }],
+      isError: true,
+    };
+  }
+}
+
+export const createToolkitToolTool: Tool = {
+  name: 'mcp__flowdot__create_toolkit_tool',
+  description: `Create a new tool in a toolkit.
+
+Add HTTP or Workflow-based tools to your agent toolkit with custom input/output schemas and credentials.`,
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      toolkit_id: {
+        type: 'string',
+        description: 'The toolkit ID (hash)',
+      },
+      name: {
+        type: 'string',
+        description: 'Unique tool name (lowercase, hyphens, e.g., "get-weather")',
+      },
+      title: {
+        type: 'string',
+        description: 'Display title (e.g., "Get Weather Data")',
+      },
+      description: {
+        type: 'string',
+        description: 'What this tool does',
+      },
+      tool_type: {
+        type: 'string',
+        enum: ['http', 'workflow'],
+        description: 'Tool type: "http" for REST API calls, "workflow" for FlowDot workflows',
+      },
+      input_schema: {
+        type: 'object',
+        description: 'JSON Schema defining tool inputs',
+      },
+      output_schema: {
+        type: 'object',
+        description: 'Optional JSON Schema defining tool outputs',
+      },
+      endpoint_config: {
+        type: 'object',
+        description: 'HTTP configuration (required if tool_type is "http")',
+        properties: {
+          url: { type: 'string', description: 'API endpoint URL' },
+          method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] },
+        },
+      },
+      workflow_hash: {
+        type: 'string',
+        description: 'FlowDot workflow hash (required if tool_type is "workflow")',
+      },
+      credential_keys: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'List of credential keys this tool requires (e.g., ["API_KEY", "API_SECRET"])',
+      },
+      timeout_ms: {
+        type: 'number',
+        description: 'Execution timeout in milliseconds (1000-300000, default: 30000)',
+      },
+      is_enabled: {
+        type: 'boolean',
+        description: 'Whether the tool is enabled (default: true)',
+      },
+    },
+    required: ['toolkit_id', 'name', 'title', 'description', 'tool_type', 'input_schema'],
+  },
+};
+
+export async function handleCreateToolkitTool(
+  api: FlowDotApiClient,
+  args: Record<string, unknown>
+): Promise<CallToolResult> {
+  try {
+    const toolkitId = String(args.toolkit_id);
+    const input: CreateToolkitToolInput = {
+      name: String(args.name),
+      title: String(args.title),
+      description: String(args.description),
+      tool_type: args.tool_type as 'http' | 'workflow',
+      input_schema: args.input_schema as Record<string, unknown>,
+    };
+
+    if (args.output_schema) input.output_schema = args.output_schema as Record<string, unknown>;
+    if (args.endpoint_config) input.endpoint_config = args.endpoint_config as any;
+    if (args.workflow_hash) input.workflow_hash = String(args.workflow_hash);
+    if (args.credential_keys && Array.isArray(args.credential_keys)) {
+      input.credential_keys = args.credential_keys.map(k => String(k));
+    }
+    if (args.timeout_ms) input.timeout_ms = Number(args.timeout_ms);
+    if (args.is_enabled !== undefined) input.is_enabled = Boolean(args.is_enabled);
+
+    const result = await api.createToolkitTool(toolkitId, input);
+
+    if (!result) {
+      return {
+        content: [{ type: 'text', text: 'Failed to create tool' }],
+        isError: true,
+      };
+    }
+
+    const text = `✓ Tool created successfully!
+
+**Name:** ${result.name}
+**Title:** ${result.title}
+**Type:** ${result.tool_type}
+**ID:** ${result.id}
+
+Your tool is now available in the toolkit.`;
+
+    return { content: [{ type: 'text', text }] };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      content: [{ type: 'text', text: `Error creating tool: ${message}` }],
+      isError: true,
+    };
+  }
+}
+
+export const updateToolkitToolTool: Tool = {
+  name: 'mcp__flowdot__update_toolkit_tool',
+  description: `Update an existing tool in a toolkit.
+
+Modify tool configuration, schemas, endpoints, or credentials.`,
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      toolkit_id: {
+        type: 'string',
+        description: 'The toolkit ID (hash)',
+      },
+      tool_id: {
+        type: 'string',
+        description: 'The tool ID to update',
+      },
+      name: {
+        type: 'string',
+        description: 'New tool name',
+      },
+      title: {
+        type: 'string',
+        description: 'New title',
+      },
+      description: {
+        type: 'string',
+        description: 'New description',
+      },
+      tool_type: {
+        type: 'string',
+        enum: ['http', 'workflow'],
+        description: 'New tool type',
+      },
+      input_schema: {
+        type: 'object',
+        description: 'New input schema',
+      },
+      output_schema: {
+        type: 'object',
+        description: 'New output schema',
+      },
+      endpoint_config: {
+        type: 'object',
+        description: 'New HTTP configuration',
+      },
+      workflow_hash: {
+        type: 'string',
+        description: 'New workflow hash',
+      },
+      credential_keys: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'New credential keys list',
+      },
+      timeout_ms: {
+        type: 'number',
+        description: 'New timeout in milliseconds',
+      },
+      is_enabled: {
+        type: 'boolean',
+        description: 'Enable or disable the tool',
+      },
+    },
+    required: ['toolkit_id', 'tool_id'],
+  },
+};
+
+export async function handleUpdateToolkitTool(
+  api: FlowDotApiClient,
+  args: Record<string, unknown>
+): Promise<CallToolResult> {
+  try {
+    const toolkitId = String(args.toolkit_id);
+    const toolId = String(args.tool_id);
+    const input: UpdateToolkitToolInput = {};
+
+    if (args.name) input.name = String(args.name);
+    if (args.title) input.title = String(args.title);
+    if (args.description) input.description = String(args.description);
+    if (args.tool_type) input.tool_type = args.tool_type as 'http' | 'workflow';
+    if (args.input_schema) input.input_schema = args.input_schema as Record<string, unknown>;
+    if (args.output_schema) input.output_schema = args.output_schema as Record<string, unknown>;
+    if (args.endpoint_config) input.endpoint_config = args.endpoint_config as any;
+    if (args.workflow_hash) input.workflow_hash = String(args.workflow_hash);
+    if (args.credential_keys && Array.isArray(args.credential_keys)) {
+      input.credential_keys = args.credential_keys.map(k => String(k));
+    }
+    if (args.timeout_ms) input.timeout_ms = Number(args.timeout_ms);
+    if (args.is_enabled !== undefined) input.is_enabled = Boolean(args.is_enabled);
+
+    const result = await api.updateToolkitTool(toolkitId, toolId, input);
+
+    if (!result) {
+      return {
+        content: [{ type: 'text', text: 'Failed to update tool' }],
+        isError: true,
+      };
+    }
+
+    const text = `✓ Tool updated successfully!
+
+**Name:** ${result.name}
+**Title:** ${result.title}`;
+
+    return { content: [{ type: 'text', text }] };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      content: [{ type: 'text', text: `Error updating tool: ${message}` }],
+      isError: true,
+    };
+  }
+}
+
+export const deleteToolkitToolTool: Tool = {
+  name: 'mcp__flowdot__delete_toolkit_tool',
+  description: `Delete a tool from a toolkit.
+
+WARNING: This cannot be undone. The tool will be permanently removed.`,
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      toolkit_id: {
+        type: 'string',
+        description: 'The toolkit ID (hash)',
+      },
+      tool_id: {
+        type: 'string',
+        description: 'The tool ID to delete',
+      },
+    },
+    required: ['toolkit_id', 'tool_id'],
+  },
+};
+
+export async function handleDeleteToolkitTool(
+  api: FlowDotApiClient,
+  args: Record<string, unknown>
+): Promise<CallToolResult> {
+  try {
+    const toolkitId = String(args.toolkit_id);
+    const toolId = String(args.tool_id);
+
+    const result = await api.deleteToolkitTool(toolkitId, toolId);
+
+    const text = result.success
+      ? `✓ Tool deleted successfully.`
+      : `Error: ${'Failed to delete tool'}`;
+
+    return {
+      content: [{ type: 'text', text }],
+      isError: !result.success,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      content: [{ type: 'text', text: `Error deleting tool: ${message}` }],
       isError: true,
     };
   }

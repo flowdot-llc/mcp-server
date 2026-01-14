@@ -215,6 +215,12 @@ import {
   handleListToolkitTools,
   getToolkitToolTool,
   handleGetToolkitTool,
+  createToolkitToolTool,
+  handleCreateToolkitTool,
+  updateToolkitToolTool,
+  handleUpdateToolkitTool,
+  deleteToolkitToolTool,
+  handleDeleteToolkitTool,
 } from './agent-toolkits.js';
 
 // All available tools
@@ -334,7 +340,7 @@ const tools = [
   deleteKnowledgeDocumentToolDef,
   queryKnowledgeBaseToolDef,
   getKnowledgeStorageToolDef,
-  // Agent Toolkits (21)
+  // Agent Toolkits (24)
   listAgentToolkitsTool,
   searchAgentToolkitsTool,
   getAgentToolkitTool,
@@ -356,6 +362,9 @@ const tools = [
   invokeToolkitToolTool,
   listToolkitToolsTool,
   getToolkitToolTool,
+  createToolkitToolTool,
+  updateToolkitToolTool,
+  deleteToolkitToolTool,
 ];
 
 /**
@@ -998,6 +1007,18 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'mcp__flowdot__get_toolkit_tool':
         return handleGetToolkitTool(api, args as {
+          toolkit_id: string;
+          tool_id: string;
+        });
+
+      case 'mcp__flowdot__create_toolkit_tool':
+        return handleCreateToolkitTool(api, args as any);
+
+      case 'mcp__flowdot__update_toolkit_tool':
+        return handleUpdateToolkitTool(api, args as any);
+
+      case 'mcp__flowdot__delete_toolkit_tool':
+        return handleDeleteToolkitTool(api, args as {
           toolkit_id: string;
           tool_id: string;
         });

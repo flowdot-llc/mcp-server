@@ -109,6 +109,8 @@ import {
   ToolkitComment,
   CreateToolkitInput,
   UpdateToolkitInput,
+  CreateToolkitToolInput,
+  UpdateToolkitToolInput,
   ToolkitSearchFilters,
   ToolkitListFilters,
   InstallToolkitResult,
@@ -1462,6 +1464,35 @@ export class FlowDotApiClient {
    */
   async getToolkitTool(toolkitId: string, toolId: string): Promise<AgentToolkitTool> {
     return this.request<AgentToolkitTool>(`/agent-toolkits/${toolkitId}/tools/${toolId}`);
+  }
+
+  /**
+   * Create a new tool in a toolkit.
+   */
+  async createToolkitTool(toolkitId: string, input: CreateToolkitToolInput): Promise<AgentToolkitTool> {
+    return this.request<AgentToolkitTool>(`/agent-toolkits/${toolkitId}/tools`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Update a tool in a toolkit.
+   */
+  async updateToolkitTool(toolkitId: string, toolId: string, input: UpdateToolkitToolInput): Promise<AgentToolkitTool> {
+    return this.request<AgentToolkitTool>(`/agent-toolkits/${toolkitId}/tools/${toolId}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Delete a tool from a toolkit.
+   */
+  async deleteToolkitTool(toolkitId: string, toolId: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-toolkits/${toolkitId}/tools/${toolId}`, {
+      method: 'DELETE',
+    });
   }
 
   /**
