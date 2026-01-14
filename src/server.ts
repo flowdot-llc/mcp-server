@@ -84,15 +84,14 @@ export async function createServer(): Promise<Server> {
 
   console.error('FlowDot MCP Server initialized.');
   console.error('');
-  console.error('Available tools (31 total):');
-  console.error('  Core: list_workflows, execute_workflow, get_execution_status, agent_chat');
-  console.error('  Analytics: get_workflow_metrics, get_workflow_comments, get_execution_history');
-  console.error('  Management: get_workflow_details, get_workflow_inputs_schema, duplicate_workflow, toggle_workflow_public, favorite_workflow');
-  console.error('  Execution: cancel_execution, retry_execution, stream_execution');
-  console.error('  Discovery: get_workflow_tags, set_workflow_tags, search_workflows, get_public_workflows');
-  console.error('  Building: create_workflow, delete_workflow, get_workflow_graph, validate_workflow');
-  console.error('  Nodes: list_available_nodes, get_node_schema, add_node, update_node, delete_node');
-  console.error('  Connections: add_connection, delete_connection, get_node_connections');
+  console.error('Available tool categories:');
+  console.error('  • Workflows: Core execution, management, building, validation');
+  console.error('  • Custom Nodes: Create, manage, and share custom node types');
+  console.error('  • Apps: Build and manage multi-file React applications');
+  console.error('  • Agent Toolkits: Create, install, and invoke MCP toolkits');
+  console.error('  • Knowledge Base: Upload documents and query with RAG');
+  console.error('  • Sharing: Public URLs, shared results, presets, social features');
+  console.error('  • Plus: Analytics, discovery, teams, and more');
   console.error('');
 
   return server;

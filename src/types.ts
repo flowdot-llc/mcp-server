@@ -1047,3 +1047,185 @@ export interface TransferDocumentResult {
     category_id: number | null;
   };
 }
+
+// ============================================
+// Agent Toolkit Types
+// ============================================
+
+export interface AgentToolkit {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  category: string;
+  version: string;
+  icon: string | null;
+  visibility: 'private' | 'public' | 'unlisted' | 'team';
+  is_verified: boolean;
+  is_featured: boolean;
+  is_disabled?: boolean;
+  user_name?: string;
+  user_hash?: string;
+  team_name?: string | null;
+  vote_count?: number;
+  favorite_count?: number;
+  installation_count: number;
+  copy_count: number;
+  tags: string[];
+  tools_count: number;
+  tools?: AgentToolkitTool[];
+  credential_requirements?: ToolkitCredentialRequirement[];
+  is_favorited?: boolean;
+  user_vote?: number | null;
+  can_edit?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentToolkitTool {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  tool_type: 'http' | 'workflow';
+  input_schema: Record<string, unknown>;
+  endpoint_config?: ToolkitEndpointConfig | null;
+  workflow_hash?: string | null;
+  credential_keys?: string[];
+  timeout_ms?: number;
+  order_index: number;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ToolkitEndpointConfig {
+  url: string;
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  headers?: Record<string, string>;
+  query_params?: Record<string, string>;
+  body_template?: Record<string, unknown>;
+  response_mapping?: Record<string, string>;
+}
+
+export interface ToolkitCredentialRequirement {
+  key_name: string;
+  label: string;
+  type: 'api_key' | 'bearer_token' | 'oauth2' | 'basic_auth' | 'custom';
+  description: string;
+  is_required: boolean;
+  validation_pattern?: string;
+  placeholder?: string;
+}
+
+export interface AgentToolkitInstallation {
+  id: string;
+  toolkit_id: string;
+  toolkit_name: string;
+  toolkit_title: string;
+  toolkit_version: string;
+  is_active: boolean;
+  credentials_configured: boolean;
+  missing_credentials?: string[];
+  installed_at: string;
+  last_used_at: string | null;
+  usage_count: number;
+}
+
+export interface ToolkitComment {
+  id: number;
+  user_name: string;
+  user_hash: string | null;
+  content: string;
+  vote_count: number;
+  created_at: string;
+  replies: ToolkitComment[];
+}
+
+export interface CreateToolkitInput {
+  name: string;
+  title: string;
+  description: string;
+  category?: string;
+  version?: string;
+  icon?: string;
+  visibility?: 'private' | 'public' | 'unlisted';
+  tags?: string[];
+}
+
+export interface UpdateToolkitInput {
+  name?: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  version?: string;
+  icon?: string;
+  tags?: string[];
+}
+
+export interface ToolkitSearchFilters {
+  query?: string;
+  category?: string;
+  tags?: string[];
+  verified_only?: boolean;
+  sort?: 'trending' | 'popular' | 'recent' | 'most_installed';
+  limit?: number;
+  page?: number;
+}
+
+export interface ToolkitListFilters {
+  search?: string;
+  category?: string;
+  limit?: number;
+  page?: number;
+}
+
+export interface InstallToolkitResult {
+  id: string;
+  toolkit_id: string;
+  toolkit_name: string;
+  is_active: boolean;
+  credentials_configured: boolean;
+  missing_credentials: string[];
+  message: string;
+}
+
+export interface ToolkitCredentialStatus {
+  toolkit_id: string;
+  toolkit_name: string;
+  credentials_configured: boolean;
+  required_credentials: ToolkitCredentialRequirement[];
+  configured_credentials?: string[];
+  missing_credentials: string[];
+}
+
+export interface InvokeToolkitToolInput {
+  installation_id: string;
+  tool_name: string;
+  inputs: Record<string, unknown>;
+}
+
+export interface InvokeToolkitToolResult {
+  success: boolean;
+  data?: unknown;
+  error?: string;
+  execution_time_ms?: number;
+}
+
+export interface VoteToolkitResult {
+  id: string;
+  vote: string;
+  vote_count: number;
+}
+
+export interface FavoriteToolkitResult {
+  id: string;
+  is_favorited: boolean;
+}
+
+export interface CreateToolkitCommentResult {
+  id: number;
+  content: string;
+  user_name: string;
+  created_at: string;
+}

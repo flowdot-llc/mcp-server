@@ -101,6 +101,23 @@ import {
   KnowledgeCategoryListFilters,
   TransferDocumentInput,
   TransferDocumentResult,
+  // Agent Toolkit Types
+  AgentToolkit,
+  AgentToolkitTool,
+  AgentToolkitInstallation,
+  ToolkitCredentialRequirement,
+  ToolkitComment,
+  CreateToolkitInput,
+  UpdateToolkitInput,
+  ToolkitSearchFilters,
+  ToolkitListFilters,
+  InstallToolkitResult,
+  ToolkitCredentialStatus,
+  InvokeToolkitToolInput,
+  InvokeToolkitToolResult,
+  VoteToolkitResult,
+  FavoriteToolkitResult,
+  CreateToolkitCommentResult,
 } from './types.js';
 
 export class FlowDotApiClient {
@@ -1339,5 +1356,227 @@ export class FlowDotApiClient {
    */
   async getKnowledgeStorage(): Promise<KnowledgeStorage> {
     return this.request<KnowledgeStorage>('/knowledge/storage');
+  }
+
+  // ============================================
+  // Agent Toolkit Operations
+  // ============================================
+
+  /**
+   * List user's own toolkits.
+   */
+  async listAgentToolkits(filters?: ToolkitListFilters): Promise<PaginatedResult<AgentToolkit>> {
+    const params = new URLSearchParams();
+    if (filters?.search) params.set('search', filters.search);
+    if (filters?.category) params.set('category', filters.category);
+    if (filters?.limit) params.set('limit', filters.limit.toString());
+    if (filters?.page) params.set('page', filters.page.toString());
+    const queryString = params.toString();
+    return this.request<PaginatedResult<AgentToolkit>>(`/agent-toolkits${queryString ? `?${queryString}` : ''}`);
+  }
+
+  /**
+   * Search public toolkits in the marketplace.
+   */
+  async searchPublicAgentToolkits(filters?: ToolkitSearchFilters): Promise<PaginatedResult<AgentToolkit>> {
+    const params = new URLSearchParams();
+    if (filters?.query) params.set('query', filters.query);
+    if (filters?.category) params.set('category', filters.category);
+    if (filters?.tags) params.set('tags', filters.tags.join(','));
+    if (filters?.verified_only) params.set('verified_only', 'true');
+    if (filters?.sort) params.set('sort', filters.sort);
+    if (filters?.limit) params.set('limit', filters.limit.toString());
+    if (filters?.page) params.set('page', filters.page.toString());
+    const queryString = params.toString();
+    return this.request<PaginatedResult<AgentToolkit>>(`/agent-toolkits/search${queryString ? `?${queryString}` : ''}`);
+  }
+
+  /**
+   * Get detailed information about a toolkit.
+   */
+  async getAgentToolkit(toolkitId: string): Promise<AgentToolkit> {
+    return this.request<AgentToolkit>(`/agent-toolkits/${toolkitId}`);
+  }
+
+  /**
+   * Create a new agent toolkit.
+   */
+  async createAgentToolkit(input: CreateToolkitInput): Promise<AgentToolkit> {
+    return this.request<AgentToolkit>('/agent-toolkits', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Update an existing toolkit.
+   */
+  async updateAgentToolkit(toolkitId: string, input: UpdateToolkitInput): Promise<AgentToolkit> {
+    return this.request<AgentToolkit>(`/agent-toolkits/${toolkitId}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Delete a toolkit.
+   */
+  async deleteAgentToolkit(toolkitId: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-toolkits/${toolkitId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Copy/duplicate a toolkit.
+   */
+  async copyAgentToolkit(toolkitId: string, name?: string): Promise<AgentToolkit> {
+    return this.request<AgentToolkit>(`/agent-toolkits/${toolkitId}/copy`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  /**
+   * Toggle toolkit visibility.
+   */
+  async toggleToolkitVisibility(
+    toolkitId: string,
+    visibility: 'private' | 'public' | 'unlisted'
+  ): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-toolkits/${toolkitId}/toggle-public`, {
+      method: 'POST',
+      body: JSON.stringify({ visibility }),
+    });
+  }
+
+  /**
+   * List tools in a toolkit.
+   */
+  async listToolkitTools(toolkitId: string): Promise<AgentToolkitTool[]> {
+    return this.request<AgentToolkitTool[]>(`/agent-toolkits/${toolkitId}/tools`);
+  }
+
+  /**
+   * Get a specific tool in a toolkit.
+   */
+  async getToolkitTool(toolkitId: string, toolId: string): Promise<AgentToolkitTool> {
+    return this.request<AgentToolkitTool>(`/agent-toolkits/${toolkitId}/tools/${toolId}`);
+  }
+
+  /**
+   * Install a toolkit.
+   */
+  async installToolkit(toolkitId: string): Promise<InstallToolkitResult> {
+    return this.request<InstallToolkitResult>(`/agent-toolkits/${toolkitId}/install`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Uninstall a toolkit.
+   */
+  async uninstallToolkit(installationId: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-toolkit-installations/${installationId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * List installed toolkits.
+   */
+  async listInstalledToolkits(): Promise<AgentToolkitInstallation[]> {
+    return this.request<AgentToolkitInstallation[]>('/agent-toolkits/installed');
+  }
+
+  /**
+   * Get a toolkit installation.
+   */
+  async getToolkitInstallation(installationId: string): Promise<AgentToolkitInstallation> {
+    return this.request<AgentToolkitInstallation>(`/agent-toolkit-installations/${installationId}`);
+  }
+
+  /**
+   * Update a toolkit installation (credential mapping).
+   */
+  async updateToolkitInstallation(
+    installationId: string,
+    credentialMapping: Record<string, string>
+  ): Promise<AgentToolkitInstallation> {
+    return this.request<AgentToolkitInstallation>(`/agent-toolkit-installations/${installationId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ credential_mapping: credentialMapping }),
+    });
+  }
+
+  /**
+   * Toggle toolkit installation active status.
+   */
+  async toggleToolkitActive(installationId: string, isActive: boolean): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-toolkit-installations/${installationId}/toggle-active`, {
+      method: 'POST',
+      body: JSON.stringify({ is_active: isActive }),
+    });
+  }
+
+  /**
+   * Check credentials for a toolkit installation.
+   */
+  async checkToolkitCredentials(installationId: string): Promise<ToolkitCredentialStatus> {
+    return this.request<ToolkitCredentialStatus>(`/agent-toolkit-installations/${installationId}/check-credentials`);
+  }
+
+  /**
+   * Invoke a tool from an installed toolkit.
+   */
+  async invokeToolkitTool(input: InvokeToolkitToolInput): Promise<InvokeToolkitToolResult> {
+    return this.request<InvokeToolkitToolResult>(
+      `/agent-toolkit-installations/${input.installation_id}/execute/${input.tool_name}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ inputs: input.inputs }),
+      }
+    );
+  }
+
+  /**
+   * Get comments on a toolkit.
+   */
+  async getToolkitComments(toolkitId: string): Promise<ToolkitComment[]> {
+    return this.request<ToolkitComment[]>(`/agent-toolkits/${toolkitId}/comments`);
+  }
+
+  /**
+   * Add a comment to a toolkit.
+   */
+  async addToolkitComment(
+    toolkitId: string,
+    content: string,
+    parentId?: number
+  ): Promise<CreateToolkitCommentResult> {
+    return this.request<CreateToolkitCommentResult>(`/agent-toolkits/${toolkitId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, parent_id: parentId }),
+    });
+  }
+
+  /**
+   * Vote on a toolkit.
+   */
+  async voteToolkit(toolkitId: string, vote: 'up' | 'down' | 'remove'): Promise<VoteToolkitResult> {
+    return this.request<VoteToolkitResult>(`/agent-toolkits/${toolkitId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ vote }),
+    });
+  }
+
+  /**
+   * Favorite a toolkit.
+   */
+  async favoriteToolkit(toolkitId: string, favorite: boolean): Promise<FavoriteToolkitResult> {
+    return this.request<FavoriteToolkitResult>(`/agent-toolkits/${toolkitId}/favorite`, {
+      method: 'POST',
+      body: JSON.stringify({ favorite }),
+    });
   }
 }

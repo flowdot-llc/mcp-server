@@ -169,6 +169,54 @@ import { deleteKnowledgeDocumentToolDef, handleDeleteKnowledgeDocument } from '.
 import { queryKnowledgeBaseToolDef, handleQueryKnowledgeBase } from './query-knowledge-base.js';
 import { getKnowledgeStorageToolDef, handleGetKnowledgeStorage } from './get-knowledge-storage.js';
 
+// ============================================
+// Agent Toolkit Tools (agent_toolkits:read / agent_toolkits:manage)
+// ============================================
+import {
+  listAgentToolkitsTool,
+  handleListAgentToolkits,
+  searchAgentToolkitsTool,
+  handleSearchAgentToolkits,
+  getAgentToolkitTool,
+  handleGetAgentToolkit,
+  getToolkitCommentsTool,
+  handleGetToolkitComments,
+  createAgentToolkitTool,
+  handleCreateAgentToolkit,
+  updateAgentToolkitTool,
+  handleUpdateAgentToolkit,
+  deleteAgentToolkitTool,
+  handleDeleteAgentToolkit,
+  copyAgentToolkitTool,
+  handleCopyAgentToolkit,
+  toggleToolkitVisibilityTool,
+  handleToggleToolkitVisibility,
+  voteToolkitTool,
+  handleVoteToolkit,
+  favoriteToolkitTool,
+  handleFavoriteToolkit,
+  addToolkitCommentTool,
+  handleAddToolkitComment,
+  installToolkitTool,
+  handleInstallToolkit,
+  uninstallToolkitTool,
+  handleUninstallToolkit,
+  listInstalledToolkitsTool,
+  handleListInstalledToolkits,
+  toggleToolkitActiveTool,
+  handleToggleToolkitActive,
+  checkToolkitCredentialsTool,
+  handleCheckToolkitCredentials,
+  updateToolkitInstallationTool,
+  handleUpdateToolkitInstallation,
+  invokeToolkitToolTool,
+  handleInvokeToolkitTool,
+  listToolkitToolsTool,
+  handleListToolkitTools,
+  getToolkitToolTool,
+  handleGetToolkitTool,
+} from './agent-toolkits.js';
+
 // All available tools
 const tools = [
   // Core (4)
@@ -286,6 +334,28 @@ const tools = [
   deleteKnowledgeDocumentToolDef,
   queryKnowledgeBaseToolDef,
   getKnowledgeStorageToolDef,
+  // Agent Toolkits (21)
+  listAgentToolkitsTool,
+  searchAgentToolkitsTool,
+  getAgentToolkitTool,
+  getToolkitCommentsTool,
+  createAgentToolkitTool,
+  updateAgentToolkitTool,
+  deleteAgentToolkitTool,
+  copyAgentToolkitTool,
+  toggleToolkitVisibilityTool,
+  voteToolkitTool,
+  favoriteToolkitTool,
+  addToolkitCommentTool,
+  installToolkitTool,
+  uninstallToolkitTool,
+  listInstalledToolkitsTool,
+  toggleToolkitActiveTool,
+  checkToolkitCredentialsTool,
+  updateToolkitInstallationTool,
+  invokeToolkitToolTool,
+  listToolkitToolsTool,
+  getToolkitToolTool,
 ];
 
 /**
@@ -800,6 +870,137 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'get_knowledge_storage':
         return handleGetKnowledgeStorage(api);
+
+      // ============================================
+      // Agent Toolkit Tools
+      // ============================================
+      case 'mcp__flowdot__list_agent_toolkits':
+        return handleListAgentToolkits(api, args as {
+          search?: string;
+          category?: string;
+          visibility?: 'private' | 'public' | 'unlisted' | 'team';
+          limit?: number;
+          page?: number;
+        });
+
+      case 'mcp__flowdot__search_agent_toolkits':
+        return handleSearchAgentToolkits(api, args as {
+          query?: string;
+          category?: string;
+          tags?: string[];
+          sort?: string;
+          limit?: number;
+          page?: number;
+        });
+
+      case 'mcp__flowdot__get_agent_toolkit':
+        return handleGetAgentToolkit(api, args as { toolkit_id: string });
+
+      case 'mcp__flowdot__get_toolkit_comments':
+        return handleGetToolkitComments(api, args as { toolkit_id: string });
+
+      case 'mcp__flowdot__create_agent_toolkit':
+        return handleCreateAgentToolkit(api, args as {
+          name: string;
+          title: string;
+          description: string;
+          category?: string;
+          icon?: string;
+          tags?: string[];
+          visibility?: 'private' | 'public' | 'unlisted' | 'team';
+        });
+
+      case 'mcp__flowdot__update_agent_toolkit':
+        return handleUpdateAgentToolkit(api, args as {
+          toolkit_id: string;
+          title?: string;
+          description?: string;
+          category?: string;
+          icon?: string;
+          tags?: string[];
+        });
+
+      case 'mcp__flowdot__delete_agent_toolkit':
+        return handleDeleteAgentToolkit(api, args as { toolkit_id: string });
+
+      case 'mcp__flowdot__copy_agent_toolkit':
+        return handleCopyAgentToolkit(api, args as {
+          toolkit_id: string;
+          name?: string;
+          title?: string;
+        });
+
+      case 'mcp__flowdot__toggle_toolkit_visibility':
+        return handleToggleToolkitVisibility(api, args as {
+          toolkit_id: string;
+          visibility: 'private' | 'public' | 'unlisted' | 'team';
+        });
+
+      case 'mcp__flowdot__vote_toolkit':
+        return handleVoteToolkit(api, args as {
+          toolkit_id: string;
+          vote: 'up' | 'down' | 'remove';
+        });
+
+      case 'mcp__flowdot__favorite_toolkit':
+        return handleFavoriteToolkit(api, args as {
+          toolkit_id: string;
+          favorite?: boolean;
+        });
+
+      case 'mcp__flowdot__add_toolkit_comment':
+        return handleAddToolkitComment(api, args as {
+          toolkit_id: string;
+          content: string;
+          parent_id?: number;
+        });
+
+      case 'mcp__flowdot__install_toolkit':
+        return handleInstallToolkit(api, args as {
+          toolkit_id: string;
+          credential_mapping?: Record<string, string>;
+        });
+
+      case 'mcp__flowdot__uninstall_toolkit':
+        return handleUninstallToolkit(api, args as { installation_id: string });
+
+      case 'mcp__flowdot__list_installed_toolkits':
+        return handleListInstalledToolkits(api, args as {
+          active_only?: boolean;
+          limit?: number;
+          page?: number;
+        });
+
+      case 'mcp__flowdot__toggle_toolkit_active':
+        return handleToggleToolkitActive(api, args as {
+          installation_id: string;
+          is_active: boolean;
+        });
+
+      case 'mcp__flowdot__check_toolkit_credentials':
+        return handleCheckToolkitCredentials(api, args as { installation_id: string });
+
+      case 'mcp__flowdot__update_toolkit_installation':
+        return handleUpdateToolkitInstallation(api, args as {
+          installation_id: string;
+          credential_mapping: Record<string, string>;
+        });
+
+      case 'mcp__flowdot__invoke_toolkit_tool':
+        return handleInvokeToolkitTool(api, args as {
+          installation_id: string;
+          tool_name: string;
+          inputs?: Record<string, unknown>;
+        });
+
+      case 'mcp__flowdot__list_toolkit_tools':
+        return handleListToolkitTools(api, args as { toolkit_id: string });
+
+      case 'mcp__flowdot__get_toolkit_tool':
+        return handleGetToolkitTool(api, args as {
+          toolkit_id: string;
+          tool_id: string;
+        });
 
       default:
         return {
