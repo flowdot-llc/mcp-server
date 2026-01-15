@@ -13,8 +13,15 @@ export const updateAppTool: Tool = {
   name: 'update_app',
   description: `Update an existing FlowDot app. You can update any combination of fields.
 
+CRITICAL: Remember these rules when updating code:
+- NO IMPORTS - React is global (use React.useState, etc.)
+- MUST include export default at the end: export default MyAppName;
+- NO FORM ELEMENTS - Never use <form> tags (sandbox blocks them)
+- ALL BUTTONS need type="button" attribute
+- Use getNodeOutput() helper to extract workflow results safely
+
 Use this to:
-- Update the React code (remember: NO imports, NO exports, use React.useState, etc.)
+- Update the React code
 - Change the name or description
 - Add/update mobile-specific code
 - Set display mode via config: { displayMode: "windowed" | "fullscreen" | "embedded" }

@@ -13,6 +13,13 @@ export const editAppCodeTool: Tool = {
   name: 'edit_app_code',
   description: `Performs exact string replacement in app code. Similar to find-and-replace.
 
+CRITICAL: Remember these rules when editing code:
+- NO IMPORTS - React is global
+- MUST include export default at the end: export default MyAppName;
+- NO FORM ELEMENTS - Use div + button with type="button" instead
+- Workflow results: Use getNodeOutput(result, nodeTitle) helper
+- ALL BUTTONS need type="button" attribute
+
 Use this tool when you need to:
 - Modify specific sections of existing app code
 - Replace a function, component, or code block
@@ -25,9 +32,9 @@ IMPORTANT RULES:
 
 WORKFLOW FOR BUILDING LARGE APPS:
 1. Create app with minimal code: create_app(name: "MyApp")
-2. Set initial skeleton: update_app(code: "function MyApp() { return <div>Loading...</div>; }")
+2. Set initial skeleton: update_app(code: "function MyApp() { ... } export default MyApp;")
 3. Use edit_app_code to incrementally replace/expand sections
-4. Use append_app_code to add helper functions at the end
+4. Use append_app_code to add helper functions before the export
 
 Example:
 - old_string: "return <div>Loading...</div>;"

@@ -24,9 +24,29 @@ Apps run in a sandboxed browser iframe with:
 
 ## CRITICAL CODE RULES
 1. NO IMPORTS - React is global, just use React.useState(), React.useEffect(), etc.
-2. NO EXPORTS - Just define your function, the system handles the rest
+2. MUST include export default at the end: export default MyAppName;
 3. Function must be named: function MyAppName() { ... }
 4. Use Tailwind CSS for ALL styling (no inline style objects, no CSS-in-JS)
+5. NO FORM ELEMENTS - Never use <form> tags (sandbox blocks form submissions)
+6. ALL BUTTONS need type="button" to prevent unwanted form submission behavior
+
+## IMPORTANT: NO FORM ELEMENTS
+The sandbox does not allow form submissions. NEVER use <form> tags.
+
+❌ WRONG:
+<form onSubmit={handleSubmit}>
+  <button type="submit">Submit</button>
+</form>
+
+✅ CORRECT:
+<div>
+  <input onKeyDown={(e) => e.key === 'Enter' && handleClick()} />
+  <button type="button" onClick={handleClick}>Submit</button>
+</div>
+
+## BUTTON BEST PRACTICES
+Always add type="button" to prevent default form behavior:
+<button type="button" onClick={handleClick}>Click Me</button>
 
 ## DISPLAY MODES
 Apps can be configured to display in three modes via config.displayMode:
@@ -37,27 +57,24 @@ Apps can be configured to display in three modes via config.displayMode:
 ## WORKFLOW INTEGRATION
 Apps can invoke linked workflows using: await invokeWorkflow('workflow-hash', { inputName: value })
 
-The function returns workflow results in this format:
-{
-  "data": {
-    "[nodeId]": {
-      "nodeId": "uuid",
-      "nodeTitle": "My Output Node",
-      "nodeType": "text_output",
-      "outputs": {
-        "Consolidated Text": { "value": "the actual data", "metadata": {...} }
-      }
-    }
-  }
-}
+## WORKFLOW RESPONSE STRUCTURE
+invokeWorkflow returns: { success: boolean, data: { [nodeId]: NodeOutput } }
 
-IMPORTANT: Use this helper function to extract outputs by node title:
+Each NodeOutput has:
+- nodeId, nodeTitle, nodeType
+- outputs: { [socketName]: { value, metadata } }
+
+IMPORTANT: Use this helper to extract outputs safely:
 const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-  const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+  if (!result?.data) return null;
+  const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
   return node?.outputs?.[socketName]?.value;
 };
 
-Example: const weatherData = getNodeOutput(result, 'Weather Results', 'Consolidated Text');
+Example:
+const result = await invokeWorkflow('hash', { input });
+const data = getNodeOutput(result, 'Output Node');
+if (data) { /* use data */ }
 
 After creating an app, use link_app_workflow to connect workflows that the app can invoke.
 Use get_app_template to see example code and patterns.`,

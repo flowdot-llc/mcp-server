@@ -20,9 +20,25 @@ FlowDot apps run in a sandboxed browser iframe with:
 
 ## CRITICAL CODE RULES
 1. NO IMPORTS - React is global (use React.useState, React.useEffect, React.useRef, etc.)
-2. NO EXPORTS - Just define your function
+2. MUST include export default at the end: export default MyAppName;
 3. Function must be named: function MyAppName() { ... }
 4. Use Tailwind CSS for ALL styling
+5. NO FORM ELEMENTS - Never use <form> tags (sandbox blocks form submissions)
+6. ALL BUTTONS need type="button" to prevent unwanted form submission behavior
+
+## IMPORTANT: NO FORM ELEMENTS
+The sandbox does not allow form submissions. NEVER use <form> tags.
+
+❌ WRONG:
+<form onSubmit={handleSubmit}>
+  <button type="submit">Submit</button>
+</form>
+
+✅ CORRECT:
+<div>
+  <input onKeyDown={(e) => e.key === 'Enter' && handleClick()} />
+  <button type="button" onClick={handleClick}>Submit</button>
+</div>
 
 ## WORKFLOW RESPONSE FORMAT
 invokeWorkflow returns data in this structure:
@@ -39,13 +55,17 @@ invokeWorkflow returns data in this structure:
   }
 }
 
-IMPORTANT: Use this helper function to extract outputs by node title:
+IMPORTANT: Use this helper function to extract outputs safely:
 const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-  const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+  if (!result?.data) return null;
+  const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
   return node?.outputs?.[socketName]?.value;
 };
 
-Example: const weatherData = getNodeOutput(result, 'Weather Results', 'Consolidated Text');
+Example:
+const result = await invokeWorkflow('hash', { input });
+const data = getNodeOutput(result, 'Output Node');
+if (data) { /* use data */ }
 
 ## DISPLAY MODES
 Set config.displayMode to:
@@ -85,12 +105,14 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
 
   // Helper to extract output from workflow response by node title
   const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-    const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+    if (!result?.data) return null;
+    const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
     return node?.outputs?.[socketName]?.value;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (!input.trim() || loading) return;
+
     setLoading(true);
     setError(null);
 
@@ -109,18 +131,25 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !loading) {
+      handleSubmit();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">My FlowDot App</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Input</label>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Enter your text..."
               className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               disabled={loading}
@@ -128,13 +157,14 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
           </div>
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={loading || !input.trim()}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Processing...' : 'Submit'}
           </button>
-        </form>
+        </div>
 
         {error && (
           <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-lg">
@@ -153,7 +183,9 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
       </div>
     </div>
   );
-}`,
+}
+
+export default BasicFormApp;`,
   },
   chat: {
     name: 'Chat Interface',
@@ -286,7 +318,9 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
       </div>
     </div>
   );
-}`,
+}
+
+export default ChatApp;`,
   },
   dashboard: {
     name: 'Dashboard App',
@@ -408,7 +442,9 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
       </div>
     </div>
   );
-}`,
+}
+
+export default DashboardApp;`,
   },
   'form-builder': {
     name: 'Dynamic Form Builder',
@@ -424,7 +460,8 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
 
   // Helper to extract output from workflow response by node title
   const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-    const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+    if (!result?.data) return null;
+    const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
     return node?.outputs?.[socketName]?.value;
   };
 
@@ -453,8 +490,9 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (loading) return;
+
     setLoading(true);
 
     try {
@@ -513,6 +551,7 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
             type="text"
             value={value || ''}
             onChange={(e) => handleChange(field.name, e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !loading && handleSubmit()}
             placeholder={field.description}
             className="w-full p-2 border rounded-lg"
           />
@@ -529,7 +568,7 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Dynamic Form</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           {inputSchema.map(field => (
             <div key={field.name}>
               <label className="block text-sm font-medium mb-1">
@@ -544,13 +583,14 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
           ))}
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Processing...' : 'Submit'}
           </button>
-        </form>
+        </div>
 
         {result && (
           <div className="mt-6 p-4 bg-white rounded-lg shadow">
@@ -563,7 +603,9 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
       </div>
     </div>
   );
-}`,
+}
+
+export default DynamicFormApp;`,
   },
   'data-viewer': {
     name: 'Data Viewer',
@@ -714,7 +756,9 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
       </div>
     </div>
   );
-}`,
+}
+
+export default DataViewerApp;`,
   },
 };
 

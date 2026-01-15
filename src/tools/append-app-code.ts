@@ -13,6 +13,11 @@ export const appendAppCodeTool: Tool = {
   name: 'append_app_code',
   description: `Appends content to the end of app code.
 
+CRITICAL: Remember export rules:
+- App entry file MUST end with: export default MyAppName;
+- When appending, content goes AFTER the closing brace but BEFORE the export
+- Use insert_app_code if you need to place code before the export statement
+
 Use this tool when you need to:
 - Add helper functions after the main component
 - Add additional components at the end
@@ -20,13 +25,12 @@ Use this tool when you need to:
 
 WORKFLOW FOR BUILDING LARGE APPS:
 1. Create app: create_app(name: "MyApp")
-2. Set main component skeleton: update_app(code: "function MyApp() { ... }")
-3. Use append_app_code to add helper functions after the main component
+2. Set main component skeleton: update_app(code: "function MyApp() { ... } export default MyApp;")
+3. Use insert_app_code to add helper functions BEFORE the export
 
 Example usage:
-- First update_app with main component
-- Then append_app_code with helper function:
-  content: "\\n\\nfunction formatDate(date) { return date.toLocaleDateString(); }"
+- If file ends with "export default MyApp;", use insert_app_code instead
+- Or use edit_app_code to replace content before the export
 
 Max code size: 102KB`,
   inputSchema: {

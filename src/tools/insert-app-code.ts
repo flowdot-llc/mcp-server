@@ -13,6 +13,11 @@ export const insertAppCodeTool: Tool = {
   name: 'insert_app_code',
   description: `Inserts content after a specific pattern in app code.
 
+CRITICAL: Remember export rules:
+- App entry file MUST end with: export default MyAppName;
+- To add helper functions, insert BEFORE the export statement
+- Use after_pattern to find the closing brace of your main component
+
 Use this tool when you need to:
 - Add new state declarations after existing ones
 - Insert event handlers inside a component
@@ -25,10 +30,11 @@ IMPORTANT:
 - For multiple insertions at different locations, call this tool multiple times
 
 WORKFLOW FOR BUILDING LARGE APPS:
-1. Create app with skeleton: create_app + update_app with basic structure
+1. Create app with skeleton: create_app + update_app with basic structure including export
 2. Use insert_app_code to add state: after_pattern: "function MyApp() {"
    content: "\\n  const [data, setData] = React.useState(null);"
-3. Use insert_app_code to add handlers, JSX, etc.
+3. To add helper functions: after_pattern: "}\\n\\n" (before export)
+   content: "function helperFunc() { ... }\\n\\n"
 
 Example:
 - after_pattern: "const [loading, setLoading] = React.useState(false);"

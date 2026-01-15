@@ -13,12 +13,16 @@ export const prependAppCodeTool: Tool = {
   name: 'prepend_app_code',
   description: `Prepends content to the beginning of app code.
 
+CRITICAL: Remember export rules:
+- NO IMPORTS - React is global
+- App entry file MUST end with: export default MyAppName;
+
 Use this tool when you need to:
 - Add constants or configuration at the start of the code
 - Add comments or documentation at the beginning
 - Insert setup code before the main component
 
-NOTE: FlowDot apps don't use imports (React is global), so this is less commonly needed.
+NOTE: Since FlowDot apps don't use imports, this is less commonly needed.
 For most cases, use edit_app_code or insert_app_code instead.
 
 Example usage:
