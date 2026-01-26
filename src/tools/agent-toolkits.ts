@@ -331,7 +331,69 @@ export const createAgentToolkitTool: Tool = {
   name: 'mcp__flowdot__create_agent_toolkit',
   description: `Create a new MCP agent toolkit.
 
-Toolkits organize related tools and credentials for specific integrations or use cases.`,
+Toolkits organize related tools and credentials for specific integrations or use cases.
+
+## Credential Requirements
+
+Use credential_requirements to define what credentials users need to provide. Each credential can be:
+- **api_key**: Standard API key (most common)
+- **oauth**: OAuth 2.0 token that can be refreshed via OAuth flow
+- **bearer**: Bearer token
+- **basic**: Basic auth credentials
+- **custom**: Custom credential type
+
+## OAuth Configuration
+
+For OAuth credentials, set credential_type: "oauth" and provide oauth_config with:
+
+Required OAuth fields:
+- **authorization_url**: OAuth authorization endpoint (e.g., "https://api.schwabapi.com/v1/oauth/authorize")
+- **token_endpoint**: Token exchange endpoint (e.g., "https://api.schwabapi.com/v1/oauth/token")
+- **scopes**: Array of OAuth scopes (e.g., ["api"])
+
+Client credential references (reference OTHER credentials in the same toolkit):
+- **client_id_credential_key**: Key name of the credential that stores the client ID (e.g., "SCHWAB_APP_KEY")
+- **client_secret_credential_key**: Key name of the credential that stores the client secret (e.g., "SCHWAB_APP_SECRET")
+
+Optional OAuth fields:
+- **pkce_enabled**: Enable PKCE (default: true, recommended for security)
+- **auth_error_codes**: HTTP codes indicating auth failure (default: [401, 403])
+- **auth_error_patterns**: Error message patterns indicating auth failure
+- **extra_auth_params**: Additional URL params for authorization request
+
+## Example: OAuth Toolkit Setup (e.g., Schwab API)
+
+credential_requirements: [
+  {
+    key_name: "SCHWAB_APP_KEY",
+    label: "Schwab App Key (Client ID)",
+    credential_type: "api_key",
+    is_required: true,
+    description: "Your Schwab Developer App Key"
+  },
+  {
+    key_name: "SCHWAB_APP_SECRET",
+    label: "Schwab App Secret (Client Secret)",
+    credential_type: "api_key",
+    is_required: true,
+    description: "Your Schwab Developer App Secret"
+  },
+  {
+    key_name: "SCHWAB_ACCESS_TOKEN",
+    label: "Schwab Access Token",
+    credential_type: "oauth",
+    is_required: true,
+    description: "OAuth access token (auto-refreshed via Reconnect)",
+    oauth_config: {
+      authorization_url: "https://api.schwabapi.com/v1/oauth/authorize",
+      token_endpoint: "https://api.schwabapi.com/v1/oauth/token",
+      scopes: ["api"],
+      client_id_credential_key: "SCHWAB_APP_KEY",
+      client_secret_credential_key: "SCHWAB_APP_SECRET",
+      pkce_enabled: true
+    }
+  }
+]`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -369,6 +431,90 @@ Toolkits organize related tools and credentials for specific integrations or use
         items: { type: 'string' },
         description: 'Tags for discoverability (max 10)',
       },
+      credential_requirements: {
+        type: 'array',
+        description: 'Credential requirements for the toolkit. Define what API keys, OAuth tokens, or other credentials users need.',
+        items: {
+          type: 'object',
+          properties: {
+            key_name: {
+              type: 'string',
+              description: 'Unique key identifier (e.g., "API_KEY", "SCHWAB_ACCESS_TOKEN")',
+            },
+            label: {
+              type: 'string',
+              description: 'Human-readable label (e.g., "Schwab Access Token")',
+            },
+            credential_type: {
+              type: 'string',
+              enum: ['api_key', 'oauth', 'bearer', 'basic', 'custom'],
+              description: 'Type of credential. Use "oauth" for tokens that can be refreshed via OAuth flow.',
+            },
+            description: {
+              type: 'string',
+              description: 'Help text explaining this credential',
+            },
+            is_required: {
+              type: 'boolean',
+              description: 'Whether this credential is required (default: true)',
+            },
+            placeholder: {
+              type: 'string',
+              description: 'Placeholder text for input field',
+            },
+            validation_pattern: {
+              type: 'string',
+              description: 'Regex pattern to validate credential format',
+            },
+            oauth_config: {
+              type: 'object',
+              description: 'OAuth configuration (required when credential_type is "oauth")',
+              properties: {
+                authorization_url: {
+                  type: 'string',
+                  description: 'OAuth authorization endpoint URL',
+                },
+                token_endpoint: {
+                  type: 'string',
+                  description: 'OAuth token exchange endpoint URL',
+                },
+                scopes: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'OAuth scopes to request',
+                },
+                client_id_credential_key: {
+                  type: 'string',
+                  description: 'Key name of another credential that contains the OAuth client ID',
+                },
+                client_secret_credential_key: {
+                  type: 'string',
+                  description: 'Key name of another credential that contains the OAuth client secret',
+                },
+                pkce_enabled: {
+                  type: 'boolean',
+                  description: 'Enable PKCE for OAuth flow (default: true)',
+                },
+                auth_error_codes: {
+                  type: 'array',
+                  items: { type: 'number' },
+                  description: 'HTTP status codes that indicate authentication failure (default: [401, 403])',
+                },
+                auth_error_patterns: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Error message patterns that indicate authentication failure',
+                },
+                extra_auth_params: {
+                  type: 'object',
+                  description: 'Additional URL parameters to include in authorization request',
+                },
+              },
+            },
+          },
+          required: ['key_name', 'label'],
+        },
+      },
     },
     required: ['name', 'title', 'description'],
   },
@@ -392,6 +538,18 @@ export async function handleCreateAgentToolkit(
     if (args.tags && Array.isArray(args.tags)) {
       input.tags = args.tags.map(t => String(t));
     }
+    if (args.credential_requirements && Array.isArray(args.credential_requirements)) {
+      input.credential_requirements = args.credential_requirements.map((cred: any) => ({
+        key_name: String(cred.key_name),
+        label: String(cred.label),
+        credential_type: cred.credential_type || 'api_key',
+        description: cred.description ? String(cred.description) : undefined,
+        is_required: cred.is_required !== undefined ? Boolean(cred.is_required) : true,
+        placeholder: cred.placeholder ? String(cred.placeholder) : undefined,
+        validation_pattern: cred.validation_pattern ? String(cred.validation_pattern) : undefined,
+        oauth_config: cred.oauth_config || undefined,
+      }));
+    }
 
     const result = await api.createAgentToolkit(input);
 
@@ -403,18 +561,22 @@ export async function handleCreateAgentToolkit(
     }
 
     const toolkit = result;
+    const credsCount = input.credential_requirements?.length || 0;
+    const oauthCreds = input.credential_requirements?.filter(c => c.credential_type === 'oauth').length || 0;
+
     const text = `✓ Toolkit created successfully!
 
 **ID:** ${toolkit.id}
 **Name:** ${toolkit.name}
 **Title:** ${toolkit.title}
 **Visibility:** ${toolkit.visibility}
+${credsCount > 0 ? `**Credentials Defined:** ${credsCount} (${oauthCreds} OAuth)` : ''}
 
 Next steps:
-1. Add tools to your toolkit
-2. Define credential requirements
-3. Install and configure credentials
-4. Start using your toolkit!`;
+1. Add tools to your toolkit using mcp__flowdot__create_toolkit_tool
+2. Install the toolkit using mcp__flowdot__install_toolkit
+3. Configure credential mappings in the installation
+${oauthCreds > 0 ? '4. Use the "Reconnect" button in the UI to authorize OAuth credentials' : ''}`;
 
     return { content: [{ type: 'text', text }] };
   } catch (error) {
@@ -430,7 +592,21 @@ export const updateAgentToolkitTool: Tool = {
   name: 'mcp__flowdot__update_agent_toolkit',
   description: `Update an existing agent toolkit's metadata.
 
-Modify title, description, category, tags, and other toolkit properties.`,
+Modify title, description, category, tags, and other toolkit properties.
+
+## Updating Credential Requirements
+
+Use credential_requirements to update the toolkit's credential definitions. This REPLACES all existing credentials.
+
+For OAuth credentials, include oauth_config with:
+- **authorization_url**: OAuth authorization endpoint
+- **token_endpoint**: Token exchange endpoint
+- **scopes**: Array of OAuth scopes
+- **client_id_credential_key**: Key name of credential containing client ID
+- **client_secret_credential_key**: Key name of credential containing client secret
+- **pkce_enabled**: Enable PKCE (default: true)
+
+See mcp__flowdot__create_agent_toolkit documentation for full OAuth configuration details and examples.`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -467,6 +643,64 @@ Modify title, description, category, tags, and other toolkit properties.`,
         items: { type: 'string' },
         description: 'New tags',
       },
+      credential_requirements: {
+        type: 'array',
+        description: 'Updated credential requirements (REPLACES all existing). See mcp__flowdot__create_agent_toolkit for schema details.',
+        items: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'number',
+              description: 'Existing credential ID (include to update, omit for new)',
+            },
+            key_name: {
+              type: 'string',
+              description: 'Unique key identifier',
+            },
+            label: {
+              type: 'string',
+              description: 'Human-readable label',
+            },
+            credential_type: {
+              type: 'string',
+              enum: ['api_key', 'oauth', 'bearer', 'basic', 'custom'],
+              description: 'Type of credential',
+            },
+            description: {
+              type: 'string',
+              description: 'Help text',
+            },
+            is_required: {
+              type: 'boolean',
+              description: 'Whether required',
+            },
+            placeholder: {
+              type: 'string',
+              description: 'Placeholder text',
+            },
+            validation_pattern: {
+              type: 'string',
+              description: 'Validation regex',
+            },
+            oauth_config: {
+              type: 'object',
+              description: 'OAuth configuration for oauth credential type',
+              properties: {
+                authorization_url: { type: 'string' },
+                token_endpoint: { type: 'string' },
+                scopes: { type: 'array', items: { type: 'string' } },
+                client_id_credential_key: { type: 'string' },
+                client_secret_credential_key: { type: 'string' },
+                pkce_enabled: { type: 'boolean' },
+                auth_error_codes: { type: 'array', items: { type: 'number' } },
+                auth_error_patterns: { type: 'array', items: { type: 'string' } },
+                extra_auth_params: { type: 'object' },
+              },
+            },
+          },
+          required: ['key_name', 'label'],
+        },
+      },
     },
     required: ['toolkit_id'],
   },
@@ -489,6 +723,19 @@ export async function handleUpdateAgentToolkit(
     if (args.tags && Array.isArray(args.tags)) {
       input.tags = args.tags.map(t => String(t));
     }
+    if (args.credential_requirements && Array.isArray(args.credential_requirements)) {
+      input.credential_requirements = args.credential_requirements.map((cred: any) => ({
+        id: cred.id ? Number(cred.id) : undefined,
+        key_name: String(cred.key_name),
+        label: String(cred.label),
+        credential_type: cred.credential_type || 'api_key',
+        description: cred.description ? String(cred.description) : undefined,
+        is_required: cred.is_required !== undefined ? Boolean(cred.is_required) : true,
+        placeholder: cred.placeholder ? String(cred.placeholder) : undefined,
+        validation_pattern: cred.validation_pattern ? String(cred.validation_pattern) : undefined,
+        oauth_config: cred.oauth_config || undefined,
+      }));
+    }
 
     const result = await api.updateAgentToolkit(toolkitId, input);
 
@@ -499,7 +746,8 @@ export async function handleUpdateAgentToolkit(
       };
     }
 
-    const text = `✓ Toolkit updated successfully!
+    const credsUpdated = input.credential_requirements ? ` (${input.credential_requirements.length} credentials)` : '';
+    const text = `✓ Toolkit updated successfully!${credsUpdated}
 
 **ID:** ${result.id}
 **Title:** ${result.title}`;
@@ -1059,7 +1307,7 @@ export async function handleCheckToolkitCredentials(
       const missing = status.missing_credentials.includes(req.key_name) ? '⚠️ MISSING' : '✓';
       return `  ${missing} ${req.label} ${required}
      Key: ${req.key_name}
-     Type: ${req.type}
+     Type: ${req.credential_type}
      ${req.description || ''}`;
     });
 

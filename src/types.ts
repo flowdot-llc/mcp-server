@@ -1109,13 +1109,27 @@ export interface ToolkitEndpointConfig {
 }
 
 export interface ToolkitCredentialRequirement {
+  id?: number;
   key_name: string;
   label: string;
-  type: 'api_key' | 'bearer_token' | 'oauth2' | 'basic_auth' | 'custom';
-  description: string;
+  credential_type: 'api_key' | 'oauth' | 'bearer' | 'basic' | 'custom';
+  description?: string;
   is_required: boolean;
   validation_pattern?: string;
   placeholder?: string;
+  oauth_config?: OAuthConfig;
+}
+
+export interface OAuthConfig {
+  authorization_url: string;
+  token_endpoint: string;
+  scopes?: string[];
+  client_id_credential_key?: string;
+  client_secret_credential_key?: string;
+  auth_error_codes?: number[];
+  auth_error_patterns?: string[];
+  pkce_enabled?: boolean;
+  extra_auth_params?: Record<string, string>;
 }
 
 export interface AgentToolkitInstallation {
@@ -1151,6 +1165,19 @@ export interface CreateToolkitInput {
   icon?: string;
   visibility?: 'private' | 'public' | 'unlisted';
   tags?: string[];
+  credential_requirements?: ToolkitCredentialRequirementInput[];
+}
+
+export interface ToolkitCredentialRequirementInput {
+  id?: number;
+  key_name: string;
+  label: string;
+  credential_type?: 'api_key' | 'oauth' | 'bearer' | 'basic' | 'custom';
+  description?: string;
+  is_required?: boolean;
+  validation_pattern?: string;
+  placeholder?: string;
+  oauth_config?: OAuthConfig;
 }
 
 export interface UpdateToolkitInput {
@@ -1161,6 +1188,7 @@ export interface UpdateToolkitInput {
   version?: string;
   icon?: string;
   tags?: string[];
+  credential_requirements?: ToolkitCredentialRequirementInput[];
 }
 
 export interface CreateToolkitToolInput {

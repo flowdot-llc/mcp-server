@@ -1,1 +1,0 @@
-{"version":3,"file":"list-user-teams.d.ts","sourceRoot":"","sources":["../../src/tools/list-user-teams.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAEH,OAAO,EAAE,IAAI,EAAE,cAAc,EAAE,MAAM,oCAAoC,CAAC;AAC1E,OAAO,EAAE,gBAAgB,EAAE,MAAM,kBAAkB,CAAC;AAEpD,eAAO,MAAM,oBAAoB,EAAE,IASlC,CAAC;AAEF,wBAAsB,mBAAmB,CACvC,GAAG,EAAE,gBAAgB,GACpB,OAAO,CAAC,cAAc,CAAC,CA2CzB"}
