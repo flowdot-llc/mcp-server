@@ -125,11 +125,13 @@ import {
 export class FlowDotApiClient {
   private hubUrl: string;
   private apiToken: string;
+  private internalSecret: string | undefined;
 
-  constructor(hubUrl: string, apiToken: string) {
+  constructor(hubUrl: string, apiToken: string, internalSecret?: string) {
     // Remove trailing slash from hubUrl
     this.hubUrl = hubUrl.replace(/\/$/, '');
     this.apiToken = apiToken;
+    this.internalSecret = internalSecret;
   }
 
   /**
@@ -145,6 +147,52 @@ export class FlowDotApiClient {
       ...options,
       headers: {
         Authorization: `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...options.headers,
+      },
+    });
+
+    const data = (await response.json()) as ApiResponse<T>;
+
+    if (!response.ok || !data.success) {
+      let errorMessage = data.error || data.message || `API error: ${response.status}`;
+
+      // Include debug info if available
+      if (data.debug) {
+        const debug = data.debug as Record<string, unknown>;
+        if (debug.hints && Array.isArray(debug.hints) && debug.hints.length > 0) {
+          errorMessage += ' | Hints: ' + debug.hints.join('; ');
+        }
+        if (debug.code_preview) {
+          errorMessage += ` | Code starts with: "${String(debug.code_preview).substring(0, 50)}..."`;
+        }
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    return data.data as T;
+  }
+
+  /**
+   * Make an internal request to Hub endpoints (requires X-Internal-Secret).
+   * Used for internal Node.js ↔ Hub communication.
+   */
+  private async internalRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    if (!this.internalSecret) {
+      throw new Error('Internal secret not configured. Set INTERNAL_API_SECRET environment variable.');
+    }
+
+    const url = `${this.hubUrl}/hub${endpoint}`;
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'X-Internal-Secret': this.internalSecret,
         'Content-Type': 'application/json',
         Accept: 'application/json',
         ...options.headers,
@@ -1561,11 +1609,19 @@ export class FlowDotApiClient {
    * Invoke a tool from an installed toolkit.
    */
   async invokeToolkitTool(input: InvokeToolkitToolInput): Promise<InvokeToolkitToolResult> {
+    const requestBody: { inputs: Record<string, unknown>; credential_overrides?: Record<string, string> } = {
+      inputs: input.inputs,
+    };
+
+    if (input.credential_overrides) {
+      requestBody.credential_overrides = input.credential_overrides;
+    }
+
     return this.request<InvokeToolkitToolResult>(
       `/agent-toolkit-installations/${input.installation_id}/execute/${input.tool_name}`,
       {
         method: 'POST',
-        body: JSON.stringify({ inputs: input.inputs }),
+        body: JSON.stringify(requestBody),
       }
     );
   }

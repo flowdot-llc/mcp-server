@@ -42,7 +42,8 @@ export async function createServer(): Promise<Server> {
   }
 
   // Create API client
-  const apiClient = new FlowDotApiClient(hubUrl, apiToken);
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  const apiClient = new FlowDotApiClient(hubUrl, apiToken, internalSecret);
 
   // Test connection
   console.error(`FlowDot MCP Server connecting to ${hubUrl}...`);

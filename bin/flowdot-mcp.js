@@ -2,7 +2,7 @@
 /**
  * FlowDot MCP Server CLI
  *
- * This is the entry point when running via npx @flowdot/mcp-server
+ * This is the entry point when running via npx @flowdot.ai/mcp-server
  */
 
 import('../dist/index.js').catch((error) => {

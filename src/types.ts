@@ -1259,6 +1259,7 @@ export interface InvokeToolkitToolInput {
   installation_id: string;
   tool_name: string;
   inputs: Record<string, unknown>;
+  credential_overrides?: Record<string, string>;
 }
 
 export interface InvokeToolkitToolResult {

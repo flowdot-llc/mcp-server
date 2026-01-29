@@ -1399,7 +1399,9 @@ export const invokeToolkitToolTool: Tool = {
   name: 'mcp__flowdot__invoke_toolkit_tool',
   description: `Execute a tool from an installed toolkit.
 
-Runs the tool with provided inputs using your configured credentials.`,
+Runs the tool with provided inputs using your configured credentials.
+
+You can optionally pass credential_overrides to provide dynamic credentials (like tokens from a previous tool call).`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -1415,6 +1417,10 @@ Runs the tool with provided inputs using your configured credentials.`,
         type: 'object',
         description: 'Tool inputs (as defined by the tool\'s input schema)',
       },
+      credential_overrides: {
+        type: 'object',
+        description: 'Optional credential overrides (e.g., {"SCHWAB_ACCESS_TOKEN": "token_value"}). Use this to pass fresh tokens from a previous token refresh call.',
+      },
     },
     required: ['installation_id', 'tool_name'],
   },
@@ -1429,6 +1435,7 @@ export async function handleInvokeToolkitTool(
       installation_id: String(args.installation_id),
       tool_name: String(args.tool_name),
       inputs: (args.inputs as Record<string, unknown>) || {},
+      credential_overrides: args.credential_overrides as Record<string, string> | undefined,
     };
 
     const result = await api.invokeToolkitTool(input);
