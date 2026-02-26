@@ -10,13 +10,47 @@ import { CreateRecipeStepInput, RecipeStepType } from '../types.js';
 
 export const addRecipeStepTool: Tool = {
   name: 'add_recipe_step',
-  description: `Add a new step to a recipe. Step types:
-- **agent**: Run an LLM agent with prompts and tools
-- **loop**: Iterate over items in a store
-- **parallel**: Run multiple steps concurrently
-- **gate**: Conditional check or approval gate
-- **branch**: Conditional branching based on expressions
-- **invoke**: Run another recipe as a subroutine`,
+  description: `Add a new step to a recipe. **Save the returned step ID** for connections.
+
+**Step Types & Config:**
+
+**agent** - LLM agent with tools
+\`\`\`json
+{ "user_prompt": "Instructions with {{inputs.request}} and {{store_key}}", "tools": ["read", "search", "web-search"], "output_store": "result_key", "max_iterations": 10 }
+\`\`\`
+**IMPORTANT:** Use \`user_prompt\` (NOT \`prompt\`) - this is the field the runtime expects.
+Tools: read, search, analyze, find-definition, web-search, edit, execute-command, create-file
+
+**parallel** - Run steps concurrently
+\`\`\`json
+{ "parallel_step_ids": ["step-id-1", "step-id-2"] }
+\`\`\`
+
+**loop** - Iterate over array
+\`\`\`json
+{ "items_store": "array_key", "item_store": "current_item_key", "body": "step-id-to-run" }
+\`\`\`
+
+**gate** - Approval or condition check
+\`\`\`json
+{ "requires_approval": true, "approval_prompt": "Review: {{data}}", "condition": "{{status}} === 'ready'" }
+\`\`\`
+
+**branch** - Conditional routing
+\`\`\`json
+{ "conditions": [{"expression": "{{x}} === 'a'", "then": "step-a"}], "default": "step-default" }
+\`\`\`
+
+**invoke** - Call another recipe
+\`\`\`json
+{ "recipe_hash": "xyz", "input_mapping": {"target_input": "{{source_store}}"}, "output_mapping": {"target_output": "local_store"} }
+\`\`\`
+
+**Interpolation Syntax:**
+- \`{{inputs.request}}\` - Access CLI task argument (user runs: \`flowdot alias "task text"\`)
+- \`{{store_key}}\` - Reference any store value by its key
+- \`{{stores.store_key}}\` - Explicit store access (same as above)
+- \`{{step.step_id}}\` - Access output from a previous step`,
   inputSchema: {
     type: 'object',
     properties: {
@@ -95,10 +129,16 @@ export async function handleAddRecipeStep(
 
 **Agent Configuration:**
 Set the config object with:
-- \`prompt\`: The system/user prompt for the agent
-- \`model\`: LLM model to use (optional)
+- \`user_prompt\`: The prompt for the agent (REQUIRED - use this, NOT \`prompt\`)
+- \`system_prompt\`: Optional system-level instructions
+- \`model_tier\`: LLM model tier: "simple", "capable", or "complex" (optional)
 - \`tools\`: Array of tool names to make available
-- \`max_iterations\`: Maximum iterations for the agent`;
+- \`output_store\`: Store key to write agent output to
+- \`max_iterations\`: Maximum iterations for the agent
+
+**Interpolation in prompts:**
+- Use \`{{inputs.request}}\` to access the CLI task argument
+- Use \`{{store_key}}\` to reference store values`;
     } else if (args.type === 'loop') {
       configInfo = `
 

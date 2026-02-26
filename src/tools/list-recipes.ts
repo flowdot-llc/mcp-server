@@ -9,8 +9,29 @@ import { FlowDotApiClient } from '../api-client.js';
 
 export const listRecipesTool: Tool = {
   name: 'list_recipes',
-  description:
-    'List agent recipes available to the user. Returns recipe IDs, names, descriptions, and step counts. Recipes are reusable agent orchestration workflows.',
+  description: `List agent recipes available to the user. Returns recipe IDs, names, descriptions, and step counts.
+
+**What are Recipes?**
+Recipes are reusable agent orchestration workflows. Design them with MCP tools, execute them via the FlowDot CLI.
+
+**CRITICAL**: MCP tools can only DESIGN recipes. To RUN a recipe, use the CLI:
+\`npx flowdot recipes run <aliasOrHash> --input '{"key":"value"}'\`
+
+**Building a Recipe (workflow):**
+1. create_recipe → Creates recipe, returns hash
+2. add_recipe_store → Define inputs (is_input: true) and outputs (is_output: true)
+   - **Name primary input store \`request\`** - CLI passes task as \`inputs.request\`
+3. add_recipe_step → Add steps (agent, parallel, loop, gate, branch, invoke)
+   - For agent steps, use \`user_prompt\` (NOT \`prompt\`) in config
+4. update_recipe_step → Connect steps via "next" and "on_error"
+5. update_recipe → Set entry_step_id to the first step
+6. link_recipe → Create CLI alias for easy execution
+
+**Step Types:** agent (LLM with tools), parallel (concurrent), loop (iterate array), gate (approval), branch (conditional), invoke (subroutine)
+
+**Interpolation Syntax:**
+- \`{{inputs.request}}\` - Access CLI task argument
+- \`{{store_key}}\` - Reference store values`,
   inputSchema: {
     type: 'object',
     properties: {

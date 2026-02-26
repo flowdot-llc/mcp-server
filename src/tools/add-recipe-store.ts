@@ -12,9 +12,28 @@ export const addRecipeStoreTool: Tool = {
   name: 'add_recipe_store',
   description: `Add a new store (variable) to a recipe. Stores hold data that flows between steps.
 
-- **Input stores**: Values that must be provided when executing the recipe
-- **Output stores**: Values that are returned after execution
-- **Internal stores**: Temporary values used during execution`,
+**Store Types:**
+- **Input stores** (is_input: true): Values user provides when running
+- **Output stores** (is_output: true): Values returned after execution
+- **Internal stores**: Temporary values used during execution
+
+**IMPORTANT - The \`request\` Convention:**
+When users run a recipe with a task argument like:
+\`flowdot my-recipe "do something"\`
+
+The CLI passes this as \`inputs.request\`. Therefore:
+- **Name your primary input store \`request\`** to receive the task directly
+- In prompts, use \`{{inputs.request}}\` to access the CLI task argument
+- Example: \`add_recipe_store(key: "request", is_input: true)\`
+
+**Using Stores in Steps:**
+Reference stores in agent prompts, conditions, and mappings with \`{{store_key}}\` syntax:
+- Agent prompt: \`"Analyze {{topic}} and write to {{output}}"\`
+- Branch condition: \`"{{severity}} === 'high'"\`
+- Gate approval: \`"Review findings:\\n{{findings}}"\`
+
+**Agent Output:**
+Set \`output_store\` in agent config to write results to a store.`,
   inputSchema: {
     type: 'object',
     properties: {

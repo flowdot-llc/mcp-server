@@ -10,8 +10,19 @@ import { LinkRecipeInput } from '../types.js';
 
 export const linkRecipeTool: Tool = {
   name: 'link_recipe',
-  description:
-    'Link a recipe for quick access via an alias. Linked recipes can be executed using their alias.',
+  description: `Link a recipe for CLI execution. **REQUIRED** to run recipes from command line.
+
+**CRITICAL - Alias Rules:**
+- Use HYPHENS only: \`my-recipe\` ✓
+- NO underscores: \`my_recipe\` ✗ (causes 422 error)
+- Lowercase, alphanumeric + hyphens only
+
+**After Linking, Run via CLI:**
+\`\`\`bash
+npx flowdot recipes run <alias> --input '{"input_key":"value"}'
+\`\`\`
+
+**Note:** MCP tools can only DESIGN recipes. CLI is required to EXECUTE them.`,
   inputSchema: {
     type: 'object',
     properties: {

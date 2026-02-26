@@ -10,7 +10,16 @@ import { UpdateRecipeInput } from '../types.js';
 
 export const updateRecipeTool: Tool = {
   name: 'update_recipe',
-  description: "Update an agent recipe's name, description, category, tags, or visibility.",
+  description: `Update an agent recipe's metadata, including the critical entry_step_id.
+
+**CRITICAL - entry_step_id:**
+Recipe will NOT run until entry_step_id is set to a valid step ID!
+After adding steps, you MUST call this tool with entry_step_id pointing to the first step.
+
+**Example:**
+\`\`\`
+update_recipe({ hash: "abc", entry_step_id: "first-step-uuid" })
+\`\`\``,
   inputSchema: {
     type: 'object',
     properties: {

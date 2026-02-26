@@ -10,8 +10,19 @@ import { CreateRecipeInput } from '../types.js';
 
 export const createRecipeTool: Tool = {
   name: 'create_recipe',
-  description:
-    'Create a new agent recipe. Recipes are reusable agent orchestration workflows that can contain multiple steps.',
+  description: `Create a new agent recipe. Recipes are reusable agent orchestration workflows.
+
+**After Creating:**
+1. Save the returned hash - you need it for all subsequent operations
+2. Add input stores (is_input: true) - **name primary input \`request\`** for CLI task arg
+3. Add output stores (is_output: true) - what recipe produces
+4. Add steps and connect them via "next"
+   - For agent steps: use \`user_prompt\` (NOT \`prompt\`) in config
+   - Use \`{{inputs.request}}\` to access CLI task argument
+5. Set entry_step_id with update_recipe
+6. Link with alias for CLI access
+
+**IMPORTANT**: Recipe won't run until entry_step_id is set!`,
   inputSchema: {
     type: 'object',
     properties: {
