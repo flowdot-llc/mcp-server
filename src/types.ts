@@ -1286,3 +1286,238 @@ export interface CreateToolkitCommentResult {
   user_name: string;
   created_at: string;
 }
+
+// ============================================
+// Agent Recipe Types
+// ============================================
+
+export type RecipeStepType = 'agent' | 'loop' | 'parallel' | 'gate' | 'branch' | 'invoke';
+
+export interface AgentRecipe {
+  id: string;
+  hash: string;
+  name: string;
+  description: string | null;
+  version: string;
+  visibility: 'private' | 'public' | 'unlisted';
+  category: string | null;
+  tags: string[];
+  entry_step_id: string | null;
+  steps: RecipeStep[];
+  stores: RecipeStore[];
+  step_count: number;
+  store_count: number;
+  user_name?: string;
+  user_hash?: string;
+  vote_count: number;
+  favorite_count: number;
+  fork_count: number;
+  execution_count: number;
+  is_favorited?: boolean;
+  user_vote?: number | null;
+  can_edit?: boolean;
+  forked_from?: {
+    hash: string;
+    name: string;
+    user_name: string;
+    user_hash: string;
+  } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeStep {
+  id: string;
+  name: string;
+  type: RecipeStepType;
+  description: string | null;
+  config: Record<string, unknown>;
+  position: { x: number; y: number } | null;
+  next: string | null;
+  on_error: string | null;
+  order_index: number;
+}
+
+export interface RecipeStore {
+  id: string;
+  key: string;
+  label: string | null;
+  schema_type: 'any' | 'string' | 'number' | 'boolean' | 'array' | 'object';
+  default_value: unknown;
+  description: string | null;
+  is_input: boolean;
+  is_output: boolean;
+}
+
+export interface RecipeLink {
+  alias: string;
+  recipe_hash: string;
+  recipe_name: string;
+  recipe_description: string | null;
+  owner_name: string;
+  owner_hash: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface RecipeComment {
+  id: number;
+  user_name: string;
+  user_hash: string | null;
+  content: string;
+  vote_count: number;
+  created_at: string;
+  replies: RecipeComment[];
+}
+
+// REMOVED: RecipeExecution and StepHistoryEntry interfaces
+// MCP CANNOT run recipes - only the CLI can enter recipe modes
+// See Docs/AGENT_RECIPES.md for the GOSPEL rule
+
+export interface RecipeDefinition {
+  name: string;
+  description: string | null;
+  version: string;
+  entry_step_id: string | null;
+  steps: RecipeStep[];
+  stores: RecipeStore[];
+}
+
+// Recipe API Input Types
+
+export interface CreateRecipeInput {
+  name: string;
+  description?: string;
+  version?: string;
+  visibility?: 'private' | 'public' | 'unlisted';
+  category?: string;
+  tags?: string[];
+}
+
+export interface UpdateRecipeInput {
+  name?: string;
+  description?: string;
+  version?: string;
+  visibility?: 'private' | 'public' | 'unlisted';
+  category?: string;
+  tags?: string[];
+  entry_step_id?: string | null;
+}
+
+export interface CreateRecipeStepInput {
+  name: string;
+  type: RecipeStepType;
+  description?: string;
+  config?: Record<string, unknown>;
+  position?: { x: number; y: number };
+  next?: string | null;
+  on_error?: string | null;
+}
+
+export interface UpdateRecipeStepInput {
+  name?: string;
+  description?: string;
+  config?: Record<string, unknown>;
+  position?: { x: number; y: number };
+  next?: string | null;
+  on_error?: string | null;
+}
+
+export interface CreateRecipeStoreInput {
+  key: string;
+  label?: string;
+  schema_type?: 'any' | 'string' | 'number' | 'boolean' | 'array' | 'object';
+  default_value?: unknown;
+  description?: string;
+  is_input?: boolean;
+  is_output?: boolean;
+}
+
+export interface UpdateRecipeStoreInput {
+  key?: string;
+  label?: string;
+  schema_type?: 'any' | 'string' | 'number' | 'boolean' | 'array' | 'object';
+  default_value?: unknown;
+  description?: string;
+  is_input?: boolean;
+  is_output?: boolean;
+}
+
+// REMOVED: ExecuteRecipeInput - MCP CANNOT run recipes
+// See Docs/AGENT_RECIPES.md for the GOSPEL rule
+
+export interface LinkRecipeInput {
+  alias: string;
+  is_default?: boolean;
+}
+
+// Recipe API Result Types
+
+// RecipeListResult is just an array of recipes - Laravel returns the array directly
+export type RecipeListResult = AgentRecipe[];
+
+export interface PublicRecipeListResult {
+  data: AgentRecipe[];
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+}
+
+export interface RecipeSearchFilters {
+  q?: string;
+  category?: string;
+  tags?: string[];
+  sort?: 'popular' | 'recent' | 'most_forked';
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateRecipeResult {
+  hash: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface ForkRecipeResult {
+  hash: string;
+  name: string;
+  description: string | null;
+  forked_from: {
+    hash: string;
+    name: string;
+    user_name: string;
+    user_hash: string;
+  };
+  created_at: string;
+}
+
+export interface VoteRecipeResult {
+  hash: string;
+  vote: string;
+  vote_count: number;
+}
+
+export interface FavoriteRecipeResult {
+  hash: string;
+  is_favorited: boolean;
+}
+
+export interface LinkRecipeResult {
+  alias: string;
+  recipe_hash: string;
+  recipe_name: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+// REMOVED: ExecuteRecipeResult - MCP CANNOT run recipes
+// See Docs/AGENT_RECIPES.md for the GOSPEL rule
+
+export interface CreateRecipeCommentResult {
+  id: number;
+  content: string;
+  user_name: string;
+  created_at: string;
+}

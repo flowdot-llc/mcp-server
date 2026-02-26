@@ -223,6 +223,30 @@ import {
   handleDeleteToolkitTool,
 } from './agent-toolkits.js';
 
+// ============================================
+// Agent Recipe Tools (recipes:read / recipes:manage)
+// ============================================
+import { listRecipesTool, handleListRecipes } from './list-recipes.js';
+import { getRecipeTool, handleGetRecipe } from './get-recipe.js';
+import { getRecipeDefinitionTool, handleGetRecipeDefinition } from './get-recipe-definition.js';
+import { browseRecipesTool, handleBrowseRecipes } from './browse-recipes.js';
+import { createRecipeTool, handleCreateRecipe } from './create-recipe.js';
+import { updateRecipeTool, handleUpdateRecipe } from './update-recipe.js';
+import { deleteRecipeTool, handleDeleteRecipe } from './delete-recipe.js';
+import { forkRecipeTool, handleForkRecipe } from './fork-recipe.js';
+// REMOVED: execute_recipe and get_recipe_execution - MCP CANNOT run recipes, only CLI can
+import { listRecipeStepsTool, handleListRecipeSteps } from './list-recipe-steps.js';
+import { addRecipeStepTool, handleAddRecipeStep } from './add-recipe-step.js';
+import { updateRecipeStepTool, handleUpdateRecipeStep } from './update-recipe-step.js';
+import { deleteRecipeStepTool, handleDeleteRecipeStep } from './delete-recipe-step.js';
+import { listRecipeStoresTool, handleListRecipeStores } from './list-recipe-stores.js';
+import { addRecipeStoreTool, handleAddRecipeStore } from './add-recipe-store.js';
+import { updateRecipeStoreTool, handleUpdateRecipeStore } from './update-recipe-store.js';
+import { deleteRecipeStoreTool, handleDeleteRecipeStore } from './delete-recipe-store.js';
+import { voteRecipeTool, handleVoteRecipe } from './vote-recipe.js';
+import { favoriteRecipeTool, handleFavoriteRecipe } from './favorite-recipe.js';
+import { linkRecipeTool, handleLinkRecipe } from './link-recipe.js';
+
 // All available tools
 const tools = [
   // Core (4)
@@ -365,6 +389,27 @@ const tools = [
   createToolkitToolTool,
   updateToolkitToolTool,
   deleteToolkitToolTool,
+  // Agent Recipes (21)
+  listRecipesTool,
+  getRecipeTool,
+  getRecipeDefinitionTool,
+  browseRecipesTool,
+  createRecipeTool,
+  updateRecipeTool,
+  deleteRecipeTool,
+  forkRecipeTool,
+  // REMOVED: executeRecipeTool, getRecipeExecutionTool - MCP CANNOT run recipes
+  listRecipeStepsTool,
+  addRecipeStepTool,
+  updateRecipeStepTool,
+  deleteRecipeStepTool,
+  listRecipeStoresTool,
+  addRecipeStoreTool,
+  updateRecipeStoreTool,
+  deleteRecipeStoreTool,
+  voteRecipeTool,
+  favoriteRecipeTool,
+  linkRecipeTool,
 ];
 
 /**
@@ -1021,6 +1066,137 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
         return handleDeleteToolkitTool(api, args as {
           toolkit_id: string;
           tool_id: string;
+        });
+
+      // ============================================
+      // Agent Recipe Tools
+      // ============================================
+      case 'list_recipes':
+        return handleListRecipes(api, args as { favorites_only?: boolean });
+
+      case 'get_recipe':
+        return handleGetRecipe(api, args as { hash: string });
+
+      case 'get_recipe_definition':
+        return handleGetRecipeDefinition(api, args as { hash: string });
+
+      case 'browse_recipes':
+        return handleBrowseRecipes(api, args as {
+          q?: string;
+          sort?: 'popular' | 'recent' | 'most_forked';
+          page?: number;
+        });
+
+      case 'create_recipe':
+        return handleCreateRecipe(api, args as {
+          name: string;
+          description?: string;
+          visibility?: 'private' | 'public' | 'unlisted';
+        });
+
+      case 'update_recipe':
+        return handleUpdateRecipe(api, args as {
+          hash: string;
+          name?: string;
+          description?: string;
+          visibility?: 'private' | 'public' | 'unlisted';
+        });
+
+      case 'delete_recipe':
+        return handleDeleteRecipe(api, args as { hash: string; confirm: boolean });
+
+      case 'fork_recipe':
+        return handleForkRecipe(api, args as { hash: string; name?: string });
+
+      // REMOVED: execute_recipe and get_recipe_execution cases
+      // MCP CANNOT run recipes - only the CLI can enter recipe modes
+
+      case 'list_recipe_steps':
+        return handleListRecipeSteps(api, args as { hash: string });
+
+      case 'add_recipe_step':
+        return handleAddRecipeStep(api, args as {
+          hash: string;
+          name: string;
+          type: 'agent' | 'loop' | 'parallel' | 'gate' | 'branch' | 'invoke';
+          description?: string;
+          config?: Record<string, unknown>;
+          next?: string;
+          on_error?: string;
+          position?: { x: number; y: number };
+        });
+
+      case 'update_recipe_step':
+        return handleUpdateRecipeStep(api, args as {
+          hash: string;
+          step_id: string;
+          label?: string;
+          config?: Record<string, unknown>;
+          position?: { x: number; y: number };
+          next_step_id?: string | null;
+          on_success_step_id?: string | null;
+          on_failure_step_id?: string | null;
+        });
+
+      case 'delete_recipe_step':
+        return handleDeleteRecipeStep(api, args as {
+          hash: string;
+          step_id: string;
+          confirm: boolean;
+        });
+
+      case 'list_recipe_stores':
+        return handleListRecipeStores(api, args as { hash: string });
+
+      case 'add_recipe_store':
+        return handleAddRecipeStore(api, args as {
+          hash: string;
+          key: string;
+          label?: string;
+          schema_type?: 'any' | 'string' | 'number' | 'boolean' | 'array' | 'object';
+          default_value?: unknown;
+          description?: string;
+          is_input?: boolean;
+          is_output?: boolean;
+        });
+
+      case 'update_recipe_store':
+        return handleUpdateRecipeStore(api, args as {
+          hash: string;
+          store_id: string;
+          key?: string;
+          label?: string;
+          schema_type?: 'any' | 'string' | 'number' | 'boolean' | 'array' | 'object';
+          default_value?: unknown;
+          description?: string;
+          is_input?: boolean;
+          is_output?: boolean;
+        });
+
+      case 'delete_recipe_store':
+        return handleDeleteRecipeStore(api, args as {
+          hash: string;
+          store_id: string;
+          confirm: boolean;
+        });
+
+      case 'vote_recipe':
+        return handleVoteRecipe(api, args as {
+          hash: string;
+          vote: 'up' | 'down' | 'remove';
+        });
+
+      case 'favorite_recipe':
+        return handleFavoriteRecipe(api, args as {
+          hash: string;
+          favorite: boolean;
+        });
+
+      case 'link_recipe':
+        return handleLinkRecipe(api, args as {
+          hash: string;
+          alias: string;
+          is_default?: boolean;
         });
 
       default:

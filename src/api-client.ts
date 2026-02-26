@@ -120,6 +120,32 @@ import {
   VoteToolkitResult,
   FavoriteToolkitResult,
   CreateToolkitCommentResult,
+  // Agent Recipe Types
+  AgentRecipe,
+  RecipeStep,
+  RecipeStore,
+  RecipeLink,
+  RecipeComment,
+  // REMOVED: RecipeExecution - MCP CANNOT run recipes
+  RecipeDefinition,
+  RecipeSearchFilters,
+  CreateRecipeInput,
+  UpdateRecipeInput,
+  CreateRecipeStepInput,
+  UpdateRecipeStepInput,
+  CreateRecipeStoreInput,
+  UpdateRecipeStoreInput,
+  // REMOVED: ExecuteRecipeInput - MCP CANNOT run recipes
+  LinkRecipeInput,
+  RecipeListResult,
+  PublicRecipeListResult,
+  CreateRecipeResult,
+  ForkRecipeResult,
+  VoteRecipeResult,
+  FavoriteRecipeResult,
+  LinkRecipeResult,
+  // REMOVED: ExecuteRecipeResult - MCP CANNOT run recipes
+  CreateRecipeCommentResult,
 } from './types.js';
 
 export class FlowDotApiClient {
@@ -1664,6 +1690,269 @@ export class FlowDotApiClient {
     return this.request<FavoriteToolkitResult>(`/agent-toolkits/${toolkitId}/favorite`, {
       method: 'POST',
       body: JSON.stringify({ favorite }),
+    });
+  }
+
+  // ============================================
+  // Agent Recipe Operations
+  // ============================================
+
+  /**
+   * List user's agent recipes.
+   * Laravel returns the array directly in data, not wrapped in { recipes: [...] }
+   */
+  async listRecipes(): Promise<RecipeListResult> {
+    return this.request<AgentRecipe[]>('/agent-recipes');
+  }
+
+  /**
+   * Get a specific recipe by hash.
+   */
+  async getRecipe(hash: string): Promise<AgentRecipe> {
+    return this.request<AgentRecipe>(`/agent-recipes/${hash}`);
+  }
+
+  /**
+   * Get recipe definition for CLI execution.
+   */
+  async getRecipeDefinition(hash: string): Promise<RecipeDefinition> {
+    return this.request<RecipeDefinition>(`/agent-recipes/${hash}/definition`);
+  }
+
+  /**
+   * List public recipes with optional search/filters.
+   */
+  async listPublicRecipes(filters?: RecipeSearchFilters): Promise<PublicRecipeListResult> {
+    const params = new URLSearchParams();
+    if (filters?.q) params.append('q', filters.q);
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.tags) params.append('tags', filters.tags.join(','));
+    if (filters?.sort) params.append('sort', filters.sort);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const queryString = params.toString();
+    return this.request<PublicRecipeListResult>(`/agent-recipes/public${queryString ? '?' + queryString : ''}`);
+  }
+
+  /**
+   * Create a new recipe.
+   */
+  async createRecipe(input: CreateRecipeInput): Promise<CreateRecipeResult> {
+    return this.request<CreateRecipeResult>('/agent-recipes', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Update a recipe.
+   */
+  async updateRecipe(hash: string, input: UpdateRecipeInput): Promise<AgentRecipe> {
+    return this.request<AgentRecipe>(`/agent-recipes/${hash}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Delete a recipe.
+   */
+  async deleteRecipe(hash: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-recipes/${hash}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm: true }),
+    });
+  }
+
+  /**
+   * Fork a recipe.
+   */
+  async forkRecipe(hash: string, newName?: string): Promise<ForkRecipeResult> {
+    return this.request<ForkRecipeResult>(`/agent-recipes/${hash}/fork`, {
+      method: 'POST',
+      body: JSON.stringify({ name: newName }),
+    });
+  }
+
+  /**
+   * Vote on a recipe.
+   */
+  async voteRecipe(hash: string, vote: 'up' | 'down' | 'remove'): Promise<VoteRecipeResult> {
+    return this.request<VoteRecipeResult>(`/agent-recipes/${hash}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ vote }),
+    });
+  }
+
+  /**
+   * Favorite a recipe.
+   */
+  async favoriteRecipe(hash: string, favorite: boolean): Promise<FavoriteRecipeResult> {
+    return this.request<FavoriteRecipeResult>(`/agent-recipes/${hash}/favorite`, {
+      method: 'POST',
+      body: JSON.stringify({ favorite }),
+    });
+  }
+
+  /**
+   * Get recipe comments.
+   */
+  async getRecipeComments(hash: string): Promise<RecipeComment[]> {
+    return this.request<RecipeComment[]>(`/agent-recipes/${hash}/comments`);
+  }
+
+  /**
+   * Add a comment to a recipe.
+   */
+  async addRecipeComment(hash: string, content: string, parentId?: number): Promise<CreateRecipeCommentResult> {
+    return this.request<CreateRecipeCommentResult>(`/agent-recipes/${hash}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, parent_id: parentId }),
+    });
+  }
+
+  // ============================================
+  // Recipe Linking Operations
+  // ============================================
+
+  /**
+   * List user's recipe links (aliases).
+   */
+  async listRecipeLinks(): Promise<RecipeLink[]> {
+    return this.request<RecipeLink[]>('/agent-recipes/links');
+  }
+
+  /**
+   * Link a recipe with an alias.
+   */
+  async linkRecipe(hash: string, input: LinkRecipeInput): Promise<LinkRecipeResult> {
+    return this.request<LinkRecipeResult>(`/agent-recipes/${hash}/link`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Unlink a recipe by alias.
+   */
+  async unlinkRecipe(alias: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-recipes/links/${alias}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================
+  // REMOVED: Recipe Execution Operations section
+  // MCP CANNOT run recipes - only the CLI can enter recipe modes
+  // See Docs/AGENT_RECIPES.md for the GOSPEL rule
+  // Removed methods: executeRecipe, getRecipeExecutions, getRecipeExecution, cancelRecipeExecution
+
+  // ============================================
+  // Recipe Step Operations
+  // ============================================
+
+  /**
+   * List steps for a recipe.
+   */
+  async listRecipeSteps(hash: string): Promise<RecipeStep[]> {
+    return this.request<RecipeStep[]>(`/agent-recipes/${hash}/steps`);
+  }
+
+  /**
+   * Get a specific step.
+   */
+  async getRecipeStep(hash: string, stepId: string): Promise<RecipeStep> {
+    return this.request<RecipeStep>(`/agent-recipes/${hash}/steps/${stepId}`);
+  }
+
+  /**
+   * Add a step to a recipe.
+   */
+  async addRecipeStep(hash: string, input: CreateRecipeStepInput): Promise<RecipeStep> {
+    return this.request<RecipeStep>(`/agent-recipes/${hash}/steps`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Update a recipe step.
+   */
+  async updateRecipeStep(hash: string, stepId: string, input: UpdateRecipeStepInput): Promise<RecipeStep> {
+    return this.request<RecipeStep>(`/agent-recipes/${hash}/steps/${stepId}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Delete a recipe step.
+   */
+  async deleteRecipeStep(hash: string, stepId: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-recipes/${hash}/steps/${stepId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm: true }),
+    });
+  }
+
+  /**
+   * Reorder recipe steps.
+   */
+  async reorderRecipeSteps(hash: string, stepIds: string[]): Promise<RecipeStep[]> {
+    return this.request<RecipeStep[]>(`/agent-recipes/${hash}/steps/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ step_ids: stepIds }),
+    });
+  }
+
+  /**
+   * Duplicate a recipe step.
+   */
+  async duplicateRecipeStep(hash: string, stepId: string): Promise<RecipeStep> {
+    return this.request<RecipeStep>(`/agent-recipes/${hash}/steps/${stepId}/duplicate`, {
+      method: 'POST',
+    });
+  }
+
+  // ============================================
+  // Recipe Store Operations
+  // ============================================
+
+  /**
+   * List stores for a recipe.
+   */
+  async listRecipeStores(hash: string): Promise<RecipeStore[]> {
+    return this.request<RecipeStore[]>(`/agent-recipes/${hash}/stores`);
+  }
+
+  /**
+   * Add a store to a recipe.
+   */
+  async addRecipeStore(hash: string, input: CreateRecipeStoreInput): Promise<RecipeStore> {
+    return this.request<RecipeStore>(`/agent-recipes/${hash}/stores`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Update a recipe store.
+   */
+  async updateRecipeStore(hash: string, storeId: string, input: UpdateRecipeStoreInput): Promise<RecipeStore> {
+    return this.request<RecipeStore>(`/agent-recipes/${hash}/stores/${storeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  }
+
+  /**
+   * Delete a recipe store.
+   */
+  async deleteRecipeStore(hash: string, storeId: string): Promise<SuccessResult> {
+    return this.request<SuccessResult>(`/agent-recipes/${hash}/stores/${storeId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirm: true }),
     });
   }
 }
