@@ -28,8 +28,9 @@ Tools: read, search, analyze, find-definition, web-search, edit, execute-command
 
 **loop** - Iterate over array
 \`\`\`json
-{ "items_store": "array_key", "item_store": "current_item_key", "body": "step-id-to-run" }
+{ "loop_over": "array_store_key", "loop_variable": "current_item_key", "loop_step_id": "step-id-to-run", "parallel": true, "max_concurrent": 5 }
 \`\`\`
+Set \`parallel: true\` to execute iterations concurrently. Use \`max_concurrent\` to limit simultaneous executions.
 
 **gate** - Approval or condition check
 \`\`\`json
@@ -144,9 +145,11 @@ Set the config object with:
 
 **Loop Configuration:**
 Set the config object with:
-- \`items_store\`: Store key containing the array to iterate over
-- \`item_store\`: Store key to put each item in
-- \`body\`: Step ID to run for each iteration`;
+- \`loop_over\`: Store key containing the array to iterate over
+- \`loop_variable\`: Store key to put each item in
+- \`loop_step_id\`: Step ID to run for each iteration
+- \`parallel\`: (optional) Execute iterations concurrently (default: false)
+- \`max_concurrent\`: (optional) Limit concurrent executions when parallel=true`;
     } else if (args.type === 'branch') {
       configInfo = `
 
