@@ -32,10 +32,18 @@ Tools: read, search, analyze, find-definition, web-search, edit, execute-command
 \`\`\`
 Set \`parallel: true\` to execute iterations concurrently. Use \`max_concurrent\` to limit simultaneous executions.
 
-**gate** - Approval or condition check
+**gate** - Approval, condition check, or user input collection
 \`\`\`json
-{ "requires_approval": true, "approval_prompt": "Review: {{data}}", "condition": "{{status}} === 'ready'" }
+{ "requires_approval": true, "approval_prompt": "Review: {{data}}", "condition": "{{status}} === 'ready'", "input_options": { "button_mode": "preset", "preset": "approve_deny" }, "input_output_store": "decision" }
 \`\`\`
+**Gate Input Options** (for rich user input):
+- \`input_options.button_mode\`: "preset" or "custom"
+- \`input_options.preset\`: "approve_deny", "yes_no", or "continue_cancel"
+- \`input_options.buttons\`: Array of { label, value, isApproval, style } for custom buttons
+- \`input_options.allow_comment\`: Enable text input field
+- \`input_options.comment_required\`: Require text input
+- \`input_options.comment_placeholder\`: Placeholder text
+- \`input_output_store\`: Store key to save user response { action, comment, timestamp, timedOut }
 
 **branch** - Conditional routing
 \`\`\`json
@@ -157,6 +165,22 @@ Set the config object with:
 Set the config object with:
 - \`conditions\`: Array of { expression, then } objects
 - \`default\`: Step ID if no conditions match`;
+    } else if (args.type === 'gate') {
+      configInfo = `
+
+**Gate Configuration:**
+Set the config object with:
+- \`requires_approval\`: Boolean to require user input
+- \`approval_prompt\`: Message to show the user
+- \`condition\`: Optional expression to evaluate
+- \`input_options\`: Rich input configuration object:
+  - \`button_mode\`: "preset" or "custom"
+  - \`preset\`: "approve_deny", "yes_no", or "continue_cancel"
+  - \`buttons\`: Array of { label, value, isApproval, style } for custom options
+  - \`allow_comment\`: Enable text input field
+  - \`comment_required\`: Require text input
+  - \`comment_placeholder\`: Placeholder text
+- \`input_output_store\`: Store key to save { action, comment, timestamp, timedOut }`;
     }
 
     return {
