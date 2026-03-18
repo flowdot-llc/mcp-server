@@ -8,6 +8,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { FlowDotApiClient } from './api-client.js';
 import { registerTools } from './tools/index.js';
+import { registerResources } from './resources/index.js';
 
 const MCP_TOKEN_PREFIX = 'fd_mcp_';
 
@@ -76,6 +77,7 @@ export async function createServer(): Promise<Server> {
     {
       capabilities: {
         tools: {},
+        resources: {},
       },
     }
   );
@@ -83,7 +85,15 @@ export async function createServer(): Promise<Server> {
   // Register tools
   registerTools(server, apiClient);
 
+  // Register learning resources
+  registerResources(server);
+
   console.error('FlowDot MCP Server initialized.');
+  console.error('');
+  console.error('📚 Learning Resources:');
+  console.error('  Use learn:// resources to understand FlowDot concepts before using tools');
+  console.error('  Available: learn://overview, learn://workflows, learn://recipes,');
+  console.error('            learn://custom-nodes, learn://apps, learn://toolkits, learn://knowledge-base');
   console.error('');
   console.error('Available tool categories:');
   console.error('  • Workflows: Core execution, management, building, validation');
