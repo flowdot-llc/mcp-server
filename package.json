@@ -28,14 +28,14 @@
     "automation"
   ],
   "author": "FlowDot",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "https://github.com/flowdot-llc/mcp-server"
   },
   "homepage": "https://flowdot.ai/docs/mcp",
   "dependencies": {
-    "@flowdot.ai/api": "^1.0.2",
+    "@flowdot.ai/api": "^1.0.3",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/acorn": "^4.0.6",
     "acorn": "^8.15.0",
@@ -51,6 +51,7 @@
   "files": [
     "dist",
     "bin",
+    "LICENSE",
     "README.md"
   ],
   "engines": {
