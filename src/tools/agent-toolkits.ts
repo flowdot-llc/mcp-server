@@ -785,15 +785,11 @@ export async function handleDeleteAgentToolkit(
 ): Promise<CallToolResult> {
   try {
     const toolkitId = String(args.toolkit_id);
-    const result = await api.deleteAgentToolkit(toolkitId);
-
-    const text = result.success
-      ? `✓ Toolkit deleted successfully.`
-      : `Error: ${'Failed to delete toolkit'}`;
+    // The API client throws on error, so if we get here without exception, it succeeded.
+    await api.deleteAgentToolkit(toolkitId);
 
     return {
-      content: [{ type: 'text', text }],
-      isError: !result.success,
+      content: [{ type: 'text', text: `✓ Toolkit deleted successfully.` }],
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -890,15 +886,11 @@ export async function handleToggleToolkitVisibility(
     const toolkitId = String(args.toolkit_id);
     const visibility = args.visibility as 'private' | 'public' | 'unlisted';
 
-    const result = await api.toggleToolkitVisibility(toolkitId, visibility);
-
-    const text = result.success
-      ? `✓ Toolkit visibility changed to: ${visibility}`
-      : `Error: ${'Failed to change visibility'}`;
+    // The API client throws on error, so if we get here without exception, it succeeded.
+    await api.toggleToolkitVisibility(toolkitId, visibility);
 
     return {
-      content: [{ type: 'text', text }],
-      isError: !result.success,
+      content: [{ type: 'text', text: `✓ Toolkit visibility changed to: ${visibility}` }],
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -1149,15 +1141,11 @@ export async function handleUninstallToolkit(
 ): Promise<CallToolResult> {
   try {
     const installationId = String(args.installation_id);
-    const result = await api.uninstallToolkit(installationId);
-
-    const text = result.success
-      ? `✓ Toolkit uninstalled successfully.`
-      : `Error: ${'Failed to uninstall toolkit'}`;
+    // The API client throws on error, so if we get here without exception, it succeeded.
+    await api.uninstallToolkit(installationId);
 
     return {
-      content: [{ type: 'text', text }],
-      isError: !result.success,
+      content: [{ type: 'text', text: `✓ Toolkit uninstalled successfully.` }],
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -1250,15 +1238,11 @@ export async function handleToggleToolkitActive(
     const installationId = String(args.installation_id);
     const isActive = Boolean(args.is_active);
 
-    const result = await api.toggleToolkitActive(installationId, isActive);
-
-    const text = result.success
-      ? `✓ Toolkit ${isActive ? 'activated' : 'deactivated'} successfully.`
-      : `Error: ${'Failed to toggle toolkit'}`;
+    // The API client throws on error, so if we get here without exception, it succeeded.
+    await api.toggleToolkitActive(installationId, isActive);
 
     return {
-      content: [{ type: 'text', text }],
-      isError: !result.success,
+      content: [{ type: 'text', text: `✓ Toolkit ${isActive ? 'activated' : 'deactivated'} successfully.` }],
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -1440,9 +1424,10 @@ export async function handleInvokeToolkitTool(
 
     const result = await api.invokeToolkitTool(input);
 
-    if (!result.success) {
+    // Defensive check in case result is undefined
+    if (!result || !result.success) {
       return {
-        content: [{ type: 'text', text: result.error || 'Tool execution failed' }],
+        content: [{ type: 'text', text: result?.error || 'Tool execution failed' }],
         isError: true,
       };
     }
@@ -1867,15 +1852,12 @@ export async function handleDeleteToolkitTool(
     const toolkitId = String(args.toolkit_id);
     const toolId = String(args.tool_id);
 
-    const result = await api.deleteToolkitTool(toolkitId, toolId);
-
-    const text = result.success
-      ? `✓ Tool deleted successfully.`
-      : `Error: ${'Failed to delete tool'}`;
+    // The API client throws on error, so if we get here without exception, it succeeded.
+    // The result may be undefined because the Hub returns {success: true} without a data field.
+    await api.deleteToolkitTool(toolkitId, toolId);
 
     return {
-      content: [{ type: 'text', text }],
-      isError: !result.success,
+      content: [{ type: 'text', text: `✓ Tool '${toolId}' deleted successfully.` }],
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

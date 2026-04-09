@@ -35,7 +35,7 @@
   },
   "homepage": "https://flowdot.ai/docs/mcp",
   "dependencies": {
-    "@flowdot.ai/api": "^1.0.3",
+    "@flowdot.ai/api": "file:../flowdot-api",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/acorn": "^4.0.6",
     "acorn": "^8.15.0",
