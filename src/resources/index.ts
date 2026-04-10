@@ -215,6 +215,42 @@ execute_workflow({
 // Returns execution results
 \`\`\`
 
+## Sync vs Async Execution
+
+\`execute_workflow\` supports two modes:
+
+| Mode | When To Use | Behavior |
+|------|-------------|----------|
+| **Sync** (default for fast workflows) | Quick workflows (<30s) where you need the result immediately | Call blocks until the workflow completes; result returned in the same response |
+| **Async** | Long-running workflows, parallel work, fire-and-forget | Returns an \`execution_id\` immediately; poll \`get_execution_status\` or use \`stream_execution\` for real-time updates |
+
+\`\`\`javascript
+// Async pattern
+const { execution_id } = await execute_workflow({
+  workflow_id: "abc123",
+  inputs: { /* ... */ },
+  wait_for_completion: false   // Async mode
+});
+
+// Then poll
+const status = await get_execution_status({ execution_id });
+
+// Or stream events in real time
+const stream = await stream_execution({ execution_id });
+\`\`\`
+
+**Why this matters:** AI clients have request timeouts (often 30-60 seconds). Sync mode will fail on workflows that exceed those limits. For any workflow involving multiple LLM calls, large file processing, or external API chains, **default to async**.
+
+## Data Flow & Type Handling
+
+Data flows from one node's output socket to another node's input socket. A few rules to remember when designing workflows:
+
+- **Socket types must be compatible.** Connecting a number socket to a string socket will either fail validation or trigger an automatic coercion. Run \`validate_workflow\` to surface mismatches before execution.
+- **Output socket names matter.** When you connect with \`add_connection\`, the \`source_socket_id\` and \`target_socket_id\` must match exact socket names from each node's schema. Use \`get_node_schema\` to see them.
+- **Null/undefined propagation.** If an upstream node fails or produces no value, downstream nodes receive null. Design nodes to handle nulls gracefully or use a validator node early in the chain.
+- **One source can fan out.** A single output socket can connect to multiple downstream input sockets — you don't need to duplicate the upstream node.
+- **Convergence requires explicit merging.** If multiple nodes feed into one downstream node, that downstream node needs an input socket that accepts multiple sources, OR you need an explicit merge/join node.
+
 ## Advanced Features
 
 ### Getting Workflow Structure
@@ -264,17 +300,90 @@ get_execution_history({ workflow_id: "abc123" })
 
 ## Common Patterns
 
+Pick a shape before you start adding nodes. Most workflows fit one of these:
+
 ### Pattern 1: Linear Processing
-Input → Process 1 → Process 2 → Output
+\`\`\`
+Input → Transform → LLM → Output
+\`\`\`
+The simplest case. Each node feeds the next. Use this for "take input, do N steps, return result."
 
 ### Pattern 2: Branching
-Input → Condition → Path A or Path B → Output
+\`\`\`
+Input → Condition Node → Path A → Output A
+                       → Path B → Output B
+\`\`\`
+Use a condition or router node to send data down different paths based on its content. Each path can have its own downstream nodes. Useful for "if X, do Y; otherwise do Z."
 
-### Pattern 3: Parallel Processing
-Input → [Process A, Process B, Process C] → Merge → Output
+### Pattern 3: Parallel Fan-Out + Merge
+\`\`\`
+              ┌→ Process A ─┐
+Input ───────┼→ Process B ─┼→ Merge → Output
+              └→ Process C ─┘
+\`\`\`
+A single input feeds three independent processing chains, which then converge into a merge node. Useful for "do these N independent things and combine the results." All three branches execute in parallel.
 
 ### Pattern 4: Loop Processing
-Input → Loop Over Items → Process Each → Collect Results → Output
+\`\`\`
+Input → Generate List → Loop Node → Process Each Item → Collect → Output
+\`\`\`
+Use this when you need to process every item in an array. The loop node runs the inner subgraph once per item and collects the outputs. Pair with parallel execution for speed.
+
+### Pattern 5: External API Chain
+\`\`\`
+Input → HTTP Request 1 → Transform → HTTP Request 2 → Output
+\`\`\`
+Each HTTP node makes an API call, the transform node reshapes the response into the next request's input. Use this for "fetch from API A, then use that to fetch from API B."
+
+**Tip:** When designing a workflow, sketch the pattern first as ASCII or pseudocode. The visual graph is a faithful representation of that sketch — once you know the pattern, the node-and-connection setup is mechanical.
+
+## Debugging Workflows
+
+When a workflow doesn't behave the way you expect, work through these in order:
+
+### 1. Validate before executing
+\`\`\`javascript
+validate_workflow({ workflow_id: "abc123" })
+\`\`\`
+Catches missing required inputs, disconnected nodes, cycles, and socket-type mismatches without spending tokens on a failed execution.
+
+### 2. Inspect the graph
+\`\`\`javascript
+get_workflow_graph({ workflow_id: "abc123" })
+\`\`\`
+Returns every node and connection. Useful for confirming that the structure matches your mental model — especially after a series of \`add_node\` / \`add_connection\` calls where you might have lost track of step IDs.
+
+### 3. Check the input schema
+\`\`\`javascript
+get_workflow_inputs_schema({ workflow_id: "abc123" })
+\`\`\`
+Confirms which input names the workflow expects, their types, and which are required. The most common execution failure is "input name doesn't match" — this prevents that.
+
+### 4. Read execution history
+\`\`\`javascript
+get_execution_history({ workflow_id: "abc123" })
+get_execution_status({ execution_id: "exec-123" })
+\`\`\`
+Past executions include per-node status, inputs, outputs, and error messages. If a recent run failed, this is where you find out why.
+
+### 5. Stream a fresh execution
+\`\`\`javascript
+const { execution_id } = await execute_workflow({ /* ... */, wait_for_completion: false });
+const stream = await stream_execution({ execution_id });
+\`\`\`
+Watch each node fire in real time. Lets you see exactly which node fails and what value it received.
+
+### Common failure modes
+
+| Symptom | Likely Cause |
+|---------|--------------|
+| "Input X is required" | Input name in \`execute_workflow\` doesn't match the input node's \`inputName\` property |
+| "Node X has no incoming connection" | Forgot to call \`add_connection\` for one of the input sockets |
+| "Socket type mismatch" | Connected an output socket to an input socket of an incompatible type |
+| "Node X failed: undefined is not..." | An upstream node returned null and the downstream node didn't handle it |
+| Workflow times out | Workflow is too long for sync mode — re-run with \`wait_for_completion: false\` |
+| LLM node returns nothing | The prompt template references a variable that wasn't connected |
+| Custom node returns wrong shape | Custom node's \`return\` keys don't match its declared output names |
 
 ## Best Practices
 
@@ -983,6 +1092,24 @@ Enable AI features:
 - Script can call \`llm.call()\` to make LLM requests
 - Useful for AI-powered processing
 
+## Inputs vs Properties: When to Use Which
+
+Both inputs and properties feed data into your node, but they're meant for different things. Choosing wrong is the most common design mistake in custom nodes.
+
+| Use **inputs** when | Use **properties** when |
+|---------------------|--------------------------|
+| The value comes from another node at runtime | The value is configured once when the node is added to a workflow |
+| The value changes per execution | The value is the same every execution |
+| The value is dynamic (e.g., user query, file contents, API response) | The value is static (e.g., API URL, prompt template, threshold) |
+| You want the value to flow through the workflow graph | You want the value to be invisible at the graph level |
+
+**Examples:**
+- A summarizer node: \`Text\` is an **input** (changes per call), \`maxLength\` is a **property** (configured once)
+- An HTTP wrapper node: \`requestBody\` is an **input** (built upstream), \`apiBaseUrl\` is a **property** (set per workflow)
+- A classifier node: \`text\` is an **input**, \`categories\` is a **property** (the fixed set of labels)
+
+**Rule of thumb:** If you'd connect an arrow to it from another node, it's an input. If a user would type it into a config form, it's a property.
+
 ## Creating a Custom Node
 
 ### Step 1: Get Template (Optional)
@@ -1048,6 +1175,30 @@ function processData(inputs, properties, llm) {
 - ❌ No require/import, eval, process, global
 - ❌ No file system access
 - ✅ Available: console, JSON, Math, String, Array methods
+
+## What the Script Validator Enforces
+
+Before your custom node is saved, FlowDot's MCP server runs your script through an **AST-based validator** (using the \`acorn\` JavaScript parser) — not regex. This means the validator can catch things that pattern matching would miss. Knowing what's checked helps you avoid silent rejection.
+
+**Hard errors (script will be rejected):**
+- **Syntax errors** — must be valid ES2020 JavaScript
+- **Missing \`processData\` function** — the validator walks the AST looking for a top-level function declaration with that exact name
+- **No return statement inside \`processData\`** — function with no return is rejected
+- **Top-level return statements** — rejected (returns must be inside the function)
+- **Output key mismatches** — every output you declared must appear as a key in the function's return statement; extras are also flagged
+- **Banned globals** — any reference to \`eval\`, \`Function\`, \`require\`, \`import\`, \`process\`, \`global\`, \`globalThis\`, \`window\`, \`document\`, \`fetch\`, \`XMLHttpRequest\`, or \`WebSocket\` is rejected
+
+**Soft warnings (script saves but you'll see warnings):**
+- Unused inputs (declared in your inputs array but never read in the script)
+- Unhandled error paths in async-style code
+- Complex control flow that might be hard to maintain
+
+**Why this matters:** The validator catches mismatches between your declared schema (the inputs/outputs arrays you pass to \`create_custom_node\`) and your actual code. If you declare an output named \`Summary\` but your code returns \`{ summary: ... }\` (lowercase), the validator will reject the script with a clear error pointing to the mismatch — you don't have to wait until runtime to find out.
+
+**Practical workflow:**
+1. Get a template with \`get_custom_node_template\` — this generates code where inputs and outputs already match your schema
+2. Modify the template body, but keep the input/output access patterns
+3. Submit with \`create_custom_node\` — if the validator rejects, the error message tells you exactly what to fix
 
 ### Step 3: Create Node
 \`\`\`javascript
@@ -1132,6 +1283,46 @@ create_custom_node({
   tokens: { prompt, response, total }
 }
 \`\`\`
+
+### LLM Call Best Practices
+
+The \`llm.call()\` API is simple but the parameters matter a lot for cost, speed, and reliability:
+
+| Parameter | What It Does | Typical Values |
+|-----------|--------------|----------------|
+| \`prompt\` | The user message | Your actual request |
+| \`systemPrompt\` | Persistent instructions for the model | "You are a JSON formatter. Always return valid JSON." |
+| \`temperature\` | Randomness (0 = deterministic, 1 = creative) | **0** for extraction/classification, **0.3** for structured generation, **0.7** for creative writing |
+| \`maxTokens\` | Cap on response length | Match your actual need — bigger costs more |
+
+**Always check \`result.success\` before using \`result.response\`.** LLM calls fail more often than you expect — rate limits, network blips, content filters. If you blindly use \`result.response\`, you'll inject \`undefined\` into your output and downstream nodes will break.
+
+**Cost discipline:**
+- Custom nodes that call LLMs run *every time the workflow runs*. A node called inside a loop multiplies cost by the loop size.
+- Use the lowest temperature that works. Higher temperature isn't free — it correlates with longer, more verbose responses.
+- Set \`maxTokens\` aggressively. The model will stop when it hits the cap, but it won't produce 10x the tokens you asked for.
+- For deterministic tasks (extraction, classification, formatting), \`temperature: 0\` + low \`maxTokens\` is the right shape.
+
+**Pattern: graceful LLM fallback**
+\`\`\`javascript
+function processData(inputs, properties, llm) {
+  const text = inputs.Text || '';
+  if (!text) return { Result: '' };
+
+  const result = llm.call({
+    prompt: \`Extract the main topic from: \${text}\`,
+    systemPrompt: "Reply with ONLY the topic as a single short phrase.",
+    temperature: 0,
+    maxTokens: 20
+  });
+
+  return {
+    Result: result.success ? result.response.trim() : '[LLM failed: ' + result.error + ']'
+  };
+}
+\`\`\`
+
+The fallback string lets downstream nodes detect failure without crashing.
 
 ## Managing Custom Nodes
 
@@ -1326,6 +1517,60 @@ All apps are multi-file by default:
 - **Hooks:** Custom React hooks
 - **Styles:** CSS files
 
+### Bundler & Cross-File Imports
+
+When the app runs, all files are bundled together by an in-browser ESBuild WASM bundler. This is what makes multi-file apps possible inside a sandboxed iframe.
+
+**Cross-file imports use ESM-style \`import\`/\`export\` syntax** — and these *are* allowed (unlike React imports, which are not, because React is injected as a global). The bundler resolves them at build time.
+
+\`\`\`javascript
+// File: components/DataCard.jsx
+function DataCard({ title, value }) {
+  return <div className="p-4 bg-white">{title}: {value}</div>;
+}
+export default DataCard;
+
+// File: utils/format.js
+export function formatNumber(n) {
+  return new Intl.NumberFormat().format(n);
+}
+
+// File: App.jsx (entry)
+import DataCard from './components/DataCard.jsx';
+import { formatNumber } from './utils/format.js';
+
+function App() {
+  return <DataCard title="Total" value={formatNumber(1234567)} />;
+}
+export default App;
+\`\`\`
+
+**Path resolution rules:**
+- Paths are relative to the importing file
+- Always include the file extension (\`.jsx\`, \`.js\`, etc.)
+- Files are referenced by the \`path\` field you used in \`create_app_file\`
+- The entry file is set with \`set_app_entry_file\` (defaults to \`App.jsx\`)
+
+**The two import rules to remember:**
+- ✅ **Cross-file imports (your own files):** Use ESM \`import\`/\`export\` — these are bundled
+- ❌ **External library imports:** Most are NOT allowed (see "Allowed Libraries" below) — and React specifically is a *global*, not an import
+
+### Allowed Libraries
+
+Beyond React (which is global), the bundler has a whitelist of external libraries that *are* importable. Use \`get_app_template\` to see examples for each:
+
+| Library | Purpose | Import |
+|---------|---------|--------|
+| **Lucide React** | Icon library (~1000 icons) | \`import { Search, X, Check } from 'lucide-react';\` |
+| **Recharts** | Charting library | \`import { LineChart, Line, XAxis } from 'recharts';\` |
+| **Framer Motion** | Animation primitives | \`import { motion } from 'framer-motion';\` |
+| **clsx / classnames** | Conditional className helper | \`import clsx from 'clsx';\` |
+| **date-fns** | Date manipulation | \`import { format } from 'date-fns';\` |
+
+Anything else — including \`fetch\`, \`axios\`, Node built-ins, or arbitrary npm packages — will fail at bundle time. **If you need network access, call a workflow via \`invokeWorkflow()\` instead** — workflows run on the server side and can hit external APIs freely.
+
+If you're not sure whether a library is allowed, the bundler error message will tell you. The error is loud and immediate, not silent.
+
 ### Display Modes
 - **windowed:** Standard view with FlowDot header (default)
 - **fullscreen:** Full viewport, minimal control bar
@@ -1393,6 +1638,20 @@ All apps are multi-file by default:
    \`\`\`javascript
    <button type="button" onClick={handleClick}>Click Me</button>
    \`\`\`
+
+## Why the Sandbox Restrictions Exist
+
+The "no imports, no forms, no fetch" rules aren't arbitrary — they exist because every FlowDot app runs inside an **iframe sandbox** that intentionally restricts what client-side code can do.
+
+| Restriction | Reason |
+|-------------|--------|
+| **No \`<form>\` tags** | The sandbox blocks form submissions because they would trigger a full-page navigation that escapes the iframe. Use buttons + state instead. |
+| **No \`fetch\` / \`XMLHttpRequest\`** | The sandbox has no network access. This prevents apps from leaking user data, calling third-party APIs without consent, or being used as exfiltration vectors. **All network calls go through \`invokeWorkflow()\`**, which runs server-side under the user's permissions and is auditable. |
+| **No Node built-ins** | This is a browser, not Node — but more importantly, things like \`fs\`, \`child_process\`, or \`os\` would be a security disaster even if they worked. |
+| **No imports for React itself** | React is injected as a global so the bundle stays small and consistent. Letting users import their own React would let them load unchecked versions. |
+| **All buttons need \`type="button"\`** | Default \`<button>\` type is \`submit\`, which inside any form-like context tries to navigate. Setting \`type="button"\` is harmless and prevents the sandbox from blocking the click. |
+
+**Mental model:** An app is a *renderer*. It draws UI, manages local state, and calls workflows. It does not talk to the network or the host browser directly. If you want to do something an app can't do, the answer is almost always "make a workflow that does it and invoke it from the app."
 
 ## Creating an App
 
@@ -1861,6 +2120,60 @@ create_toolkit_tool({
 })
 \`\`\`
 
+## Designing HTTP Tool Schemas
+
+The \`input_schema\` you give a tool is **the only thing the calling AI agent sees** when it decides whether and how to invoke your tool. A bad schema produces bad tool calls. A great schema turns a tool into something the agent can use confidently on the first try.
+
+### Schema design rules
+
+1. **Use rich \`description\` fields, not just types.** Every property should have a description that tells the agent *when* to use it and *what shape* the value should take. Type alone is not enough.
+
+   \`\`\`javascript
+   // ❌ Weak
+   query: { type: "string" }
+
+   // ✅ Strong
+   query: {
+     type: "string",
+     description: "Search query as a single phrase. Spaces are allowed. Keep under 100 chars. Examples: 'jazz piano 1960s', 'Miles Davis Kind of Blue'."
+   }
+   \`\`\`
+
+2. **Use \`enum\` for closed sets.** If a parameter only accepts certain values, list them. This eliminates a whole class of guessing errors.
+
+   \`\`\`javascript
+   type: {
+     type: "string",
+     enum: ["track", "album", "artist", "playlist"],
+     description: "What kind of Spotify entity to search for"
+   }
+   \`\`\`
+
+3. **Mark required fields explicitly.** The \`required\` array at the schema root tells the agent which fields it cannot omit. Anything not in \`required\` is optional and the agent will know it can skip it.
+
+4. **Constrain numeric ranges.** If a parameter has min/max bounds, encode them with \`minimum\` and \`maximum\`. The agent will respect them.
+
+   \`\`\`javascript
+   limit: {
+     type: "number",
+     minimum: 1,
+     maximum: 50,
+     description: "Number of results to return (default 20, max 50)"
+   }
+   \`\`\`
+
+5. **Describe what the tool *does* in the tool description, not just what it is.** "Searches Spotify" is weak. "Searches Spotify's catalog by free-text query and returns matching tracks, albums, or artists with metadata. Use this when the user asks about a song, album, or artist by name." is strong.
+
+6. **Avoid \`additionalProperties: true\` unless you mean it.** If you allow arbitrary extra fields, agents will start passing fields that don't exist on your endpoint and your API will reject them silently.
+
+### Output schemas matter too
+
+If your tool defines an \`output_schema\`, the agent uses it to know what shape the response will have — which means it can chain tools together more confidently. A tool that returns \`{ tracks: [...] }\` should declare that. The next tool can then expect \`tracks\` as input without having to inspect the actual response first.
+
+### The mental test
+
+Before saving a tool, ask yourself: *if I gave this schema to a stranger who has never seen the underlying API, could they make a successful call on the first try using only the schema and descriptions?* If not, the schema needs more detail.
+
 ## OAuth Configuration
 
 For APIs requiring OAuth 2.0:
@@ -1915,6 +2228,40 @@ create_agent_toolkit({
 - **pkce_enabled:** Enable PKCE (recommended)
 - **auth_error_codes:** HTTP codes indicating auth failure
 - **auth_error_patterns:** Error message patterns for auth failure
+
+### When to Use Each Credential Type
+
+| Credential type | Use when | Notes |
+|---|---|---|
+| **api_key** | The API uses a long-lived static key in a header (e.g., \`X-API-Key\`, \`Authorization: ApiKey ...\`) | Simplest. No refresh needed. Good for OpenAI, Anthropic, most data APIs. |
+| **bearer** | The API uses a static \`Authorization: Bearer <token>\` header without OAuth | Like api_key but with the standard \`Bearer\` prefix. |
+| **basic** | The API uses HTTP Basic Auth (\`Authorization: Basic base64(user:pass)\`) | Rare for modern APIs but still common in legacy services. |
+| **oauth** | The API requires user-delegated access via OAuth 2.0 | Use this for any API where the user logs in to authorize access (Google, Schwab, Notion, GitHub user data, etc.). Tokens auto-refresh. |
+| **custom** | The API has a non-standard auth flow (signed requests, mutual TLS, request signing) | Last resort. You'll likely need to wrap the API in a workflow tool instead and let the workflow handle the signing. |
+
+### Why PKCE Matters
+
+PKCE (Proof Key for Code Exchange) is an OAuth 2.0 extension that prevents authorization code interception. Set \`pkce_enabled: true\` whenever the OAuth provider supports it — most modern providers (Google, Schwab, Notion, GitHub) do. PKCE adds no friction for the user; it just makes the flow safer.
+
+The only reason to leave PKCE off is if the provider explicitly doesn't support it and rejects the extra parameters.
+
+### How Token Refresh Actually Works
+
+When a tool call returns one of the \`auth_error_codes\` (typically 401 or 403), or when the response body matches one of the \`auth_error_patterns\` (e.g., \`"invalid_token"\`, \`"expired_token"\`), FlowDot automatically:
+
+1. Uses the stored refresh token to call \`token_endpoint\`
+2. Receives a new access token + (usually) a new refresh token
+3. Stores both back in the user's encrypted credential vault
+4. Retries the original tool call with the new access token
+
+The agent never has to handle this. From the agent's perspective, the call just succeeds.
+
+**Things you must get right for refresh to work:**
+- \`auth_error_codes\` must include every status code the API returns on token expiry (some APIs use 401, some use 403, some use both)
+- \`auth_error_patterns\` should include the actual error string the API returns — check the API docs for the exact wording
+- \`client_id_credential_key\` and \`client_secret_credential_key\` must point to credentials that are actually populated at refresh time (not just at install time)
+
+**If refresh is failing:** the most common cause is that the API returns a 200 OK with an error body instead of a 4xx code. In that case, you need to add the error pattern to \`auth_error_patterns\` so FlowDot can detect it from the body.
 
 ## Installing & Using Toolkits
 
@@ -2162,6 +2509,39 @@ Retrieval-Augmented Generation:
 - Returns ranked chunks with sources
 - Use results to ground AI responses
 
+## Writing Documents for Good Retrieval
+
+The shape of your documents directly determines whether RAG queries return useful results. A 100-page PDF with no headings is harder to retrieve from than the same content split into well-structured sections, even though both contain the same information.
+
+### Why structure matters
+
+When a document is uploaded, FlowDot splits it into chunks (typically a few hundred tokens each), generates an embedding for every chunk, and stores them. At query time, the user's question is embedded and the system returns the chunks with the most similar embeddings.
+
+This means **the chunk is the unit of retrieval**, not the document. A well-formed chunk contains a single coherent idea that makes sense on its own, with enough surrounding context that an LLM reading it (without seeing the rest of the document) can still understand what it's about.
+
+### Document preparation rules
+
+1. **Use headings.** Markdown \`#\` / \`##\` headers, or PDF section headings, give the chunker natural break points and the embedder useful context. A document with no headings becomes a soup that's hard to retrieve from.
+
+2. **One topic per section.** If a section covers three different concepts, the chunks will mix them and embeddings will be averaged. Split into three sections instead.
+
+3. **Front-load the topic in each section.** The first sentence of a section should name what the section is about. Embeddings weight earlier tokens more, so "OAuth Configuration: To set up OAuth..." retrieves better than "To set up OAuth, which we use because..."
+
+4. **Avoid pronoun chains across paragraphs.** A chunk that says "It uses the same approach as before" without explaining what "it" is becomes useless when retrieved out of context. Repeat nouns when in doubt.
+
+5. **Inline definitions.** If a section uses a term defined elsewhere, briefly redefine it. Each chunk should be self-contained.
+
+6. **Prefer Markdown over PDF when you have the choice.** Markdown round-trips through chunking with no formatting loss. PDFs lose tables, footnotes, and sometimes paragraph boundaries.
+
+7. **Split very long documents.** A 200-page manual is better as ten 20-page documents organized in a category than as one giant file. Each upload is a discrete retrievable unit.
+
+### What to avoid
+
+- **Wall-of-text without breaks** — chunker has nothing to grab onto
+- **Tables of contents and index pages** — these get embedded as if they were content and pollute results
+- **Heavily templated repeated content** (e.g., 50 product pages with identical headers) — embeddings collapse and the system can't distinguish between them
+- **Image-only PDFs** — there's no text to chunk; OCR if needed before uploading
+
 ## Uploading Documents
 
 ### Upload Text Content
@@ -2279,6 +2659,76 @@ query_knowledge_base({
   // ... more results
 ]
 \`\`\`
+
+## Querying Effectively
+
+The query you pass to \`query_knowledge_base\` is itself embedded and compared against chunk embeddings. The shape of the query matters as much as the shape of the documents.
+
+### Query design principles
+
+1. **Phrase queries as questions or statements, not keyword soup.** Semantic search works on meaning, not term frequency. \`"How do I configure OAuth for the Schwab API"\` will retrieve better than \`"oauth schwab config"\`.
+
+2. **Be specific about what you want.** A query like \`"authentication"\` will match every chunk that mentions auth — too broad to be useful. \`"How do I refresh an OAuth access token when it expires?"\` will retrieve the exact section you need.
+
+3. **Match the document's vocabulary when possible.** If the docs say "API key" but the user asks about "credentials," use \`"API key for the X service"\` rather than \`"X credentials"\`. Embeddings handle synonyms decently but exact term matches still help.
+
+4. **Ask one question per query.** \`"How do I install the toolkit and configure OAuth and refresh tokens"\` will return mediocre results for all three. Ask each separately and combine the results in your prompt.
+
+### Tuning \`top_k\`
+
+\`top_k\` controls how many chunks to return. Defaults to 5-10:
+- **3-5**: Use when you need a focused, high-precision answer
+- **10**: Use for general research questions where you want broader coverage
+- **20+**: Use when you're going to feed everything into a synthesis step and need comprehensive coverage. Be aware this dilutes signal — the bottom of the list is often noise.
+
+### Filtering by category or team
+
+Pass \`category_id\` or \`team_id\` to narrow the search scope. This dramatically improves quality when you know the answer is in a specific area:
+
+\`\`\`javascript
+// Search only in product docs
+query_knowledge_base({
+  query: "How do I deploy to production?",
+  category_id: 123,  // "Product Documentation" category
+  top_k: 5
+})
+\`\`\`
+
+This is faster *and* more accurate than searching everything — the embedding model can't distinguish between "production deployment" in your product docs and "production deployment" in a competitor analysis from a different category.
+
+### Using results as LLM context (the actual RAG pattern)
+
+The point of \`query_knowledge_base\` is rarely to show results to a user directly — it's to feed them as context into an LLM call. The standard pattern:
+
+\`\`\`javascript
+// 1. Retrieve
+const results = await query_knowledge_base({
+  query: "{{inputs.user_question}}",
+  top_k: 5
+});
+
+// 2. Format as context
+const context = results.map(r =>
+  \`[Source: \${r.document_title}, score: \${r.score}]\\n\${r.chunk_text}\`
+).join('\\n\\n---\\n\\n');
+
+// 3. Pass to LLM with explicit instructions
+// (typically done in an agent step's user_prompt)
+const prompt = \`
+Answer the user's question using ONLY the provided context.
+If the context doesn't contain the answer, say so.
+ALWAYS cite the source document title.
+
+CONTEXT:
+\${context}
+
+QUESTION: {{inputs.user_question}}
+\`;
+\`\`\`
+
+**The "ALWAYS cite" instruction is critical.** Without it, LLMs will silently mix retrieved facts with their training data, and you'll have no way to verify what came from where.
+
+**The "ONLY the provided context" instruction is also critical.** Without it, the LLM will fall back to its training data for things the docs don't mention, which defeats the purpose of having a knowledge base.
 
 ## Managing Documents
 
