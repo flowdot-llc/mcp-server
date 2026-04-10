@@ -352,6 +352,55 @@ Reference data in prompts and conditions:
 - \`{{store_key}}\` - Any store value
 - \`{{step.step_id}}\` - Output from a previous step
 
+## Architecture Patterns
+
+Before designing a recipe, pick the right *shape*. Most recipes fall into one of three patterns. Knowing the pattern up front determines which step types you need and how stores connect, which prevents you from painting yourself into a corner.
+
+### Pattern 1: Orchestrator + Workers (most common)
+
+For research, exploration, or any task where the work fans out into independent sub-tasks:
+
+\`\`\`
+1. Orchestrator (agent)
+   - Analyzes the request
+   - Generates sub-tasks as a JSON array
+   - Outputs to: questions[]
+
+2. Worker Loop (loop step over questions[])
+   - Runs Worker Agent for each item
+   - parallel: true, max_concurrent: 5
+   - Collects results to: search_results[]
+
+3. Synthesizer (agent)
+   - Reads all search_results[]
+   - Produces final coherent answer
+   - Outputs to: answer
+\`\`\`
+
+This is the canonical shape for any "research a topic", "review N files", or "analyze N items" task.
+
+### Pattern 2: Sequential Pipeline
+
+For linear transformation tasks where each step depends on the previous one:
+
+\`\`\`
+Parser → Validator → Transformer → Formatter
+\`\`\`
+
+Each step has a single \`next\` and no parallelism.
+
+### Pattern 3: Parallel Fan-Out
+
+For independent concurrent tasks that converge into one aggregator:
+
+\`\`\`
+         ┌→ Task A ─┐
+Request ─┼→ Task B ─┼→ Aggregator
+         └→ Task C ─┘
+\`\`\`
+
+Use a \`parallel\` step containing the three tasks, with the aggregator as the \`next\` step.
+
 ## Building a Recipe
 
 ### Step 1: Create Recipe
@@ -619,6 +668,151 @@ await update_recipe({ hash, entry_step_id: step1.id });
 await link_recipe({ hash, alias: "code-reviewer" });
 \`\`\`
 
+## Model Tiers
+
+Recipes support different model tiers per step. Pick the cheapest tier that works:
+
+| Tier | Use Case | Example Models |
+|------|----------|----------------|
+| \`lite\` | Simple extraction, formatting, classification | gemini-2.5-flash-lite |
+| \`capable\` | General reasoning, tool use, most agent steps | gpt-4o-mini, gemini-2.5-flash |
+| \`complex\` | Hard reasoning, final synthesis, judgment calls | claude-3.5-sonnet, gpt-4o |
+
+Set per agent step in the config:
+
+\`\`\`javascript
+add_recipe_step({
+  hash: "abc123xyz",
+  name: "synthesize",
+  type: "agent",
+  config: {
+    model_tier: "complex",   // Use complex only for the final synthesis
+    user_prompt: "...",
+    output_store: "answer"
+  }
+})
+\`\`\`
+
+**Cost optimization rule of thumb:** Use \`lite\` for any deterministic extraction, \`capable\` for tool-using agents (the bulk of most recipes), and \`complex\` only when judgment quality matters and \`capable\` isn't enough. A typical research recipe runs 80% of its steps on \`lite\` or \`capable\`, with one \`complex\` synthesizer at the end.
+
+## Designing for Small Models
+
+Recipes should work on \`lite\` and \`capable\` tiers, not just \`complex\`. Small models are fast and cheap but they need **explicit, prescriptive prompts**. Vague prompts that work on \`complex\` will silently fail on \`lite\`.
+
+**The problem:**
+
+\`\`\`
+Use the search tool to find relevant files.
+\`\`\`
+
+A small model with this prompt doesn't know what to search for, picks bad keywords, runs one search, gets nothing, and gives up.
+
+**The fix: prescriptive prompt lecturing.** Tell the model exactly what to do, with concrete examples:
+
+\`\`\`
+### Step 1: Search for Related Files
+Use the 'search' tool with keywords from the user's request. Examples:
+- For "how does authentication work" → search for: auth, login, token, session
+- For "how does routing work" → search for: router, route, endpoint, handler
+- For "how does the database work" → search for: database, query, model, schema
+
+Run at least 3 different searches with different keywords.
+\`\`\`
+
+This is the single most important skill for writing recipes that scale across model tiers.
+
+## Prompt Lecturing Principles
+
+When writing agent step prompts, apply these five principles:
+
+### 1. Give Concrete Examples
+
+**Bad:**
+\`\`\`
+Search for files related to the request.
+\`\`\`
+
+**Good:**
+\`\`\`
+Search for files using these example patterns:
+- "handleLogin" - function names
+- "AuthService" - class names
+- "Bearer" - specific strings in code
+\`\`\`
+
+### 2. Quantify Requirements
+
+**Bad:**
+\`\`\`
+Use tools before responding.
+\`\`\`
+
+**Good:**
+\`\`\`
+You MUST:
+1. Run at least 3 different searches
+2. Read at least 2 files
+3. Only then generate your response
+\`\`\`
+
+### 3. Provide Fallback Paths
+
+**Bad:**
+\`\`\`
+Search for the relevant code.
+\`\`\`
+
+**Good:**
+\`\`\`
+Search for relevant code. If your first search returns no results:
+- Try alternative keywords
+- Search for broader terms
+- Look for related concepts
+\`\`\`
+
+### 4. Specify Exact Output Format
+
+**Bad:**
+\`\`\`
+Return your findings as JSON.
+\`\`\`
+
+**Good:**
+\`\`\`
+Your final response must be ONLY a valid JSON array. No markdown, no explanation:
+["Question about file 1?", "Question about file 2?", "Question 3?"]
+
+Example correct output:
+["How does AuthService.authenticate() validate tokens?", "What middleware checks sessions?"]
+\`\`\`
+
+### 5. Prevent Common Failures
+
+**Bad:**
+\`\`\`
+Find information about authentication.
+\`\`\`
+
+**Good:**
+\`\`\`
+You are searching LOCAL FILES in a codebase.
+DO NOT use web search.
+DO NOT make up file paths.
+DO NOT cite files you haven't actually read with the 'read' tool.
+\`\`\`
+
+**The meta-rule:** Show, don't tell. A concrete example is worth ten sentences of description.
+
+## Gate Steps via COMMS (Remote Approvals)
+
+Gate steps don't only pause for terminal approval — they can route the approval request through a user's COMMS channel (Telegram, Discord) so they can approve from anywhere. The user clicks a button on their phone and the recipe continues.
+
+This is what enables long-running recipes that span hours. The user kicks off the recipe, walks away, gets a Telegram notification at the gate step, taps a button, and the recipe continues without them returning to their terminal.
+
+The same \`input_options\` schema works for COMMS as for terminal gates — preset buttons, custom buttons, \`allow_comment\`, and \`comment_required\` all behave identically. The only difference is the *channel* through which the approval is collected, and that's controlled by the user's COMMS configuration, not by the recipe definition.
+
+**For recipe designers:** You don't need to write COMMS-specific code. Just author the gate step as you normally would. If the user has a COMMS channel configured and the recipe is run with COMMS routing enabled, the gate request automatically flows through that channel. The recipe is portable across terminal-only and remote-controlled execution without any change.
+
 ## Managing Recipes
 
 \`\`\`javascript
@@ -647,6 +841,49 @@ fork_recipe({ hash: "public-recipe-hash", name: "My Fork" })
 delete_recipe({ hash: "abc123xyz", confirm: true })
 \`\`\`
 
+## Debugging Recipes
+
+When a recipe doesn't work, check these in order:
+
+### 1. Inspect the recipe definition
+
+Use \`get_recipe_definition({ hash, format: "yaml" })\` to dump the entire recipe as YAML and review it. This is the fastest way to spot misconfigured stores, missing connections, or wrong step types.
+
+### 2. List the steps and stores explicitly
+
+\`\`\`javascript
+list_recipe_steps({ hash: "abc123xyz" })
+list_recipe_stores({ hash: "abc123xyz" })
+\`\`\`
+
+Confirm:
+- The entry step ID matches the first step you want to run
+- Every step's \`next\` points to a real step ID
+- Every \`output_store\` references a real store key
+- The primary input store is named \`request\`
+
+### 3. Check for the most common mistakes
+
+| Symptom | Cause |
+|---------|-------|
+| Recipe won't start | \`entry_step_id\` not set on the recipe |
+| 422 error linking alias | Alias contains underscores instead of hyphens |
+| Agent ignores prompt | Used \`prompt\` instead of \`user_prompt\` in agent step config |
+| Loop produces empty results | \`output_store\` not set on the loop step config |
+| Step output not visible to next step | The step's \`output_store\` doesn't match what the next step interpolates |
+| Branch step always falls through to default | \`expression\` syntax wrong — must be a JS-style boolean expression |
+| Small model gives up immediately | Prompt isn't prescriptive enough — apply prompt lecturing principles |
+
+### 4. Persistent execution state (CLI-side)
+
+When a recipe runs on the FlowDot CLI, every execution persists state to disk so you can post-mortem failures. Each execution gets its own folder with:
+
+- **state.json** — overall execution state
+- **stores.json** — store values at each step
+- **logs/** — per-step logs
+
+The CLI also supports a \`DEBUG=RECIPE\` environment variable for verbose recipe-runtime tracing. Both of these are CLI-side artifacts — MCP-driven debugging works through \`get_recipe_definition\`, \`list_recipe_steps\`, and \`list_recipe_stores\` instead.
+
 ## Best Practices
 
 1. **Name primary input \`request\`** - CLI convention
@@ -673,6 +910,28 @@ delete_recipe({ hash: "abc123xyz", confirm: true })
 - Use \`user_prompt\` not \`prompt\`
 - Verify tool names are correct
 - Check interpolation syntax: \`{{store_key}}\`
+
+## Recipe Design Checklist
+
+Before declaring a recipe done, verify:
+
+- [ ] Architecture pattern chosen up front (Orchestrator+Workers / Sequential / Parallel Fan-Out)
+- [ ] Primary input store is named \`request\`
+- [ ] Output stores marked with \`is_output: true\`
+- [ ] All intermediate stores defined with appropriate types
+- [ ] Every agent step has \`user_prompt\` (not \`prompt\`)
+- [ ] Every agent step has \`output_store\` configured
+- [ ] Every loop step has \`loop_variable\` and \`output_store\`
+- [ ] All steps connected via \`next\`
+- [ ] \`on_error\` set on critical steps
+- [ ] \`entry_step_id\` set on the recipe
+- [ ] Alias linked using **hyphens**, not underscores
+- [ ] Each step uses the cheapest model tier that works (\`lite\` > \`capable\` > \`complex\`)
+- [ ] Prompts include concrete examples (Principle 1)
+- [ ] Prompts quantify requirements (Principle 2)
+- [ ] Prompts provide fallback paths (Principle 3)
+- [ ] Output format explicitly specified with example (Principle 4)
+- [ ] Common failure modes called out as DO NOT instructions (Principle 5)
 
 ## Related Resources
 
