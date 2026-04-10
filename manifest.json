@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "flowdot",
   "display_name": "FlowDot",
-  "version": "1.0.0",
-  "description": "Connect Claude to FlowDot workflows - create, execute, and manage visual automation workflows",
-  "long_description": "FlowDot MCP Server enables Claude to interact with your FlowDot workflows directly. Build, execute, and manage visual automation workflows, custom nodes, and apps - all through natural conversation.\n\n## Features\n\n- **Execute Workflows**: Run your workflows with custom inputs\n- **Build Workflows**: Create and modify workflows programmatically\n- **Manage Custom Nodes**: Browse, create, and share custom nodes\n- **App Development**: Build and deploy React apps powered by workflows\n- **Analytics**: View workflow metrics and execution history\n\n## Getting Started\n\n1. Get your MCP token from FlowDot Settings > MCP Tokens\n2. Enter your token when prompted\n3. Start chatting with Claude about your workflows!",
+  "version": "1.0.4",
+  "description": "Connect Claude to the entire FlowDot platform — 142 tools across workflows, recipes, custom nodes, apps, knowledge bases, agent toolkits, and community sharing.",
+  "long_description": "FlowDot MCP Server gives Claude a complete operational interface to the FlowDot AI workflow platform — 142 tools across 16 categories, plus 7 educational `learn://` resources.\n\n## What Claude Can Do\n\n- **Build workflows from scratch** — Create graphs, add nodes, wire connections, validate, execute, and stream results\n- **Author custom nodes** — Write JavaScript components validated with AST parsing, then publish to the community\n- **Develop FlowDot Apps** — Full multi-file React projects with surgical code editing operations\n- **Design agent recipes** — Multi-step agentic programs with stores, gates, branches, loops, parallel steps, and sub-recipes\n- **Manage knowledge bases (RAG)** — Categories, document upload, semantic queries\n- **Create and invoke agent toolkits** — Define new tools with OAuth/API-key credentials, install, and invoke\n- **Share and discover** — Public URLs, voting, comments, favorites, community browsing\n- **Run and observe executions** — Start, stream via SSE, cancel, retry, view history and metrics\n\n**Note:** Recipes can be DESIGNED through MCP but must be EXECUTED via the FlowDot CLI (`@flowdot.ai/cli`) — recipes are long-running agentic programs that exceed AI client timeouts and require local file/code/shell access.\n\n## Educational Resources\n\nThe server exposes 7 standalone concept guides via the MCP `ReadResourceRequest` interface:\n- `learn://overview`, `learn://workflows`, `learn://recipes`\n- `learn://custom-nodes`, `learn://apps`, `learn://toolkits`, `learn://knowledge-base`\n\nRead these before invoking tools to scaffold your understanding of each subsystem.\n\n## Getting Started\n\n1. Get your MCP token from FlowDot Settings > MCP Tokens\n2. Select the scopes you need (token can be restricted to read-only or any subset)\n3. Enter the token when prompted\n4. Start chatting with Claude about your workflows!",
   "author": {
     "name": "FlowDot",
     "url": "https://flowdot.ai"
@@ -39,56 +39,165 @@
     }
   },
   "tools": [
-    {
-      "name": "list_workflows",
-      "description": "List all workflows accessible to the authenticated user"
-    },
-    {
-      "name": "execute_workflow",
-      "description": "Execute a workflow with optional inputs"
-    },
-    {
-      "name": "get_execution_status",
-      "description": "Get the status and results of a workflow execution"
-    },
-    {
-      "name": "agent_chat",
-      "description": "Chat with FlowDot's AI agent for workflow assistance"
-    },
-    {
-      "name": "create_workflow",
-      "description": "Create a new workflow"
-    },
-    {
-      "name": "get_workflow_details",
-      "description": "Get detailed information about a workflow"
-    },
-    {
-      "name": "search_workflows",
-      "description": "Search workflows by query and tags"
-    },
-    {
-      "name": "list_custom_nodes",
-      "description": "List custom nodes in your library"
-    },
-    {
-      "name": "create_custom_node",
-      "description": "Create a new custom node"
-    },
-    {
-      "name": "list_apps",
-      "description": "List apps in your library"
-    },
-    {
-      "name": "create_app",
-      "description": "Create a new React app"
-    },
-    {
-      "name": "get_app_template",
-      "description": "Get starter code templates for apps"
-    }
+    { "name": "list_workflows", "description": "List all workflows accessible to the authenticated user" },
+    { "name": "execute_workflow", "description": "Execute a workflow with optional inputs (sync or async mode)" },
+    { "name": "get_execution_status", "description": "Get the status and results of a workflow execution" },
+    { "name": "agent_chat", "description": "Chat with the FlowDot AI agent for workflow assistance" },
+
+    { "name": "get_workflow_metrics", "description": "Execution metrics: impressions, success/failure rates, average duration" },
+    { "name": "get_workflow_comments", "description": "User comments and ratings on a workflow" },
+    { "name": "get_execution_history", "description": "Past execution history with timestamps, status, duration" },
+
+    { "name": "get_workflow_details", "description": "Detailed workflow info including nodes, connections, signature" },
+    { "name": "get_workflow_inputs_schema", "description": "Input schema showing expected types and required fields" },
+    { "name": "duplicate_workflow", "description": "Create a copy of an existing workflow" },
+    { "name": "toggle_workflow_public", "description": "Make a workflow public or private" },
+    { "name": "favorite_workflow", "description": "Add or remove a workflow from favorites" },
+
+    { "name": "cancel_execution", "description": "Cancel a running or pending workflow execution" },
+    { "name": "retry_execution", "description": "Retry a failed execution with the same inputs" },
+    { "name": "stream_execution", "description": "Real-time SSE streaming of workflow execution events" },
+
+    { "name": "get_workflow_tags", "description": "Get tags associated with a workflow" },
+    { "name": "set_workflow_tags", "description": "Set or update workflow tags (replaces existing)" },
+    { "name": "search_workflows", "description": "Search workflows by name, description, or tags" },
+    { "name": "search", "description": "Unified search across workflows, apps, and custom nodes" },
+    { "name": "get_public_workflows", "description": "Browse public workflows shared by other users" },
+
+    { "name": "create_workflow", "description": "Create a new empty workflow with name and description" },
+    { "name": "delete_workflow", "description": "Permanently delete a workflow" },
+    { "name": "get_workflow_graph", "description": "Get complete graph structure (all nodes and connections)" },
+    { "name": "validate_workflow", "description": "Validate for missing connections, invalid config, disconnected nodes" },
+
+    { "name": "list_available_nodes", "description": "List all available node types organized by category" },
+    { "name": "get_node_schema", "description": "Get the full schema for a node type (inputs, outputs, properties)" },
+    { "name": "add_node", "description": "Add a new node to a workflow (built-in or custom)" },
+    { "name": "update_node", "description": "Update node position or properties" },
+    { "name": "delete_node", "description": "Delete a node and all its connections" },
+
+    { "name": "add_connection", "description": "Create a connection between a node output and a node input" },
+    { "name": "delete_connection", "description": "Remove a connection between two nodes" },
+    { "name": "get_node_connections", "description": "Get all connections to and from a specific node" },
+
+    { "name": "list_custom_nodes", "description": "List your custom nodes with optional search and category filters" },
+    { "name": "search_public_custom_nodes", "description": "Search public custom nodes shared by the community" },
+    { "name": "get_custom_node", "description": "Detailed custom node info (inputs, outputs, script code)" },
+    { "name": "get_custom_node_comments", "description": "Comments and ratings on a custom node" },
+    { "name": "get_custom_node_template", "description": "Generate a working script template based on input/output definitions" },
+    { "name": "create_custom_node", "description": "Create a new custom node with script, inputs, and outputs (AST-validated)" },
+    { "name": "update_custom_node", "description": "Update name, description, code, or properties of a custom node" },
+    { "name": "delete_custom_node", "description": "Permanently delete a custom node" },
+    { "name": "copy_custom_node", "description": "Copy a public custom node to your library" },
+    { "name": "toggle_custom_node_visibility", "description": "Change visibility (private, public, unlisted)" },
+    { "name": "vote_custom_node", "description": "Upvote, downvote, or remove vote on a custom node" },
+    { "name": "favorite_custom_node", "description": "Add or remove a custom node from favorites" },
+    { "name": "add_custom_node_comment", "description": "Add a comment or reply on a custom node" },
+
+    { "name": "list_apps", "description": "List your React frontend apps" },
+    { "name": "search_apps", "description": "Search the public app marketplace" },
+    { "name": "get_app", "description": "Detailed app info including React code and linked workflows" },
+    { "name": "create_app", "description": "Create a new React app (Tailwind + React 18, sandboxed)" },
+    { "name": "update_app", "description": "Update name, description, code, config, or mobile settings" },
+    { "name": "delete_app", "description": "Permanently delete an app" },
+    { "name": "publish_app", "description": "Publish an app to the public marketplace" },
+    { "name": "unpublish_app", "description": "Make a published app private" },
+    { "name": "clone_app", "description": "Clone a public app into your library" },
+    { "name": "link_app_workflow", "description": "Link a workflow to an app for invokeWorkflow() use" },
+    { "name": "unlink_app_workflow", "description": "Unlink a workflow from an app" },
+    { "name": "get_app_template", "description": "Get starter code templates (basic, chat, dashboard, form-builder, data-viewer)" },
+    { "name": "edit_app_code", "description": "Surgical find/replace in app code" },
+    { "name": "append_app_code", "description": "Append content before the closing brace of an app file" },
+    { "name": "prepend_app_code", "description": "Prepend content to the beginning of an app file" },
+    { "name": "insert_app_code", "description": "Insert content after a specific pattern match in app code" },
+    { "name": "list_app_files", "description": "List all files in a multi-file app" },
+    { "name": "get_app_file", "description": "Get the content of a specific file in an app" },
+    { "name": "create_app_file", "description": "Create a new file in an app (jsx, js, ts, tsx, css, json, md)" },
+    { "name": "update_app_file", "description": "Update file content and type" },
+    { "name": "delete_app_file", "description": "Delete a file from an app" },
+    { "name": "rename_app_file", "description": "Rename or move a file within an app" },
+    { "name": "set_app_entry_file", "description": "Set a file as the entry point for an app" },
+
+    { "name": "get_workflow_public_url", "description": "Get a public shareable URL for a workflow" },
+    { "name": "list_shared_results", "description": "List shared execution results for a workflow" },
+    { "name": "get_shared_result", "description": "Get a shared execution result with outputs and inputs" },
+    { "name": "get_shared_result_comments", "description": "Get comments on a shared result" },
+    { "name": "create_shared_result", "description": "Create a shareable link for an execution result (with optional expiry)" },
+    { "name": "add_workflow_comment", "description": "Add a comment to a workflow" },
+    { "name": "add_shared_result_comment", "description": "Add a comment to a shared result" },
+    { "name": "vote_workflow", "description": "Upvote, downvote, or remove vote on a workflow" },
+    { "name": "vote_shared_result", "description": "Upvote, downvote, or remove vote on a shared result" },
+
+    { "name": "list_input_presets", "description": "Pre-configured input value sets for a workflow" },
+    { "name": "get_input_preset", "description": "Specific input preset with all values" },
+    { "name": "create_input_preset", "description": "Create a shareable preset with pre-configured inputs" },
+    { "name": "update_input_preset", "description": "Update preset description or values" },
+    { "name": "delete_input_preset", "description": "Delete an input preset" },
+    { "name": "vote_input_preset", "description": "Vote on an input preset" },
+    { "name": "toggle_community_inputs", "description": "Enable or disable community inputs for a workflow" },
+
+    { "name": "list_user_teams", "description": "List all teams the user belongs to with role and member count" },
+
+    { "name": "list_knowledge_categories", "description": "List document categories in the knowledge base" },
+    { "name": "create_knowledge_category", "description": "Create a new knowledge category with name, description, color" },
+    { "name": "update_knowledge_category", "description": "Update category name, description, or color" },
+    { "name": "delete_knowledge_category", "description": "Delete a category (documents become uncategorized)" },
+    { "name": "list_knowledge_documents", "description": "List documents with filters by category, team, or status" },
+    { "name": "get_knowledge_document", "description": "Get document details by ID or hash" },
+    { "name": "upload_text_document", "description": "Upload text content directly as a document" },
+    { "name": "upload_document_from_url", "description": "Download a document from a URL and add it to the knowledge base" },
+    { "name": "move_document_to_category", "description": "Move a document to a different category or make it uncategorized" },
+    { "name": "transfer_document_ownership", "description": "Transfer a document between personal and team knowledge base" },
+    { "name": "reprocess_document", "description": "Reprocess a failed or stuck document" },
+    { "name": "delete_knowledge_document", "description": "Permanently delete a document" },
+    { "name": "query_knowledge_base", "description": "Semantic and keyword search with RAG" },
+    { "name": "get_knowledge_storage", "description": "Get knowledge base storage usage and limits" },
+
+    { "name": "list_agent_toolkits", "description": "List your MCP toolkits with optional filtering" },
+    { "name": "search_agent_toolkits", "description": "Search the public toolkit marketplace" },
+    { "name": "get_agent_toolkit", "description": "Toolkit details with tools, credentials, metadata" },
+    { "name": "get_toolkit_comments", "description": "Get comments on a toolkit" },
+    { "name": "create_agent_toolkit", "description": "Create a new toolkit with credential requirements" },
+    { "name": "update_agent_toolkit", "description": "Update toolkit title, description, category, credentials" },
+    { "name": "delete_agent_toolkit", "description": "Permanently delete a toolkit" },
+    { "name": "copy_agent_toolkit", "description": "Create a private copy of a public toolkit" },
+    { "name": "toggle_toolkit_visibility", "description": "Change toolkit visibility (private, public, unlisted)" },
+    { "name": "vote_toolkit", "description": "Vote on a toolkit" },
+    { "name": "favorite_toolkit", "description": "Add or remove a toolkit from favorites" },
+    { "name": "add_toolkit_comment", "description": "Add a comment to a toolkit" },
+    { "name": "install_toolkit", "description": "Install a toolkit on your account" },
+    { "name": "uninstall_toolkit", "description": "Uninstall a toolkit from your account" },
+    { "name": "list_installed_toolkits", "description": "List installed toolkits with credential status" },
+    { "name": "toggle_toolkit_active", "description": "Enable or disable a toolkit installation" },
+    { "name": "check_toolkit_credentials", "description": "Check which credentials are missing for a toolkit" },
+    { "name": "update_toolkit_installation", "description": "Map toolkit credentials to your stored API keys" },
+    { "name": "invoke_toolkit_tool", "description": "Execute a tool from an installed toolkit" },
+    { "name": "list_toolkit_tools", "description": "List all tools defined in a toolkit" },
+    { "name": "get_toolkit_tool", "description": "Tool details with input and output schemas" },
+    { "name": "create_toolkit_tool", "description": "Create an HTTP- or Workflow-backed tool inside a toolkit" },
+    { "name": "update_toolkit_tool", "description": "Update tool configuration, schema, or endpoint" },
+    { "name": "delete_toolkit_tool", "description": "Delete a tool from a toolkit" },
+
+    { "name": "list_recipes", "description": "List recipes with optional favorites_only filter" },
+    { "name": "get_recipe", "description": "Recipe details with steps, stores, and metadata" },
+    { "name": "get_recipe_definition", "description": "Full recipe in YAML or JSON format" },
+    { "name": "browse_recipes", "description": "Browse public recipes with pagination and sorting" },
+    { "name": "create_recipe", "description": "Create a new agent recipe" },
+    { "name": "update_recipe", "description": "Update recipe metadata and entry_step_id (critical for execution)" },
+    { "name": "delete_recipe", "description": "Permanently delete a recipe" },
+    { "name": "fork_recipe", "description": "Create a private copy of a public recipe" },
+    { "name": "list_recipe_steps", "description": "List all steps with types, connections, and config" },
+    { "name": "add_recipe_step", "description": "Add a new step (agent, parallel, loop, gate, branch, invoke)" },
+    { "name": "update_recipe_step", "description": "Update step name, description, config, or connections" },
+    { "name": "delete_recipe_step", "description": "Delete a step from a recipe" },
+    { "name": "list_recipe_stores", "description": "List stores (variables) in a recipe" },
+    { "name": "add_recipe_store", "description": "Add a store for data flow between steps" },
+    { "name": "update_recipe_store", "description": "Update store key, label, type, default, or input/output flags" },
+    { "name": "delete_recipe_store", "description": "Delete a store from a recipe" },
+    { "name": "vote_recipe", "description": "Vote on a public recipe" },
+    { "name": "favorite_recipe", "description": "Add or remove a recipe from favorites" },
+    { "name": "link_recipe", "description": "Link a recipe for CLI execution with an alias" }
   ],
-  "tools_generated": true,
+  "tools_generated": false,
   "compatibility": {
     "platforms": ["macos", "windows"],
     "runtimes": {
