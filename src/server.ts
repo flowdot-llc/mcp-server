@@ -79,6 +79,29 @@ export async function createServer(): Promise<Server> {
         tools: {},
         resources: {},
       },
+      instructions: `# FlowDot MCP — Start Here
+
+**READ THIS FIRST.** Before using any FlowDot tool, you should read the FlowDot learning resources. They are **MCP resources** (not tools), so they won't appear in your tool list — you must fetch them explicitly via the MCP resource-read mechanism (URIs below).
+
+## The 7 Learning Resources
+
+FlowDot exposes 7 \`learn://\` resources that explain every major feature of the platform. Each is a complete guide with concepts, tool reference, and worked examples. Read the one that matches the user's task *before* calling tools in that area.
+
+1. **\`learn://overview\`** — High-level overview of all FlowDot components and how they work together. Start here if you don't know where to start.
+2. **\`learn://workflows\`** — Complete guide to creating, managing, and executing FlowDot workflows (visual node-and-connection automations). Read before using \`create_workflow\`, \`add_node\`, \`add_connection\`, \`execute_workflow\`, etc.
+3. **\`learn://recipes\`** — Complete guide to agent recipes — orchestration workflows for complex automation (agent, parallel, loop, gate, branch, invoke steps). Read before using \`create_recipe\`, \`add_recipe_step\`, \`add_recipe_store\`, \`link_recipe\`, etc.
+4. **\`learn://custom-nodes\`** — Complete guide to creating and managing custom nodes (reusable JavaScript nodes with optional LLM calls). Read before using \`create_custom_node\`, \`update_custom_node\`, etc.
+5. **\`learn://apps\`** — Complete guide to building multi-file React applications with FlowDot (sandboxed frontends that can invoke workflows). Read before using \`create_app\`, \`create_app_file\`, \`edit_app_code\`, etc.
+6. **\`learn://toolkits\`** — Complete guide to creating and managing MCP agent toolkits (extend agents with new tools, credential-scoped). Read before using any \`mcp__flowdot__*toolkit*\` tool.
+7. **\`learn://knowledge-base\`** — Complete guide to using the FlowDot knowledge base with RAG (document upload, categories, semantic search). Read before using \`upload_text_document\`, \`query_knowledge_base\`, \`create_knowledge_category\`, etc.
+
+## How to Read a Learning Resource
+
+Use your MCP client's resource-read capability on the URI (e.g. \`learn://recipes\`). In Claude this is the \`ReadMcpResourceTool\` — pass \`server: "flowdot"\` and \`uri: "learn://recipes"\`. You can also list all resources via \`ListMcpResourcesTool\` to confirm they're available.
+
+## Rule of Thumb
+
+If the user asks about a FlowDot feature area you haven't touched in this session, **read the matching \`learn://\` resource before calling tools in that area.** These guides are the ground truth and will save you from guessing at schemas, step types, store conventions, and sandbox rules.`,
     }
   );
 
