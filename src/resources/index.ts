@@ -575,7 +575,7 @@ add_recipe_step({
 
 **IMPORTANT:** Use \`user_prompt\` (NOT \`prompt\`) - this is the field the runtime expects.
 
-**Available tools:**
+**Built-in tools:**
 - \`read\` - Read files
 - \`search\` - Search codebase
 - \`analyze\` - Analyze code
@@ -584,6 +584,63 @@ add_recipe_step({
 - \`edit\` - Edit files
 - \`execute-command\` - Run shell commands
 - \`create-file\` - Create new files
+
+**You are NOT limited to the built-in tools.** The \`tools\` array accepts arbitrary tool references, and the recipe runtime resolves them against three sources at execution time:
+
+1. **Built-ins** — the 8 tools above
+2. **Local MCP servers** — any MCP server the user has configured in their CLI environment (e.g. \`schwab\`, \`robinhood\`, \`electron-qa\`, \`playwright\`, a custom stdio server they wrote)
+3. **FlowDot toolkits** — any agent toolkit the user has installed (see \`learn://toolkits\`)
+
+This means you can design generic recipes like *"QA these websites using the electron-qa browser tool"* or *"Rebalance this portfolio using the Schwab trading tool"* without knowing which specific MCP server the user has — you just declare the namespace or a wildcard and the runtime wires it up.
+
+### Tool Reference Naming
+
+| Source | Syntax | Example |
+|---|---|---|
+| Built-in | \`<name>\` | \`read\`, \`search\`, \`edit\` |
+| Specific MCP tool | \`mcp__<server>__<tool>\` | \`mcp__schwab__get_accounts\` |
+| All tools from one MCP server | \`mcp__<server>__*\` | \`mcp__electron-qa__*\` |
+| All MCP tools from every server | \`mcp__*\` | \`mcp__*\` |
+| Specific toolkit tool | \`toolkit__<name>__<tool>\` | \`toolkit__spotify__search_tracks\` |
+| All tools from one toolkit | \`toolkit__<name>__*\` | \`toolkit__trading__*\` |
+
+You can freely mix built-ins, MCP references, and toolkit references in a single \`tools\` array:
+
+\`\`\`javascript
+add_recipe_step({
+  hash: "abc123xyz",
+  name: "qa-website",
+  type: "agent",
+  config: {
+    user_prompt: "QA the site at {{current_task.url}}: {{current_task.goal}}",
+    tools: [
+      "mcp__electron-qa__*",   // all browser-automation tools
+      "create-file",            // built-in, to write the evidence file
+      "web-search"              // built-in, for lookups
+    ],
+    output_store: "qa_results"
+  }
+})
+\`\`\`
+
+### Prompt Lecturing for MCP Tools
+
+MCP and toolkit tools follow the same prompt-lecturing rules as built-ins — maybe more so. Small models do NOT know what \`mcp__schwab__place_order\` does just because it's in the tool list. Name the tools explicitly in the prompt, give concrete example invocations, and spell out the expected output shape. Example:
+
+\`\`\`
+You have access to the electron-qa browser tools. To QA a page you MUST:
+1. Call 'mcp__electron-qa__launch_app' with the URL
+2. Call 'mcp__electron-qa__describe_screen' to see what's rendered
+3. Call 'mcp__electron-qa__find_element' and 'mcp__electron-qa__perform_action' to exercise the feature
+4. Call 'mcp__electron-qa__take_screenshot' and save the path to evidence
+5. Call 'mcp__electron-qa__close_app' before reporting
+
+DO NOT skip steps 1 or 5. DO NOT invent element selectors you haven't seen in a describe_screen result.
+\`\`\`
+
+### Runtime Prerequisite
+
+MCP tools are resolved at **execution time** against the CLI user's MCP server configuration. The recipe definition itself stores the tool names as strings — there is no compile-time check that \`mcp__schwab__*\` exists. If the user runs your recipe without a \`schwab\` MCP server configured, the wildcard expands to nothing and the agent will have no Schwab tools available. Design your prompts defensively, and document required MCP servers / toolkits in the recipe description.
 
 #### Loop Step (Iterate)
 \`\`\`javascript
@@ -982,6 +1039,8 @@ Confirm:
 | Step output not visible to next step | The step's \`output_store\` doesn't match what the next step interpolates |
 | Branch step always falls through to default | \`expression\` syntax wrong — must be a JS-style boolean expression |
 | Small model gives up immediately | Prompt isn't prescriptive enough — apply prompt lecturing principles |
+| MCP tool not found at runtime | User's CLI environment doesn't have that MCP server configured — document required servers in the recipe description |
+| \`mcp__*\` wildcard expands to nothing | No MCP servers registered in the CLI, or the named server isn't running |
 
 ### 4. Persistent execution state (CLI-side)
 
@@ -1002,6 +1061,7 @@ The CLI also supports a \`DEBUG=RECIPE\` environment variable for verbose recipe
 5. **Save all IDs** - You need hashes and step IDs for updates
 6. **Test incrementally** - Build one step at a time
 7. **Handle errors** - Use \`on_error\` for critical steps
+8. **Reach beyond the built-ins** - If the task needs browser automation, trading APIs, or any external capability, check whether the user has an MCP server or toolkit for it and reference its tools directly in the step's \`tools\` array (e.g. \`mcp__electron-qa__*\`) rather than trying to shoehorn it into \`execute-command\`
 
 ## Troubleshooting
 
@@ -1041,6 +1101,8 @@ Before declaring a recipe done, verify:
 - [ ] Prompts provide fallback paths (Principle 3)
 - [ ] Output format explicitly specified with example (Principle 4)
 - [ ] Common failure modes called out as DO NOT instructions (Principle 5)
+- [ ] Any external capability (browser, trading, email, etc.) is wired via an \`mcp__*\` or \`toolkit__*\` tool reference rather than hacked around with \`execute-command\`
+- [ ] Required MCP servers / toolkits listed in the recipe description so users know what to configure
 
 ## Related Resources
 

@@ -160,6 +160,9 @@ import { updateKnowledgeCategoryToolDef, handleUpdateKnowledgeCategory } from '.
 import { deleteKnowledgeCategoryToolDef, handleDeleteKnowledgeCategory } from './delete-knowledge-category.js';
 import { listKnowledgeDocumentsToolDef, handleListKnowledgeDocuments } from './list-knowledge-documents.js';
 import { getKnowledgeDocumentToolDef, handleGetKnowledgeDocument } from './get-knowledge-document.js';
+import { getKnowledgeDocumentContentToolDef, handleGetKnowledgeDocumentContent } from './get-knowledge-document-content.js';
+import { updateKnowledgeDocumentContentToolDef, handleUpdateKnowledgeDocumentContent } from './update-knowledge-document-content.js';
+import { patchKnowledgeDocumentSectionToolDef, handlePatchKnowledgeDocumentSection } from './patch-knowledge-document-section.js';
 import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-text-document.js';
 import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
 import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
@@ -356,6 +359,9 @@ const tools = [
   deleteKnowledgeCategoryToolDef,
   listKnowledgeDocumentsToolDef,
   getKnowledgeDocumentToolDef,
+  getKnowledgeDocumentContentToolDef,
+  updateKnowledgeDocumentContentToolDef,
+  patchKnowledgeDocumentSectionToolDef,
   uploadTextDocumentToolDef,
   uploadDocumentFromUrlToolDef,
   moveDocumentToCategoryToolDef,
@@ -875,6 +881,22 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'get_knowledge_document':
         return handleGetKnowledgeDocument(api, args as { document_id: number | string });
+
+      case 'get_knowledge_document_content':
+        return handleGetKnowledgeDocumentContent(api, args as { document_id: number | string });
+
+      case 'update_knowledge_document_content':
+        return handleUpdateKnowledgeDocumentContent(api, args as {
+          document_id: number | string;
+          content: string;
+        });
+
+      case 'patch_knowledge_document_section':
+        return handlePatchKnowledgeDocumentSection(api, args as {
+          document_id: number | string;
+          old_text: string;
+          new_text: string;
+        });
 
       case 'upload_text_document':
         return handleUploadTextDocument(api, args as {
