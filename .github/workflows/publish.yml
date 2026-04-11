@@ -31,8 +31,6 @@ jobs:
 
       - name: "Publish (swaps file reference then publishes with provenance)"
         run: npm run publish:safe
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
