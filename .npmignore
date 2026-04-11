@@ -1,7 +1,11 @@
 # Source files (TypeScript)
 src/
 *.ts
+*.tsx
 !*.d.ts
+
+# Source maps (never ship)
+*.map
 
 # Test files
 *.test.ts
@@ -10,22 +14,62 @@ src/
 *.spec.js
 __tests__/
 coverage/
+test-*.js
+test-*.ts
 
-# Config files
-tsconfig.json
-vitest.config.ts
+# Build / tooling config
+tsconfig*.json
+vitest.config.*
+esbuild.config.*
+eslint.config.*
 .eslintrc*
 .prettierrc*
+.editorconfig
+.husky/
+.lintstagedrc*
 
-# Build scripts
+# Scripts (publish-time only)
 scripts/
 
-# Development
+# MCP bundle artifacts (shipped via different channel)
+*.mcpb
+mcpb/
+manifest.json
+icon.png
+
+# Development / VCS / CI metadata
 .git/
 .github/
 .vscode/
+.idea/
 node_modules/
+
+# Secrets
+.env*
+.npmrc
 
 # Misc
 *.log
+*.tsbuildinfo
 .DS_Store
+Thumbs.db
+
+# Internal docs (keep only README.md)
+DEV_*.md
+LOCAL_*.md
+DOCUMENTATION_GUIDE.md
+*_GUIDE.md
+*_AUDIT.md
+TESTING.md
+QA.md
+LOOPS.md
+RECIPES.md
+MCP.md
+VSCODE.md
+LOGS.md
+COMMS.md
+CLI_DEV_GUIDE.md
+SELF_MCP.md
+PERM_GATE.md
+ZERO_TRUST_AUDIT.md
+OAUTH_*.md

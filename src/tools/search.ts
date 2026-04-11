@@ -4,9 +4,9 @@
  * A general-purpose search tool for FlowDot resources.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import {
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type {
   Workflow,
   App,
   CustomNode,
@@ -63,7 +63,7 @@ export async function handleSearch(
 
     const results = await Promise.allSettled(searchPromises);
 
-    let lines: string[] = [];
+    const lines: string[] = [];
     let totalResults = 0;
 
     results.forEach((result, index) => {

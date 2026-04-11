@@ -5,20 +5,17 @@
  * custom tool collections for AI agents.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import {
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type {
   AgentToolkit,
-  PaginatedResult,
   ToolkitListFilters,
   ToolkitSearchFilters,
   CreateToolkitInput,
   UpdateToolkitInput,
   CreateToolkitToolInput,
   UpdateToolkitToolInput,
-  InvokeToolkitToolInput,
-  ToolkitCredentialStatus,
-} from '../types.js';
+  InvokeToolkitToolInput} from '../types.js';
 
 // ============================================
 // Discovery & Browsing Tools
@@ -1169,7 +1166,7 @@ Shows installation status and credential configuration for each toolkit.`,
 
 export async function handleListInstalledToolkits(
   api: FlowDotApiClient,
-  args: Record<string, unknown>
+  _args: Record<string, unknown>
 ): Promise<CallToolResult> {
   try {
     const installations = await api.listInstalledToolkits();

@@ -5,8 +5,8 @@
  * Can upload to personal or team knowledge base.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const uploadDocumentFromUrlToolDef: Tool = {
   name: 'upload_document_from_url',

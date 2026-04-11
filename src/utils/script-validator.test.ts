@@ -5,7 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { validateCustomNodeScript, formatWarnings, ScriptWarning } from './script-validator.js';
+import type { ScriptWarning } from './script-validator.js';
+import { validateCustomNodeScript, formatWarnings } from './script-validator.js';
 
 describe('validateCustomNodeScript', () => {
   describe('syntax validation', () => {
@@ -159,7 +160,7 @@ describe('validateCustomNodeScript', () => {
       // Note: import statement causes syntax error first since parser uses sourceType: 'script'
       // but the security pattern check still detects it in the raw code
       const script = 'const x = "import something";\nfunction processData(inputs) { return {}; }';
-      const warnings = validateCustomNodeScript(script, []);
+      validateCustomNodeScript(script, []);
 
       // The regex pattern /\bimport\s+/ looks for 'import ' followed by space
       // Let's use a script that contains this pattern in a comment or string that gets past parsing

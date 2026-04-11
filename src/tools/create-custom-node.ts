@@ -5,9 +5,9 @@
  * Scope: custom_nodes:manage
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { CustomNodeSocket, CustomNodeProperty } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { CustomNodeSocket, CustomNodeProperty } from '../types.js';
 import { validateCustomNodeScript, formatWarnings } from '../utils/script-validator.js';
 
 export const createCustomNodeTool: Tool = {

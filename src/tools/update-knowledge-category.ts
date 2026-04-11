@@ -4,8 +4,8 @@
  * Updates an existing document category.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const updateKnowledgeCategoryToolDef: Tool = {
   name: 'update_knowledge_category',

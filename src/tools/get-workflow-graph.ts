@@ -4,8 +4,8 @@
  * Gets the full node and connection graph of a workflow.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getWorkflowGraphTool: Tool = {
   name: 'get_workflow_graph',
@@ -71,7 +71,7 @@ export async function handleGetWorkflowGraph(
     // List connections
     if (connectionCount > 0) {
       lines.push('### Connections');
-      for (const [id, conn] of Object.entries(graph.connections)) {
+      for (const [, conn] of Object.entries(graph.connections)) {
         const feedback = conn.isFeedback ? ' (feedback)' : '';
         lines.push(`- ${conn.sourceNodeId}.${conn.sourceSocketId} -> ${conn.targetNodeId}.${conn.targetSocketId}${feedback}`);
       }

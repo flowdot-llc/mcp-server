@@ -6,10 +6,9 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, rmSync, cpSync, createWriteStream } from 'fs';
+import { existsSync, mkdirSync, rmSync, cpSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,7 +23,7 @@ console.log('Building FlowDot MCPB package...\n');
 console.log('1. Building TypeScript...');
 try {
   execSync('npm run build', { cwd: rootDir, stdio: 'inherit' });
-} catch (error) {
+} catch {
   console.error('Failed to build TypeScript');
   process.exit(1);
 }

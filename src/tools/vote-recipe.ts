@@ -4,8 +4,8 @@
  * Vote on a recipe (upvote, downvote, or remove vote).
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const voteRecipeTool: Tool = {
   name: 'vote_recipe',

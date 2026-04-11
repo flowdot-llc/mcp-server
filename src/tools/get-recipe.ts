@@ -4,8 +4,8 @@
  * Gets detailed information about a specific agent recipe.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getRecipeTool: Tool = {
   name: 'get_recipe',

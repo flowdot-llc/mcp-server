@@ -4,12 +4,12 @@
  * Registers all available MCP tools with the server.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 // ============================================
 // Core Tools (Existing)

@@ -35,7 +35,7 @@ interface InputDef {
 export function validateCustomNodeScript(
   scriptCode: string,
   outputs: OutputDef[],
-  inputs?: InputDef[]
+  _inputs?: InputDef[]
 ): ScriptWarning[] {
   const warnings: ScriptWarning[] = [];
 
@@ -185,7 +185,7 @@ export function validateCustomNodeScript(
   }
 
   // 7. COMMON MISTAKE WARNINGS
-  if (/\boutputs\s*[=\[]/.test(scriptCode) || /\boutputs\./.test(scriptCode)) {
+  if (/\boutputs\s*[=[]/.test(scriptCode) || /\boutputs\./.test(scriptCode)) {
     const lineNum = findLineNumber(scriptCode, /\boutputs/);
     warnings.push({
       type: 'best_practice',

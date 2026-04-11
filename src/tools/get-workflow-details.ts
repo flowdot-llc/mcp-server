@@ -4,8 +4,8 @@
  * Gets detailed workflow information including nodes, connections, and signature.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getWorkflowDetailsTool: Tool = {
   name: 'get_workflow_details',

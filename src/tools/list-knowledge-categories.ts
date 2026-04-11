@@ -5,8 +5,8 @@
  * Supports filtering by team or personal categories only.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const listKnowledgeCategoriesToolDef: Tool = {
   name: 'list_knowledge_categories',

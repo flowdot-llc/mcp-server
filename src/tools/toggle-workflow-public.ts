@@ -4,8 +4,8 @@
  * Toggles a workflow's public/private visibility status.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const toggleWorkflowPublicTool: Tool = {
   name: 'toggle_workflow_public',

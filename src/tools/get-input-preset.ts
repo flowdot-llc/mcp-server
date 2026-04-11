@@ -4,8 +4,8 @@
  * Gets details of a specific input preset.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getInputPresetTool: Tool = {
   name: 'get_input_preset',

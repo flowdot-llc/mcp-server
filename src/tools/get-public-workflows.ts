@@ -4,8 +4,8 @@
  * Gets public workflows from all users.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getPublicWorkflowsTool: Tool = {
   name: 'get_public_workflows',

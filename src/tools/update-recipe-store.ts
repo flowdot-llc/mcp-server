@@ -4,9 +4,9 @@
  * Updates an existing store in a recipe.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { UpdateRecipeStoreInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { UpdateRecipeStoreInput } from '../types.js';
 
 export const updateRecipeStoreTool: Tool = {
   name: 'update_recipe_store',

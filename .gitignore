@@ -20,4 +20,10 @@ npm-debug.log*
 # Environment
 .env
 .env.local
+
+# Build / test output
 /dist
+/coverage
+
+# TypeScript cache
+*.tsbuildinfo

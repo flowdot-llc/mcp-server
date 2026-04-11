@@ -5,8 +5,8 @@
  * Scope: custom_nodes:read
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getCustomNodeTool: Tool = {
   name: 'get_custom_node',

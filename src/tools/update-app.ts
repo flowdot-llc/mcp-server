@@ -5,9 +5,9 @@
  * Required scope: apps:manage
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { UpdateAppInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { UpdateAppInput } from '../types.js';
 
 export const updateAppTool: Tool = {
   name: 'update_app',

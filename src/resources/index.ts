@@ -5,7 +5,7 @@
  * These are designed to be the FIRST thing agents check when asked about FlowDot features.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,

@@ -4,8 +4,8 @@
  * Gets execution metrics for a workflow including counts, success rates, and average duration.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getWorkflowMetricsTool: Tool = {
   name: 'get_workflow_metrics',

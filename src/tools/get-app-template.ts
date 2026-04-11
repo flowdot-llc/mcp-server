@@ -5,7 +5,7 @@
  * No API call required - returns pre-defined templates.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 export const getAppTemplateTool: Tool = {
   name: 'get_app_template',

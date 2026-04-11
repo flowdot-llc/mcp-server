@@ -4,9 +4,9 @@
  * Browse public agent recipes shared by other users.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { RecipeSearchFilters } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { RecipeSearchFilters } from '../types.js';
 
 export const browseRecipesTool: Tool = {
   name: 'browse_recipes',

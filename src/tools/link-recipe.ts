@@ -4,9 +4,9 @@
  * Links a recipe for use in MCP context.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { LinkRecipeInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { LinkRecipeInput } from '../types.js';
 
 export const linkRecipeTool: Tool = {
   name: 'link_recipe',

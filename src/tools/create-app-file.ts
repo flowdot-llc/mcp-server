@@ -5,9 +5,9 @@
  * Required scope: apps:manage
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { CreateAppFileInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { CreateAppFileInput } from '../types.js';
 
 export const createAppFileTool: Tool = {
   name: 'create_app_file',

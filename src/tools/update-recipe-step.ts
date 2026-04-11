@@ -4,9 +4,9 @@
  * Updates an existing step in a recipe.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { UpdateRecipeStepInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { UpdateRecipeStepInput } from '../types.js';
 
 export const updateRecipeStepTool: Tool = {
   name: 'update_recipe_step',

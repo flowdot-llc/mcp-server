@@ -5,9 +5,9 @@
  * Scope: custom_nodes:read
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { CustomNodeComment } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { CustomNodeComment } from '../types.js';
 
 export const getCustomNodeCommentsTool: Tool = {
   name: 'get_custom_node_comments',

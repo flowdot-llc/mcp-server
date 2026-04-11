@@ -5,9 +5,9 @@
  * Required scope: apps:read
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { AppSearchFilters } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { AppSearchFilters } from '../types.js';
 
 export const searchAppsTool: Tool = {
   name: 'search_apps',

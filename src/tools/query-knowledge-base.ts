@@ -5,8 +5,8 @@
  * Supports filtering by team and controlling which document sources to include.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const queryKnowledgeBaseToolDef: Tool = {
   name: 'query_knowledge_base',
@@ -68,7 +68,7 @@ export async function handleQueryKnowledgeBase(
     });
 
     if (response.result_count === 0) {
-      let tips = [
+      const tips = [
         'Using different keywords',
         'Checking if documents are fully processed (status: ready)',
         'Removing category filters',

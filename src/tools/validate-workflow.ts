@@ -4,8 +4,8 @@
  * Validates a workflow for errors and warnings.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const validateWorkflowTool: Tool = {
   name: 'validate_workflow',

@@ -4,8 +4,8 @@
  * Deletes a document from the knowledge base.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const deleteKnowledgeDocumentToolDef: Tool = {
   name: 'delete_knowledge_document',

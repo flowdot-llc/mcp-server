@@ -4,9 +4,9 @@
  * Adds a new store (variable) to a recipe.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { CreateRecipeStoreInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { CreateRecipeStoreInput } from '../types.js';
 
 export const addRecipeStoreTool: Tool = {
   name: 'add_recipe_store',

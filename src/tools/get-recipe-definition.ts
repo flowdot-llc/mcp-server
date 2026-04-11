@@ -6,8 +6,8 @@
  * should return identical YAML output for validation purposes.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 import yaml from 'js-yaml';
 
 export const getRecipeDefinitionTool: Tool = {

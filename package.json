@@ -9,14 +9,20 @@
     "flowdot-mcp": "./bin/flowdot-mcp.js"
   },
   "scripts": {
+    "clean": "rimraf dist coverage",
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run build",
-    "build:mcpb": "node scripts/build-mcpb.js"
+    "verify-pack": "node scripts/verify-pack.mjs",
+    "publish:safe": "node scripts/publish.mjs",
+    "prepublishOnly": "npm run clean && npm run lint && npm test && npm run build && npm run verify-pack",
+    "build:mcpb": "node scripts/build-mcpb.js",
+    "prepare": "husky || true"
   },
   "keywords": [
     "mcp",
@@ -31,7 +37,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "https://github.com/flowdot-llc/mcp-server"
+    "url": "https://github.com/flowdot-llc/mcp-server.git"
   },
   "homepage": "https://flowdot.ai/docs/mcp",
   "dependencies": {
@@ -42,10 +48,17 @@
     "js-yaml": "^4.1.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.15.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.15.0",
+    "globals": "^15.12.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "rimraf": "^6.0.1",
     "typescript": "^5.0.0",
+    "typescript-eslint": "^8.15.0",
     "vitest": "^3.2.4"
   },
   "files": [
@@ -55,9 +68,14 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix"
+    ]
   }
 }

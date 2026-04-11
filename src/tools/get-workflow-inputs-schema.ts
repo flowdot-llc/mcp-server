@@ -4,8 +4,8 @@
  * Gets the input schema for a workflow - what inputs it expects.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getWorkflowInputsSchemaTool: Tool = {
   name: 'get_workflow_inputs_schema',

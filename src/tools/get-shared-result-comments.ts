@@ -4,9 +4,9 @@
  * Gets comments on a shared execution result.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { SharedResultComment } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { SharedResultComment } from '../types.js';
 
 export const getSharedResultCommentsTool: Tool = {
   name: 'get_shared_result_comments',

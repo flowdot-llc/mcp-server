@@ -4,8 +4,8 @@
  * Creates a shareable link for a workflow execution result.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const createSharedResultTool: Tool = {
   name: 'create_shared_result',

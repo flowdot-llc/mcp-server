@@ -4,8 +4,8 @@
  * Enables or disables community inputs (input presets) for a workflow.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const toggleCommunityInputsTool: Tool = {
   name: 'toggle_community_inputs',

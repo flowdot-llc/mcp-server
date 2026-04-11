@@ -4,9 +4,9 @@
  * Gets user comments on a workflow.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { WorkflowComment } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { WorkflowComment } from '../types.js';
 
 export const getWorkflowCommentsTool: Tool = {
   name: 'get_workflow_comments',

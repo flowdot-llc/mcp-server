@@ -5,7 +5,7 @@
  * This is a local tool - no API call needed.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 interface InputDef {
   name: string;

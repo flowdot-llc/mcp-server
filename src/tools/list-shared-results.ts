@@ -4,9 +4,9 @@
  * Lists shared execution results for a workflow.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { SharedResult } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { SharedResult } from '../types.js';
 
 export const listSharedResultsTool: Tool = {
   name: 'list_shared_results',

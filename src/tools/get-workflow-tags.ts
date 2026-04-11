@@ -4,8 +4,8 @@
  * Gets the tags associated with a workflow.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getWorkflowTagsTool: Tool = {
   name: 'get_workflow_tags',

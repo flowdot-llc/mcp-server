@@ -5,8 +5,8 @@
  * Note: MCP doesn't support true streaming, so this returns connection info.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const streamExecutionTool: Tool = {
   name: 'stream_execution',

@@ -4,9 +4,9 @@
  * Updates an existing agent recipe's metadata.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { UpdateRecipeInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { UpdateRecipeInput } from '../types.js';
 
 export const updateRecipeTool: Tool = {
   name: 'update_recipe',

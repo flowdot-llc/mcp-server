@@ -6,8 +6,8 @@
  * Required scope: apps:manage
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const editAppCodeTool: Tool = {
   name: 'edit_app_code',
@@ -38,7 +38,7 @@ WORKFLOW FOR BUILDING LARGE APPS:
 
 Example:
 - old_string: "return <div>Loading...</div>;"
-- new_string: "return <div className=\"p-4\"><h1>Hello World</h1></div>;"`,
+- new_string: "return <div className='p-4'><h1>Hello World</h1></div>;"`,
   inputSchema: {
     type: 'object' as const,
     properties: {

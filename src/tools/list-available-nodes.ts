@@ -4,9 +4,9 @@
  * Lists all available node types that can be added to workflows.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { NodeType, NodeTypesResponse } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { NodeType } from '../types.js';
 
 export const listAvailableNodesTool: Tool = {
   name: 'list_available_nodes',

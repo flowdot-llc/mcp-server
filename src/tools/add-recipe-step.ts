@@ -4,9 +4,9 @@
  * Adds a new step to a recipe.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { CreateRecipeStepInput, RecipeStepType } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { CreateRecipeStepInput, RecipeStepType } from '../types.js';
 
 export const addRecipeStepTool: Tool = {
   name: 'add_recipe_step',

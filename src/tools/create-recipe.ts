@@ -4,9 +4,9 @@
  * Creates a new agent recipe.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
-import { CreateRecipeInput } from '../types.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
+import type { CreateRecipeInput } from '../types.js';
 
 export const createRecipeTool: Tool = {
   name: 'create_recipe',

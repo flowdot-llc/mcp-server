@@ -6,8 +6,8 @@
  * the complete byte-exact file contents suitable for reading or editing.
  */
 
-import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FlowDotApiClient } from '../api-client.js';
+import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { FlowDotApiClient } from '../api-client.js';
 
 export const getKnowledgeDocumentContentToolDef: Tool = {
   name: 'get_knowledge_document_content',
