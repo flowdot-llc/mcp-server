@@ -79,8 +79,9 @@ function main() {
     run('npm install --package-lock-only --ignore-scripts');
 
     // Run the full publish gate via prepublishOnly (invoked automatically by npm publish)
-    // and then publish with provenance.
-    run('npm publish --provenance --access public');
+    // then publish. No --provenance because the repo is private (npm provenance
+    // requires public source for sigstore transparency log).
+    run('npm publish --access public');
 
     console.log('\n[publish] SUCCESS');
   } catch (err) {
