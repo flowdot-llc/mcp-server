@@ -21,7 +21,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: Pin file: dependencies to published versions (CI)
+      - name: "Pin file dependencies to published versions (CI)"
         run: node scripts/ci-prepare.mjs
 
       - name: Install dependencies
