@@ -58,6 +58,20 @@ Document storage and RAG-powered search.
 - **Learn more:** \`learn://knowledge-base\`
 - **Quick start:** Use \`list_knowledge_documents\`
 
+### 7. **Email**
+Read and send emails via connected Gmail, Outlook, or IMAP/SMTP integrations.
+- **Learn more:** \`learn://email\`
+- **Quick start:** Use \`list_email_integrations\` then \`email_search\`
+
+### 8. **Comms (Notifications & Messaging)**
+Send notifications and read messages via Telegram, Discord, and other configured channels.
+- **Learn more:** \`learn://comms\`
+- **Quick start:** Use \`list_comms_channels\` then \`send_notification\`
+
+### 9. **User Profile**
+View your account info and active token details.
+- **Quick start:** Use \`whoami\`
+
 ## Common Workflows
 
 ### Creating a Simple Workflow
@@ -82,6 +96,8 @@ Document storage and RAG-powered search.
 - **Building agents?** Read \`learn://recipes\` first
 - **Extending functionality?** Read \`learn://custom-nodes\` or \`learn://toolkits\`
 - **Building UIs?** Read \`learn://apps\` first
+- **Reading/sending email?** Read \`learn://email\` first
+- **Sending notifications?** Read \`learn://comms\` first
 
 ## Getting Help
 
@@ -2944,6 +2960,301 @@ Use a custom node or LLM node that:
 - **Recipes:** \`learn://recipes\` - Use knowledge base in agent workflows
 - **Custom Nodes:** \`learn://custom-nodes\` - Build RAG-powered nodes
 - **Workflows:** \`learn://workflows\` - Integrate knowledge base lookups
+`,
+  },
+
+  'learn://email': {
+    name: 'Email Complete Guide',
+    description: 'Complete guide to reading and sending emails via Gmail, Outlook, or IMAP/SMTP integrations',
+    mimeType: 'text/markdown',
+    content: `# Email — Complete Guide
+
+## Overview
+
+FlowDot MCP lets you read and send emails through any Gmail, Outlook, or IMAP/SMTP integration you have connected in your FlowDot account. All email actions are gated by the **mailbox grant system** — MCP tokens with the appropriate scope get automatic grants.
+
+## Required Scopes
+
+| Scope | What it unlocks |
+|-------|----------------|
+| \`email:read\` | \`list_email_integrations\`, \`email_search\`, \`email_read\`, \`email_list_threads\` |
+| \`email:call\` | All of the above **plus** \`email_send\`, \`email_reply\`, \`email_draft\`, \`email_label\`, \`email_archive\`, \`email_delete\` |
+
+## Step 1 — Find Your Integration ID
+
+Always call \`list_email_integrations\` first. It returns the \`id\` you pass to every email tool.
+
+\`\`\`
+list_email_integrations
+→ [{ id: 10, provider: "gmail", email: "you@example.com" }]
+\`\`\`
+
+## Email Tools Reference
+
+### Reading Email
+
+#### \`email_search\`
+Search your mailbox with Gmail-style query syntax.
+
+**Parameters:**
+- \`integration_id\` (required) — from \`list_email_integrations\`
+- \`query\` (required) — Gmail search query string
+- \`max_results\` (optional, default 10)
+
+**Query examples:**
+\`\`\`
+is:unread                       — unread messages
+from:alice@example.com          — from a specific sender
+subject:invoice                 — subject contains "invoice"
+newer_than:7d                   — received in last 7 days
+has:attachment                  — has attachments
+label:INBOX is:unread           — unread inbox
+from:boss subject:urgent        — combined filters
+\`\`\`
+
+**Returns:** Array of messages with \`message_id\`, \`thread_id\`, headers (from/to/subject/date), snippet, labels, attachments list.
+
+---
+
+#### \`email_read\`
+Fetch the full content of a specific message.
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`message_id\` (required) — from \`email_search\` results
+- \`include_body\` (optional, default true)
+
+**Returns:** Full message with \`body_text\`, \`body_html\`, headers, attachments.
+
+---
+
+#### \`email_list_threads\`
+List email threads (conversation groups).
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`label\` (optional) — e.g. \`"INBOX"\`, \`"SENT"\`, \`"STARRED"\`
+- \`max_results\` (optional, default 10)
+
+**Returns:** Array of threads with message count and participant list.
+
+---
+
+### Sending & Composing
+
+#### \`email_send\`
+Send a new email.
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`to\` (required) — recipient address or comma-separated list
+- \`subject\` (required)
+- \`body\` (required) — plain text body
+- \`cc\` (optional)
+- \`bcc\` (optional)
+
+**Returns:** \`message_id\` of the sent message.
+
+---
+
+#### \`email_reply\`
+Reply to an existing message.
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`message_id\` (required) — the message to reply to
+- \`body\` (required) — plain text reply body
+- \`all\` (optional, default false) — reply-all
+
+---
+
+#### \`email_draft\`
+Save a draft without sending.
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`to\`, \`subject\`, \`body\` (required)
+- \`cc\`, \`bcc\` (optional)
+
+---
+
+### Organising
+
+#### \`email_label\`
+Add or remove labels/folders.
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`message_id\` (required)
+- \`add\` (optional) — array of label names to add
+- \`remove\` (optional) — array of label names to remove
+
+---
+
+#### \`email_archive\`
+Archive a message (removes from inbox without deleting).
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`message_id\` (required)
+
+---
+
+#### \`email_delete\`
+Permanently delete a message.
+
+**Parameters:**
+- \`integration_id\` (required)
+- \`message_id\` (required)
+
+---
+
+## Typical Workflows
+
+### Check Unread Inbox
+\`\`\`
+1. list_email_integrations            → get integration_id
+2. email_search(query="is:unread")    → get message list
+3. email_read(message_id="...")       → read specific message
+\`\`\`
+
+### Send an Email
+\`\`\`
+1. list_email_integrations            → get integration_id
+2. email_send(to="...", subject="...", body="...")
+\`\`\`
+
+### Search and Reply
+\`\`\`
+1. list_email_integrations
+2. email_search(query="from:alice subject:invoice")
+3. email_read(message_id="...")       → read full content
+4. email_reply(message_id="...", body="...")
+\`\`\`
+
+### Triage Inbox
+\`\`\`
+1. list_email_integrations
+2. email_search(query="is:unread newer_than:1d")
+3. For each message:
+   - email_read → understand content
+   - email_label(add=["STARRED"]) or email_archive
+\`\`\`
+
+## Mailbox Grant System
+
+MCP tokens with \`email:read\` or \`email:call\` scope are automatically granted access to the mailbox without requiring Telegram/Discord approval. Grants are created per-token per-action, so each action type (search, send, reply, etc.) is gated separately but all auto-approved for MCP tokens.
+
+For agents (non-MCP), each action requires an explicit user approval via configured comms channels.
+
+## Related Resources
+
+- **Comms:** \`learn://comms\` - Send notifications and messages
+- **Workflows:** \`learn://workflows\` - Automate email processing
+- **Recipes:** \`learn://recipes\` - Build email-driven agent workflows
+`,
+  },
+
+  'learn://comms': {
+    name: 'Comms (Notifications & Messaging) Complete Guide',
+    description: 'Complete guide to sending notifications and reading messages via Telegram, Discord, and other configured channels',
+    mimeType: 'text/markdown',
+    content: `# Comms — Notifications & Messaging Complete Guide
+
+## Overview
+
+FlowDot Comms lets you send notifications and messages via channels you have configured in your FlowDot account (Telegram, Discord, etc.). You can also list your configured channels and read notification history.
+
+## Required Scopes
+
+| Scope | What it unlocks |
+|-------|----------------|
+| \`comms:read\` | \`list_comms_channels\`, \`list_notifications\` |
+| \`comms:send\` | \`send_notification\` |
+
+## Comms Tools Reference
+
+### \`list_comms_channels\`
+List all notification channels you have configured.
+
+**Parameters:** none
+
+**Returns:** Array of channels with \`id\`, \`type\` (telegram, discord, etc.), \`name\`, and \`is_active\` flag.
+
+**Use this first** to find your channel IDs before sending.
+
+---
+
+### \`send_notification\`
+Send a notification or message via one or more configured channels.
+
+**Parameters:**
+- \`message\` (required) — the notification text
+- \`channel_ids\` (optional) — array of specific channel IDs to send to. If omitted, sends to all active channels.
+- \`title\` (optional) — notification title (shown in some channel types)
+- \`url\` (optional) — link to attach to the notification
+
+**Returns:** Confirmation with list of channels the message was dispatched to.
+
+**Example — send to all channels:**
+\`\`\`
+send_notification(message="Workflow completed successfully")
+\`\`\`
+
+**Example — send to a specific channel:**
+\`\`\`
+1. list_comms_channels → find channel id, e.g. 3
+2. send_notification(message="Deploy done", channel_ids=[3])
+\`\`\`
+
+---
+
+### \`list_notifications\`
+Read recent notification history (messages previously sent through your channels).
+
+**Parameters:**
+- \`limit\` (optional, default 20) — number of notifications to return
+
+**Returns:** Array of past notifications with \`id\`, \`message\`, \`channel\`, \`sent_at\`, \`status\`.
+
+---
+
+## Typical Workflows
+
+### Notify yourself when something finishes
+\`\`\`
+1. [do the work]
+2. send_notification(message="Done: workflow XYZ completed. Result: ...")
+\`\`\`
+
+### Send to a specific channel
+\`\`\`
+1. list_comms_channels          → find your Telegram channel id
+2. send_notification(
+     message="Alert: error detected",
+     channel_ids=[<telegram_id>],
+     title="FlowDot Alert"
+   )
+\`\`\`
+
+### Check recent notification history
+\`\`\`
+list_notifications(limit=10)
+\`\`\`
+
+## Channel Types
+
+FlowDot supports multiple channel types. The exact set depends on what you have configured in your account settings:
+
+- **Telegram** — sends via a connected Telegram bot
+- **Discord** — sends via a Discord webhook or bot
+- Other channels may be available depending on your account configuration
+
+## Related Resources
+
+- **Email:** \`learn://email\` - Read and send emails
+- **Workflows:** \`learn://workflows\` - Trigger notifications from workflow steps
+- **Recipes:** \`learn://recipes\` - Use comms in agent orchestration
 `,
   },
 };

@@ -250,6 +250,32 @@ import { voteRecipeTool, handleVoteRecipe } from './vote-recipe.js';
 import { favoriteRecipeTool, handleFavoriteRecipe } from './favorite-recipe.js';
 import { linkRecipeTool, handleLinkRecipe } from './link-recipe.js';
 
+// ============================================
+// User Profile / WhoAmI Tools (user:read)
+// ============================================
+import { whoamiTool, handleWhoami } from './whoami.js';
+
+// ============================================
+// Email Integration Tools (email:read / email:call)
+// ============================================
+import { listEmailIntegrationsTool, handleListEmailIntegrations } from './list-email-integrations.js';
+import { emailSearchTool, handleEmailSearch } from './email-search.js';
+import { emailReadTool, handleEmailRead } from './email-read.js';
+import { emailListThreadsTool, handleEmailListThreads } from './email-list-threads.js';
+import { emailSendTool, handleEmailSend } from './email-send.js';
+import { emailReplyTool, handleEmailReply } from './email-reply.js';
+import { emailDraftTool, handleEmailDraft } from './email-draft.js';
+import { emailLabelTool, handleEmailLabel } from './email-label.js';
+import { emailArchiveTool, handleEmailArchive } from './email-archive.js';
+import { emailDeleteTool, handleEmailDelete } from './email-delete.js';
+
+// ============================================
+// Communications Tools (comms:read / comms:send)
+// ============================================
+import { sendNotificationTool, handleSendNotification } from './send-notification.js';
+import { listNotificationsTool, handleListNotifications } from './list-notifications.js';
+import { listCommsChannelsTool, handleListCommsChannels } from './list-comms-channels.js';
+
 // All available tools
 const tools = [
   // Core (4)
@@ -416,6 +442,23 @@ const tools = [
   voteRecipeTool,
   favoriteRecipeTool,
   linkRecipeTool,
+  // User Profile / WhoAmI (1)
+  whoamiTool,
+  // Email Integrations (10)
+  listEmailIntegrationsTool,
+  emailSearchTool,
+  emailReadTool,
+  emailListThreadsTool,
+  emailSendTool,
+  emailReplyTool,
+  emailDraftTool,
+  emailLabelTool,
+  emailArchiveTool,
+  emailDeleteTool,
+  // Communications (3)
+  sendNotificationTool,
+  listNotificationsTool,
+  listCommsChannelsTool,
 ];
 
 /**
@@ -1220,6 +1263,102 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
           alias: string;
           is_default?: boolean;
         });
+
+      // ============================================
+      // User Profile / WhoAmI
+      // ============================================
+      case 'whoami':
+        return handleWhoami(api);
+
+      // ============================================
+      // Email Integration Tools
+      // ============================================
+      case 'list_email_integrations':
+        return handleListEmailIntegrations(api);
+
+      case 'email_search':
+        return handleEmailSearch(api, args as {
+          integration_id: number;
+          query: string;
+          max_results?: number;
+        });
+
+      case 'email_read':
+        return handleEmailRead(api, args as {
+          integration_id: number;
+          message_id: string;
+        });
+
+      case 'email_list_threads':
+        return handleEmailListThreads(api, args as {
+          integration_id: number;
+          max_results?: number;
+          label?: string;
+        });
+
+      case 'email_send':
+        return handleEmailSend(api, args as {
+          integration_id: number;
+          to: string;
+          subject: string;
+          body: string;
+          cc?: string;
+          bcc?: string;
+        });
+
+      case 'email_reply':
+        return handleEmailReply(api, args as {
+          integration_id: number;
+          message_id: string;
+          body: string;
+          reply_all?: boolean;
+        });
+
+      case 'email_draft':
+        return handleEmailDraft(api, args as {
+          integration_id: number;
+          to: string;
+          subject: string;
+          body: string;
+        });
+
+      case 'email_label':
+        return handleEmailLabel(api, args as {
+          integration_id: number;
+          message_id: string;
+          add_labels?: string[];
+          remove_labels?: string[];
+        });
+
+      case 'email_archive':
+        return handleEmailArchive(api, args as {
+          integration_id: number;
+          message_id: string;
+        });
+
+      case 'email_delete':
+        return handleEmailDelete(api, args as {
+          integration_id: number;
+          message_id: string;
+        });
+
+      // ============================================
+      // Communications Tools
+      // ============================================
+      case 'send_notification':
+        return handleSendNotification(api, args as {
+          message: string;
+          title?: string;
+          channel_types?: string[];
+        });
+
+      case 'list_notifications':
+        return handleListNotifications(api, args as {
+          limit?: number;
+        });
+
+      case 'list_comms_channels':
+        return handleListCommsChannels(api);
 
       default:
         return {
