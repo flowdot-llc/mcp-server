@@ -41,6 +41,7 @@ import { favoriteWorkflowTool, handleFavoriteWorkflow } from './favorite-workflo
 import { cancelExecutionTool, handleCancelExecution } from './cancel-execution.js';
 import { retryExecutionTool, handleRetryExecution } from './retry-execution.js';
 import { streamExecutionTool, handleStreamExecution } from './stream-execution.js';
+import { panicStopTool, handlePanicStop } from './panic-stop.js';
 
 // ============================================
 // Discovery & Organization Tools (discovery:read)
@@ -313,10 +314,11 @@ const tools = [
   duplicateWorkflowTool,
   toggleWorkflowPublicTool,
   favoriteWorkflowTool,
-  // Execution Enhancements (3)
+  // Execution Enhancements (4)
   cancelExecutionTool,
   retryExecutionTool,
   streamExecutionTool,
+  panicStopTool,
   // Discovery & Organization (4)
   getWorkflowTagsTool,
   setWorkflowTagsTool,
@@ -542,7 +544,7 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
         return handleGetWorkflowComments(api, args as { workflow_id: string });
 
       case 'get_execution_history':
-        return handleGetExecutionHistory(api, args as { workflow_id: string; page?: number; limit?: number });
+        return handleGetExecutionHistory(api, args as { workflow_id: string; page?: number; limit?: number; include_audit_log?: boolean });
 
       // ============================================
       // Workflow Management Tools
@@ -573,6 +575,9 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'stream_execution':
         return handleStreamExecution(api, args as { execution_id: string });
+
+      case 'panic_stop':
+        return handlePanicStop(api, args as { confirm: boolean });
 
       // ============================================
       // Discovery & Organization Tools

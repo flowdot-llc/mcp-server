@@ -27,6 +27,11 @@ export const getExecutionHistoryTool: Tool = {
         description: 'Number of results per page (max 50)',
         default: 20,
       },
+      include_audit_log: {
+        type: 'boolean',
+        description: 'When true, include the TRUST audit log (provider/model attribution, token counts) for each execution that has LLM node data.',
+        default: false,
+      },
     },
     required: ['workflow_id'],
   },
@@ -34,7 +39,7 @@ export const getExecutionHistoryTool: Tool = {
 
 export async function handleGetExecutionHistory(
   api: FlowDotApiClient,
-  args: { workflow_id: string; page?: number; limit?: number }
+  args: { workflow_id: string; page?: number; limit?: number; include_audit_log?: boolean }
 ): Promise<CallToolResult> {
   try {
     const result = await api.getExecutionHistory(args.workflow_id, args.page, args.limit);
@@ -60,6 +65,18 @@ export async function handleGetExecutionHistory(
       lines.push(`  Started: ${exec.started_at || 'N/A'} | Duration: ${duration}`);
       if (exec.description) {
         lines.push(`  ${exec.description}`);
+      }
+
+      // TRUST P3 AUDIT: include audit log entries if requested
+      if (args.include_audit_log && Array.isArray(exec.audit_log) && exec.audit_log.length > 0) {
+        lines.push(`  **LLM Audit (${exec.audit_log.length} node${exec.audit_log.length !== 1 ? 's' : ''}):**`);
+        for (const entry of exec.audit_log) {
+          const provider = [entry.provider, entry.underlyingProvider, entry.model].filter(Boolean).join('/');
+          const tokens = entry.inputTokens !== null && entry.inputTokens !== undefined
+            ? `  ${entry.inputTokens} in / ${entry.outputTokens ?? 0} out tok`
+            : '';
+          lines.push(`    - ${entry.nodeTitle || entry.nodeType || entry.nodeId} via ${provider || 'unknown'}${tokens}`);
+        }
       }
     }
 
