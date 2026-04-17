@@ -1,6 +1,6 @@
 {
   "name": "@flowdot.ai/mcp-server",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "FlowDot MCP Server - Connect Claude Desktop, Cursor, and other AI tools to FlowDot workflows",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
