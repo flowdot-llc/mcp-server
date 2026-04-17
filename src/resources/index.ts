@@ -3266,7 +3266,7 @@ FlowDot supports multiple channel types. The exact set depends on what you have 
 
   'learn://goals': {
     name: 'Goals & Daemon Complete Guide',
-    description: 'Complete guide to FlowDot Goals — persistent long-running objectives executed locally by flowdot-cli/daemon with scheduling, task handlers, and recipe invocation',
+    description: 'Complete guide to FlowDot Goals — persistent long-running objectives executed locally by flowdot-cli/daemon with scheduling, task handlers, and recipe invocation. Goals can be created and managed via MCP tools or the CLI.',
     mimeType: 'text/markdown',
     content: `# FlowDot Goals — Complete Guide
 
@@ -3276,10 +3276,65 @@ Goals are persistent, long-running objectives that execute **locally** via \`flo
 
 **Division of responsibility:**
 - **Hub (server):** CRUD storage, schedule tracking, COMMS channel config
+- **MCP (this server):** Create and manage goals, tasks, milestones — but NOT invoke/run them
 - **CLI (\`flowdot-cli\`):** Goal creation, task management, manual runs, result viewing
 - **Daemon (\`flowdot-daemon\`):** Autonomous scheduled execution — \`GoalScheduler\` polls Hub every 60s
 
 **Architecture principle:** Server resources are expensive. Goal execution is free — it runs on the user's machine.
+
+> **⚠️ IMPORTANT — MCP cannot run goals.** You can create and manage goal structure via MCP tools, but to actually invoke/execute a goal you must use the CLI (\`flowdot goals run <hash>\` or \`flowdot goals trigger <hash>\`) or the FlowDot native app. The daemon handles scheduled autonomous execution.
+
+---
+
+## MCP Tools Reference
+
+All 16 goal management tools require a token with the \`goals:manage\` scope.
+
+### Goal CRUD
+
+| Tool | Description |
+|------|-------------|
+| \`list_goals\` | List all goals, optionally filtered by status |
+| \`create_goal\` | Create a new goal (name, description, priority, allowed_actions) |
+| \`get_goal\` | Get full details for a goal by hash |
+| \`update_goal\` | Update name, description, priority, or allowed_actions |
+| \`delete_goal\` | Permanently delete a goal and all its tasks/milestones |
+
+### Goal Status Transitions
+
+| Tool | Description | Valid from |
+|------|-------------|------------|
+| \`pause_goal\` | Pause an active goal | active |
+| \`resume_goal\` | Resume a paused goal | paused |
+| \`complete_goal\` | Mark goal as completed | active |
+| \`abandon_goal\` | Abandon a goal (soft delete, keeps record) | active, paused |
+
+### Task Management
+
+| Tool | Description |
+|------|-------------|
+| \`list_goal_tasks\` | List tasks for a goal (optional status filter) |
+| \`add_goal_task\` | Add a task (title, description, task_type, scheduled_for) |
+| \`delete_goal_task\` | Delete a task by ID |
+
+### Milestone Management
+
+| Tool | Description |
+|------|-------------|
+| \`list_goal_milestones\` | List milestones for a goal |
+| \`add_goal_milestone\` | Add a milestone (title, description, target_date) |
+| \`complete_goal_milestone\` | Mark a milestone as completed |
+| \`delete_goal_milestone\` | Delete a milestone by ID |
+
+### Quick Start via MCP
+
+\`\`\`
+1. create_goal  — name: "Run daily aggregator outreach"
+2. add_goal_task — goal_hash: <hash>, title: "Run recipe aggregator-outreach-daily", task_type: "recipe"
+3. [CLI only] flowdot goals run <hash>   ← MCP cannot do this step
+\`\`\`
+
+---
 
 ---
 
