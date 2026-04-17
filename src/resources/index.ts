@@ -68,7 +68,12 @@ Send notifications and read messages via Telegram, Discord, and other configured
 - **Learn more:** \`learn://comms\`
 - **Quick start:** Use \`list_comms_channels\` then \`send_notification\`
 
-### 9. **User Profile**
+### 9. **Goals & Daemon**
+Persistent, long-running objectives executed locally by flowdot-cli or flowdot-daemon. Goals run tasks (research, code, notify, recipe, execute, loop, toolkit) on a schedule or on demand.
+- **Learn more:** \`learn://goals\`
+- **Quick start:** Use \`flowdot goals create "<name>"\` then \`flowdot goals run <hash>\`
+
+### 10. **User Profile**
 View your account info and active token details.
 - **Quick start:** Use \`whoami\`
 
@@ -98,6 +103,7 @@ View your account info and active token details.
 - **Building UIs?** Read \`learn://apps\` first
 - **Reading/sending email?** Read \`learn://email\` first
 - **Sending notifications?** Read \`learn://comms\` first
+- **Setting up autonomous goals or scheduled tasks?** Read \`learn://goals\` first
 
 ## Getting Help
 
@@ -3255,6 +3261,239 @@ FlowDot supports multiple channel types. The exact set depends on what you have 
 - **Email:** \`learn://email\` - Read and send emails
 - **Workflows:** \`learn://workflows\` - Trigger notifications from workflow steps
 - **Recipes:** \`learn://recipes\` - Use comms in agent orchestration
+`,
+  },
+
+  'learn://goals': {
+    name: 'Goals & Daemon Complete Guide',
+    description: 'Complete guide to FlowDot Goals — persistent long-running objectives executed locally by flowdot-cli/daemon with scheduling, task handlers, and recipe invocation',
+    mimeType: 'text/markdown',
+    content: `# FlowDot Goals — Complete Guide
+
+## What Are Goals?
+
+Goals are persistent, long-running objectives that execute **locally** via \`flowdot-cli\` or \`flowdot-daemon\`. All autonomous execution happens on the user's machine — NOT on the server.
+
+**Division of responsibility:**
+- **Hub (server):** CRUD storage, schedule tracking, COMMS channel config
+- **CLI (\`flowdot-cli\`):** Goal creation, task management, manual runs, result viewing
+- **Daemon (\`flowdot-daemon\`):** Autonomous scheduled execution — \`GoalScheduler\` polls Hub every 60s
+
+**Architecture principle:** Server resources are expensive. Goal execution is free — it runs on the user's machine.
+
+---
+
+## CLI Quick Reference
+
+\`\`\`bash
+# Goal lifecycle
+flowdot goals create "<name>"                        # Create a new goal
+flowdot goals list                                   # List all goals
+flowdot goals show <hash>                            # Show goal details, milestones, tasks
+flowdot goals run <hash>                             # Run a goal now (manual trigger)
+flowdot goals results <hash>                         # View accumulated results
+
+# Tasks
+flowdot goals task:add <hash> "<description>" -t <type>   # Add a task
+flowdot goals generate <hash>                              # AI-generate tasks from goal + milestones
+
+# Resources (context for task handlers)
+flowdot goals resource:add <hash> --category "<KB category name>"   # Link a KB category as RAG context
+
+# Daemon (for scheduled/autonomous execution)
+flowdot daemon start                                 # Start the background daemon
+\`\`\`
+
+---
+
+## Task Types
+
+All task handlers are fully implemented and working:
+
+| Type | What It Does |
+|------|-------------|
+| \`research\` | Web search + RAG context queries; stores results locally |
+| \`code\` | LLM drafting (resumes, cover letters, analyses) using RAG data |
+| \`draft\` | Alias for \`code\` |
+| \`notify\` | Sends Telegram/Discord notification via COMMS |
+| \`recipe\` | Invokes a FlowDot recipe by alias/hash (fire-and-forget for long recipes) |
+| \`execute\` | Runs a shell command (60s timeout, security checks applied) |
+| \`loop\` | Creates a recurring daemon loop via IPC |
+| \`toolkit\` | Executes an Agent Toolkit tool |
+
+---
+
+## Recipe Task
+
+The \`recipe\` task type invokes a FlowDot recipe from within a goal. It uses a **fire-and-forget** pattern — the task returns immediately while the recipe runs in the background. When the recipe completes, a Telegram notification is sent automatically.
+
+**Adding a recipe task:**
+\`\`\`bash
+flowdot goals task:add <hash> "Run recipe aggregator-outreach-daily" -t recipe
+\`\`\`
+
+The recipe handler parses the alias from the task title (e.g. \`Run recipe my-recipe\`) and passes goal context as inputs:
+\`\`\`json
+{ "request": "...", "goal_name": "...", "goal_hash": "...", "previous_results": "..." }
+\`\`\`
+
+**Permission required:** \`recipes\` must be in the goal's allowed actions.
+
+---
+
+## Toolkit Task
+
+Executes an Agent Toolkit tool (server-side API integrations like Stripe, Meta Ads, etc.):
+
+\`\`\`bash
+# Full format with JSON inputs in a code block
+flowdot goals task:add <hash> "Call toolkit__stripe__list-subscriptions
+\\\`\\\`\\\`json
+{\\"limit\\": 10}
+\\\`\\\`\\\`" -t toolkit
+
+# Shorthand format
+flowdot goals task:add <hash> "Run stripe/get-customer with {\\"customer_id\\": \\"cus_123\\"}" -t toolkit
+\`\`\`
+
+**Permission required:** \`toolkits\` must be in the goal's allowed actions.
+
+---
+
+## Notify Task
+
+Sends a notification via configured COMMS channels (Telegram, Discord):
+
+\`\`\`bash
+flowdot goals task:add <hash> "Send Telegram notification with today's results" -t notify
+\`\`\`
+
+**Permission required:** \`comms\` must be in the goal's allowed actions.
+
+---
+
+## Permission System
+
+Goals support fine-grained action permissions.
+
+**Approval modes:** \`full\`, \`category\`, \`trusted\`
+
+**Available actions:**
+\`\`\`
+web-search   workflows   comms      file-read   file-write
+api-calls    code-execute  rag      recipes     toolkits    loops
+\`\`\`
+
+**Which handlers check permissions:**
+| Handler | Permission checked |
+|---------|-------------------|
+| \`recipe\` | \`recipes\` |
+| \`execute\` | \`code-execute\` |
+| \`loop\` | \`loops\` |
+| \`toolkit\` | \`toolkits\` |
+
+---
+
+## Scheduling (Daemon)
+
+Goals run automatically via the **GoalScheduler** inside \`flowdot-daemon\`:
+
+- Polls Hub every **60 seconds** for goals where \`next_run_at\` is in the past
+- Max **3 concurrent executions**
+- Calls \`markGoalStarted()\` and \`markGoalCompleted()\` back to Hub when done
+- Broadcasts IPC events for monitoring
+
+**The daemon must be running for scheduled goals:**
+\`\`\`bash
+flowdot daemon start
+\`\`\`
+
+---
+
+## Local Storage
+
+Every goal execution writes results to disk at \`~/.flowdot/goals/<hash>/\`:
+
+\`\`\`
+~/.flowdot/goals/<hash>/
+├── runs/
+│   └── 2026-04-16_09-00/
+│       ├── run.json              # Run metadata (started, ended, status)
+│       ├── tasks/
+│       │   ├── 1.json            # Task 1 result
+│       │   └── 2.json            # Task 2 result
+│       └── logs/
+│           └── execution.log
+└── results/
+    ├── jobs_found.json           # Accumulated results
+    └── drafts/
+\`\`\`
+
+View results:
+\`\`\`bash
+flowdot goals results <hash>      # Shows task-specific summaries
+\`\`\`
+
+---
+
+## Linking Knowledge Base Context
+
+Link a KB category to give goal task handlers RAG access to your documents:
+
+\`\`\`bash
+flowdot goals resource:add <hash> --category "Developer Accomplishments"
+\`\`\`
+
+This makes all documents in that KB category available to \`research\`, \`code\`, and \`recipe\` task handlers for contextual grounding.
+
+---
+
+## Complete Example: Daily Recipe Goal
+
+Set up a goal that runs the \`aggregator-outreach-daily\` recipe every day:
+
+\`\`\`bash
+# 1. Create the goal
+flowdot goals create "Run daily aggregator outreach"
+# Note the hash from output, e.g. "abc123"
+
+# 2. Add a recipe task
+flowdot goals task:add abc123 "Run recipe aggregator-outreach-daily" -t recipe
+
+# 3. Run it manually now to test
+flowdot goals run abc123
+
+# 4. View what happened
+flowdot goals results abc123
+
+# 5. For autonomous daily runs — start the daemon
+flowdot daemon start
+# The daemon will poll Hub and execute the goal automatically when scheduled
+\`\`\`
+
+---
+
+## Verified Working Task Handlers (as of 2026-04-01)
+
+| Handler | Status |
+|---------|--------|
+| research | Working — web search + RAG |
+| code | Working — LLM content generation |
+| draft | Working — alias for code |
+| notify | Working — Telegram/Discord delivery |
+| recipe | Working — fire-and-forget, auto-notifies on completion |
+| execute | Working — shell commands with 60s timeout |
+| loop | Working — creates daemon loops via IPC |
+| toolkit | Working — Agent Toolkit tools |
+
+---
+
+## Related Resources
+
+- \`learn://recipes\` — Agent recipes that goals can invoke via the \`recipe\` task type
+- \`learn://knowledge-base\` — Link KB categories as goal RAG context
+- \`learn://comms\` — Notification channels used by \`notify\` tasks
+- \`learn://toolkits\` — Toolkit tools invocable from \`toolkit\` tasks
 `,
   },
 };

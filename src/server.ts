@@ -83,9 +83,9 @@ export async function createServer(): Promise<Server> {
 
 **READ THIS FIRST.** Before using any FlowDot tool, you should read the FlowDot learning resources. They are **MCP resources** (not tools), so they won't appear in your tool list — you must fetch them explicitly via the MCP resource-read mechanism (URIs below).
 
-## The 7 Learning Resources
+## The 10 Learning Resources
 
-FlowDot exposes 7 \`learn://\` resources that explain every major feature of the platform. Each is a complete guide with concepts, tool reference, and worked examples. Read the one that matches the user's task *before* calling tools in that area.
+FlowDot exposes 10 \`learn://\` resources that explain every major feature of the platform. Each is a complete guide with concepts, tool reference, and worked examples. Read the one that matches the user's task *before* calling tools in that area.
 
 1. **\`learn://overview\`** — High-level overview of all FlowDot components and how they work together. Start here if you don't know where to start.
 2. **\`learn://workflows\`** — Complete guide to creating, managing, and executing FlowDot workflows (visual node-and-connection automations). Read before using \`create_workflow\`, \`add_node\`, \`add_connection\`, \`execute_workflow\`, etc.
@@ -94,6 +94,9 @@ FlowDot exposes 7 \`learn://\` resources that explain every major feature of the
 5. **\`learn://apps\`** — Complete guide to building multi-file React applications with FlowDot (sandboxed frontends that can invoke workflows). Read before using \`create_app\`, \`create_app_file\`, \`edit_app_code\`, etc.
 6. **\`learn://toolkits\`** — Complete guide to creating and managing MCP agent toolkits (extend agents with new tools, credential-scoped). Read before using any \`mcp__flowdot__*toolkit*\` tool.
 7. **\`learn://knowledge-base\`** — Complete guide to using the FlowDot knowledge base with RAG (document upload, categories, semantic search). Read before using \`upload_text_document\`, \`query_knowledge_base\`, \`create_knowledge_category\`, etc.
+8. **\`learn://email\`** — Complete guide to reading and sending emails via Gmail, Outlook, or IMAP/SMTP integrations. Read before using \`email_search\`, \`email_send\`, \`email_reply\`, \`list_email_integrations\`, etc.
+9. **\`learn://comms\`** — Complete guide to notifications and messaging via Telegram, Discord, and other configured channels. Read before using \`send_notification\`, \`list_comms_channels\`, etc.
+10. **\`learn://goals\`** — Complete guide to FlowDot Goals — persistent long-running objectives and daemon scheduling. Read before setting up goals, adding tasks, invoking recipes from goals, or configuring the daemon.
 
 ## How to Read a Learning Resource
 
@@ -116,7 +119,8 @@ If the user asks about a FlowDot feature area you haven't touched in this sessio
   console.error('📚 Learning Resources:');
   console.error('  Use learn:// resources to understand FlowDot concepts before using tools');
   console.error('  Available: learn://overview, learn://workflows, learn://recipes,');
-  console.error('            learn://custom-nodes, learn://apps, learn://toolkits, learn://knowledge-base');
+  console.error('            learn://custom-nodes, learn://apps, learn://toolkits, learn://knowledge-base,');
+  console.error('            learn://email, learn://comms, learn://goals');
   console.error('');
   console.error('Available tool categories:');
   console.error('  • Workflows: Core execution, management, building, validation');
