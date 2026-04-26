@@ -73,7 +73,12 @@ Persistent, long-running objectives executed locally by flowdot-cli or flowdot-d
 - **Learn more:** \`learn://goals\`
 - **Quick start:** Use \`flowdot goals create "<name>"\` then \`flowdot goals run <hash>\`
 
-### 10. **User Profile**
+### 10. **Agent Characters (Voice Calls)**
+Voice-call personas with persona prompt + TTS + STT + LLM config. Required for the FlowDot voice-call feature.
+- **Learn more:** \`learn://characters\`
+- **Quick start:** Use \`list_agent_characters\` to see which are ready to call, \`get_agent_character\` to confirm one's config, \`update_agent_character\` to fill missing fields.
+
+### 11. **User Profile**
 View your account info and active token details.
 - **Quick start:** Use \`whoami\`
 
@@ -104,6 +109,7 @@ View your account info and active token details.
 - **Reading/sending email?** Read \`learn://email\` first
 - **Sending notifications?** Read \`learn://comms\` first
 - **Setting up autonomous goals or scheduled tasks?** Read \`learn://goals\` first
+- **Setting up a voice-call character?** Read \`learn://characters\` first
 
 ## Getting Help
 
@@ -3549,6 +3555,147 @@ flowdot daemon start
 - \`learn://knowledge-base\` — Link KB categories as goal RAG context
 - \`learn://comms\` — Notification channels used by \`notify\` tasks
 - \`learn://toolkits\` — Toolkit tools invocable from \`toolkit\` tasks
+`,
+  },
+
+  'learn://characters': {
+    name: 'Agent Characters — Voice Call Setup Guide',
+    description: 'Complete guide to creating, inspecting, and configuring agent characters for FlowDot voice calls — including the 10 required fields and per-provider settings',
+    mimeType: 'text/markdown',
+    content: `# Agent Characters — Voice Call Setup Guide
+
+## What an agent character is
+
+An **agent character** is a voice-call persona: a name + avatar + persona prompt bundled with a complete provider stack — TTS (text-to-speech voice), STT (speech-to-text), and LLM (the brain). When a user starts a voice call from the FlowDot web/mobile UI against a character, the LiveKit voice-agent worker reads the character's saved config and dispatches into the room. **No fallback, no defaults at runtime** — every required field must be set or the call refuses to start.
+
+## Required Scopes
+
+| Scope | What it unlocks |
+|---|---|
+| \`agent_characters:read\` | \`list_agent_characters\`, \`get_agent_character\` |
+| \`agent_characters:manage\` | \`create_agent_character\`, \`update_agent_character\`, \`delete_agent_character\`, \`fork_agent_character\`, \`duplicate_agent_character\`, \`toggle_agent_character_public\` |
+
+## The 10 required fields (the contract)
+
+\`get_agent_character\` returns a \`Completeness\` section listing each of these. \`create_agent_character\` and \`update_agent_character\` reject any payload that would leave the row incomplete with HTTP 422 \`code: CHARACTER_VOICE_CONFIG_INCOMPLETE\` and a \`missing[]\` list.
+
+| # | Field | What it is | Where it goes |
+|---|---|---|---|
+| 1 | \`voice_provider\` | TTS provider id | Selects which TTS plugin runs server-side |
+| 2 | \`voice_id\` | Provider-specific voice reference | Picks the actual voice |
+| 3 | \`tts_model\` | TTS model id | Picks the synthesis model |
+| 4 | \`voice_settings\` | Provider-specific settings object | Knobs the TTS plugin reads |
+| 5 | \`stt_provider\` | STT provider id | Speech-to-text plugin |
+| 6 | \`stt_model\` | STT model id | Specific STT model |
+| 7 | \`llm_provider\` | LLM provider id | Which LLM stack |
+| 8 | \`llm_model\` | LLM model id | Specific model — must be one the FlowDot aggregator currently serves if \`llm_provider = 'flowdot'\` |
+| 9 | \`llm_temperature\` | 0–2 | Sampling temperature |
+| 10 | \`personality_prompt\` | Free-text persona / system prompt | Drives the voice agent's character |
+
+## Per-provider voice_settings shapes
+
+\`voice_settings\` is provider-specific. The runtime plugin validates it; the editor validator only checks it's a non-empty object.
+
+### Fish Audio (\`voice_provider: 'fish-audio'\`)
+\`\`\`json
+{
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "latency": "normal",
+  "chunk_length": 200
+}
+\`\`\`
+- \`latency\`: one of \`'normal'\`, \`'balanced'\`, \`'low'\`
+- Get a voice id with \`mcp__fish-audio__fish_audio_voices\` (action: \`list\` or \`search\`).
+- Recommended \`tts_model\`: \`'s1'\`
+
+### ElevenLabs (\`voice_provider: 'elevenlabs'\`)
+\`\`\`json
+{
+  "stability": 0.7,
+  "similarity_boost": 0.8
+}
+\`\`\`
+- Recommended \`tts_model\`: \`'eleven_turbo_v2'\` or \`'eleven_multilingual_v2'\`
+
+### Cartesia (\`voice_provider: 'cartesia'\`)
+\`\`\`json
+{
+  "speed": "normal",
+  "emotion": []
+}
+\`\`\`
+
+### OpenAI TTS (\`voice_provider: 'openai'\`)
+\`\`\`json
+{
+  "speed": 1.0
+}
+\`\`\`
+- Recommended \`tts_model\`: \`'tts-1'\` or \`'tts-1-hd'\`
+
+## STT and LLM choices
+
+- **STT:** Currently only \`stt_provider: 'openai'\` (\`stt_model: 'whisper-1'\`) is supported by the LiveKit voice-agent worker. ElevenLabs Scribe and Fish Audio STT do not yet have LiveKit plugins. \`'browser'\` STT is incompatible with the server-side audio pipeline.
+- **LLM:** \`llm_provider\` can be \`'openai'\`, \`'anthropic'\`, \`'flowdot'\` (the aggregator), etc. When using \`'flowdot'\`, \`llm_model\` must be one the aggregator currently serves — if the runtime hits APITimeoutError on the model, swap it on the character (NOT on the user's tier preferences — the character's saved \`llm_model\` is read first).
+
+## Workflow: setup → confirm → call
+
+\`\`\`
+1.  list_agent_characters
+       └─ See which characters are ready (✅) and which are missing fields (⚠️)
+2.  get_agent_character           ── confirm one specific character
+       └─ Per-field Completeness section + voice_settings JSON
+3.  create_agent_character        ── make a new one from scratch
+       OR
+    update_agent_character        ── fill in missing fields on an existing one
+       └─ On 422 CHARACTER_VOICE_CONFIG_INCOMPLETE: ask the user for the
+          missing fields by name; resend
+4.  get_agent_character           ── confirm is_complete: true
+5.  User starts the voice call from the FlowDot web/mobile UI
+\`\`\`
+
+## Worked example — full Fish-Audio + OpenAI-STT + FlowDot-LLM character
+
+\`\`\`json
+{
+  "name": "Test Harness",
+  "voice_provider": "fish-audio",
+  "voice_id": "<paste from fish_audio_voices>",
+  "tts_model": "s1",
+  "voice_settings": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "latency": "normal",
+    "chunk_length": 200
+  },
+  "stt_provider": "openai",
+  "stt_model": "whisper-1",
+  "llm_provider": "flowdot",
+  "llm_model": "redpill/anthropic/claude-haiku-4.5",
+  "llm_temperature": 0.6,
+  "personality_prompt": "You are a concise test assistant. Keep replies under two sentences.",
+  "is_public": false
+}
+\`\`\`
+
+Pass that to \`create_agent_character\` and the response carries \`is_complete: true\` and the new \`id\`.
+
+## Fork vs. duplicate
+
+- \`fork_agent_character\` — copy a **public** character (by hash). Voice + persona are copied, **LLM is reset** to the DB default \`'default'\`/\`'default'\`. The forked character will report incomplete until you fill in \`llm_provider\`/\`llm_model\`/\`llm_temperature\`.
+- \`duplicate_agent_character\` — copy one of **your own** characters (by id). The whole config including LLM is copied; the new name is suffixed with \` (Copy)\`.
+
+## Visibility
+
+\`toggle_agent_character_public\` flips public/private. The first time a character goes public a stable hash is auto-generated and preserved across future toggles, so a public URL stays valid even after a private→public→private cycle.
+
+## Cross-references
+
+- \`learn://overview\` — where characters fit in the platform
+- \`learn://recipes\` — recipes are agentic *programs*; characters are voice *personas*. Different. Recipes can reference characters but not vice-versa.
+- \`Docs/LIVE_CALLS_TRUTH.md\` (in the Hub repo) — the no-fallback runtime contract these tools mirror.
+- \`mcp__fish-audio__fish_audio_voices\` / \`mcp__elevenlabs__*\` (if installed) — pick a real \`voice_id\` before calling \`create_agent_character\`.
 `,
   },
 };

@@ -4,7 +4,7 @@ Connect Claude Desktop, Cursor, Windsurf, Claude Code, and any other MCP-compati
 
 ## What is MCP?
 
-MCP (Model Context Protocol) is an open standard that lets AI models interact with external tools and services. The FlowDot MCP Server exposes **142 tools across 16 functional categories**, plus **7 educational `learn://` resources**, giving an AI client a complete operational interface to FlowDot — no web UI required.
+MCP (Model Context Protocol) is an open standard that lets AI models interact with external tools and services. The FlowDot MCP Server exposes **150 tools across 17 functional categories**, plus **8 educational `learn://` resources**, giving an AI client a complete operational interface to FlowDot — no web UI required.
 
 With this server, an AI client can:
 
@@ -14,6 +14,7 @@ With this server, an AI client can:
 - **Design agent recipes** — multi-step agentic programs with stores, gates, branches, loops, parallel steps, and sub-recipes
 - **Manage knowledge bases (RAG)** — categories, documents, uploads, semantic queries
 - **Create and invoke agent toolkits** — define new tools, configure OAuth/API-key credentials, install, invoke
+- **Set up agent characters for voice calls** — list/get/create/update/delete/fork/duplicate/publish, with server-side voice-config completeness validation
 - **Share and discover** — public URLs, voting, comments, favorites, community browsing
 - **Run and observe executions** — start, stream via SSE, cancel, retry, view history and metrics
 
@@ -73,7 +74,7 @@ flowdot-mcp
 
 ## Educational Resources (`learn://`)
 
-The server exposes 7 standalone concept guides via the MCP `ReadResourceRequest` interface. Read these *before* invoking tools to scaffold your understanding:
+The server exposes 8 standalone concept guides via the MCP `ReadResourceRequest` interface. Read these *before* invoking tools to scaffold your understanding:
 
 | Resource | Content |
 |----------|---------|
@@ -84,10 +85,11 @@ The server exposes 7 standalone concept guides via the MCP `ReadResourceRequest`
 | `learn://apps` | App development guide |
 | `learn://toolkits` | Agent toolkit guide |
 | `learn://knowledge-base` | Knowledge base & RAG guide |
+| `learn://characters` | Agent character (voice call) setup guide |
 
 ## Available Tools
 
-The server exposes **142 tools** organized into 16 categories.
+The server exposes **150 tools** organized into 17 categories.
 
 ### Core (4)
 - `list_workflows` — List all workflows accessible to the authenticated user
@@ -295,6 +297,21 @@ Recipes are reusable agentic programs with multiple step types and persistent st
 > npx @flowdot.ai/cli recipes run <aliasOrHash> --input '{"key":"value"}'
 > ```
 
+### Agent Characters (8)
+
+Voice-call personas — name + persona prompt + complete provider stack (TTS / STT / LLM). The Hub server-side validates voice-config completeness against the same `App\Support\AgentCharacterCompleteness` helper the runtime uses, so every read of a character carries an `is_complete` flag plus a `missing_fields[]` list. Read `learn://characters` for the per-provider settings shapes.
+
+- `list_agent_characters` — List your characters with completeness badges
+- `get_agent_character` — Full detail with per-field Completeness section
+- `create_agent_character` — Create a new character (rejects with `CHARACTER_VOICE_CONFIG_INCOMPLETE` 422 if any required field is missing)
+- `update_agent_character` — Partial update with post-merge completeness validation
+- `delete_agent_character` — Hard delete (requires `confirm: true`)
+- `fork_agent_character` — Copy a public character; LLM choice resets to default
+- `duplicate_agent_character` — Copy your own character including LLM choice
+- `toggle_agent_character_public` — Flip public/private (auto-mints stable hash on first publish)
+
+**Required fields:** `voice_provider`, `voice_id`, `tts_model`, `voice_settings`, `stt_provider`, `stt_model`, `llm_provider`, `llm_model`, `llm_temperature`, `personality_prompt`. See `learn://characters` for recommended values per provider.
+
 ## Token Scopes
 
 When creating an MCP token in FlowDot Settings, you can select exactly which scopes to grant. Restrict tokens to the minimum scope they need:
@@ -313,6 +330,8 @@ When creating an MCP token in FlowDot Settings, you can select exactly which sco
 | `apps:manage` | Create, update, delete, publish, code editing, file management |
 | `recipes:read` | List, get, browse, get definition |
 | `recipes:manage` | Create, update, delete, fork, link, manage steps and stores |
+| `agent_characters:read` | List and view agent characters (with completeness state) |
+| `agent_characters:manage` | Create, edit, delete, fork, duplicate, and publish agent characters |
 | `knowledge:read` | List, get, query |
 | `knowledge:manage` | Upload, delete, categorize, transfer, reprocess |
 | `agent_toolkits:read` | List, search, get toolkits and tools |

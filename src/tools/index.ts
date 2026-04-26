@@ -252,6 +252,19 @@ import { favoriteRecipeTool, handleFavoriteRecipe } from './favorite-recipe.js';
 import { linkRecipeTool, handleLinkRecipe } from './link-recipe.js';
 
 // ============================================
+// Agent Character Tools (agent_characters:read / agent_characters:manage)
+// Voice-call characters: voice/STT/LLM config + persona prompt.
+// ============================================
+import { listAgentCharactersTool, handleListAgentCharacters } from './list-agent-characters.js';
+import { getAgentCharacterTool, handleGetAgentCharacter } from './get-agent-character.js';
+import { createAgentCharacterTool, handleCreateAgentCharacter } from './create-agent-character.js';
+import { updateAgentCharacterTool, handleUpdateAgentCharacter } from './update-agent-character.js';
+import { deleteAgentCharacterTool, handleDeleteAgentCharacter } from './delete-agent-character.js';
+import { forkAgentCharacterTool, handleForkAgentCharacter } from './fork-agent-character.js';
+import { duplicateAgentCharacterTool, handleDuplicateAgentCharacter } from './duplicate-agent-character.js';
+import { toggleAgentCharacterPublicTool, handleToggleAgentCharacterPublic } from './toggle-agent-character-public.js';
+
+// ============================================
 // User Profile / WhoAmI Tools (user:read)
 // ============================================
 import { whoamiTool, handleWhoami } from './whoami.js';
@@ -464,6 +477,15 @@ const tools = [
   voteRecipeTool,
   favoriteRecipeTool,
   linkRecipeTool,
+  // Agent Characters (8)
+  listAgentCharactersTool,
+  getAgentCharacterTool,
+  createAgentCharacterTool,
+  updateAgentCharacterTool,
+  deleteAgentCharacterTool,
+  forkAgentCharacterTool,
+  duplicateAgentCharacterTool,
+  toggleAgentCharacterPublicTool,
   // User Profile / WhoAmI (1)
   whoamiTool,
   // Email Integrations (10)
@@ -1305,6 +1327,33 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
           alias: string;
           is_default?: boolean;
         });
+
+      // ============================================
+      // Agent Character Tools
+      // ============================================
+      case 'list_agent_characters':
+        return handleListAgentCharacters(api, args as { search?: string; limit?: number; page?: number });
+
+      case 'get_agent_character':
+        return handleGetAgentCharacter(api, args as { id: string });
+
+      case 'create_agent_character':
+        return handleCreateAgentCharacter(api, args as any);
+
+      case 'update_agent_character':
+        return handleUpdateAgentCharacter(api, args as any);
+
+      case 'delete_agent_character':
+        return handleDeleteAgentCharacter(api, args as { id: string; confirm: boolean });
+
+      case 'fork_agent_character':
+        return handleForkAgentCharacter(api, args as { hash: string });
+
+      case 'duplicate_agent_character':
+        return handleDuplicateAgentCharacter(api, args as { id: string });
+
+      case 'toggle_agent_character_public':
+        return handleToggleAgentCharacterPublic(api, args as { id: string });
 
       // ============================================
       // User Profile / WhoAmI
