@@ -1588,11 +1588,98 @@ ${tool.tool_type === 'workflow' && tool.workflow_hash ? `
   }
 }
 
+/**
+ * The full `endpoint_config` schema for HTTP toolkit tools, shared between
+ * create_toolkit_tool and update_toolkit_tool. The Hub (Laravel) executor
+ * supports all of the fields below; declaring them here lets agents discover
+ * and use them. See AgentToolkitExecutionService::executeHttpTool for the
+ * runtime semantics, and Docs/AGENT_TOOLKITS.md for the full guide.
+ */
+const httpEndpointConfigSchema = {
+  type: 'object' as const,
+  description:
+    'HTTP configuration (required if tool_type is "http"). Supports template substitution via {{credential.KEY}} and {{input.name}} in url, headers, query_params, and body_template.',
+  properties: {
+    url: {
+      type: 'string',
+      description: 'API endpoint URL. May include {{credential.X}} or {{input.Y}} placeholders.',
+    },
+    method: {
+      type: 'string',
+      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    },
+    headers: {
+      type: 'object',
+      description:
+        'Map of header name to template string. Each value may reference {{credential.X}} and {{input.Y}}.',
+      additionalProperties: { type: 'string' },
+    },
+    query_params: {
+      type: 'object',
+      description:
+        'Map of query param name to template string. Use this instead of putting query params in `url` so they are encoded correctly.',
+      additionalProperties: { type: 'string' },
+    },
+    body_template: {
+      type: 'object',
+      description:
+        'Body template for POST/PUT/PATCH. Sent as JSON by default. Values are recursively interpolated (strings support {{credential.X}} and {{input.Y}}).',
+    },
+    body_format: {
+      type: 'string',
+      enum: ['json', 'form'],
+      description: 'Body encoding. "json" (default) or "form" for application/x-www-form-urlencoded (used by OAuth token endpoints).',
+    },
+    response_mapping: {
+      type: 'object',
+      description:
+        'Optional JSONPath extraction map, e.g., { "id": "$.data.id", "status": "$.data.status" }. When set, the tool returns only the mapped fields.',
+      additionalProperties: { type: 'string' },
+    },
+    signing: {
+      type: 'object',
+      description:
+        'Per-request signed-request auth (e.g., Robinhood Crypto, Binance, Coinbase Pro, Kraken). When present, the executor generates a fresh timestamp, computes a signature over a templated message, and merges signed headers into the request.',
+      properties: {
+        algorithm: {
+          type: 'string',
+          enum: ['ed25519', 'hmac-sha256', 'hmac-sha512'],
+          description: 'Signing algorithm. Robinhood uses ed25519; most other crypto exchanges use hmac-sha256.',
+        },
+        key_credential: {
+          type: 'string',
+          description:
+            'Name of a credential (declared in the toolkit) holding the signing key. For ed25519, base64-encoded 32-byte seed or 64-byte secretKey. For HMAC, the raw secret string.',
+        },
+        message_template: {
+          type: 'string',
+          description:
+            'Template for the message to sign. May use {{credential.X}} and the special vars {{__timestamp}}, {{__path}}, {{__method}}, {{__body}}. Example for Robinhood: "{{credential.ROBINHOOD_API_KEY}}{{__timestamp}}{{__path}}{{__method}}{{__body}}".',
+        },
+        timestamp_format: {
+          type: 'string',
+          enum: ['unix_seconds', 'unix_millis', 'iso8601'],
+          description: 'Format for the {{__timestamp}} variable. Default: unix_seconds.',
+        },
+        headers: {
+          type: 'object',
+          description:
+            'Map of header name to template string. May reference {{credential.X}}, the special vars above, and additionally {{__signature_b64}} / {{__signature_hex}} (the computed signature).',
+          additionalProperties: { type: 'string' },
+        },
+      },
+      required: ['algorithm', 'key_credential', 'message_template', 'headers'],
+    },
+  },
+} as const;
+
 export const createToolkitToolTool: Tool = {
   name: 'mcp__flowdot__create_toolkit_tool',
   description: `Create a new tool in a toolkit.
 
-Add HTTP or Workflow-based tools to your agent toolkit with custom input/output schemas and credentials.`,
+Add HTTP or Workflow-based tools to your agent toolkit with custom input/output schemas and credentials.
+
+For signed-request crypto exchange APIs (Robinhood Crypto, Binance, etc.), use endpoint_config.signing to declare the algorithm and message template — the Hub computes a fresh signature on every request.`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -1625,14 +1712,7 @@ Add HTTP or Workflow-based tools to your agent toolkit with custom input/output 
         type: 'object',
         description: 'Optional JSON Schema defining tool outputs',
       },
-      endpoint_config: {
-        type: 'object',
-        description: 'HTTP configuration (required if tool_type is "http")',
-        properties: {
-          url: { type: 'string', description: 'API endpoint URL' },
-          method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] },
-        },
-      },
+      endpoint_config: httpEndpointConfigSchema,
       workflow_hash: {
         type: 'string',
         description: 'FlowDot workflow hash (required if tool_type is "workflow")',
@@ -1747,10 +1827,7 @@ Modify tool configuration, schemas, endpoints, or credentials.`,
         type: 'object',
         description: 'New output schema',
       },
-      endpoint_config: {
-        type: 'object',
-        description: 'New HTTP configuration',
-      },
+      endpoint_config: httpEndpointConfigSchema,
       workflow_hash: {
         type: 'string',
         description: 'New workflow hash',

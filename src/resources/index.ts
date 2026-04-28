@@ -2327,7 +2327,7 @@ create_agent_toolkit({
 | **bearer** | The API uses a static \`Authorization: Bearer <token>\` header without OAuth | Like api_key but with the standard \`Bearer\` prefix. |
 | **basic** | The API uses HTTP Basic Auth (\`Authorization: Basic base64(user:pass)\`) | Rare for modern APIs but still common in legacy services. |
 | **oauth** | The API requires user-delegated access via OAuth 2.0 | Use this for any API where the user logs in to authorize access (Google, Schwab, Notion, GitHub user data, etc.). Tokens auto-refresh. |
-| **custom** | The API has a non-standard auth flow (signed requests, mutual TLS, request signing) | Last resort. You'll likely need to wrap the API in a workflow tool instead and let the workflow handle the signing. |
+| **custom** | The API has a non-standard auth flow that none of the others fit (e.g., mutual TLS, request signing schemes outside ed25519/HMAC) | Used as a free-form credential type. **For the common case of per-request signed-request auth (Robinhood Crypto, Binance, Coinbase Pro, Kraken, etc.), use the dedicated \`signing\` block on \`endpoint_config\` — see "Signed-Request Auth" below.** |
 
 ### Why PKCE Matters
 
@@ -2352,6 +2352,204 @@ The agent never has to handle this. From the agent's perspective, the call just 
 - \`client_id_credential_key\` and \`client_secret_credential_key\` must point to credentials that are actually populated at refresh time (not just at install time)
 
 **If refresh is failing:** the most common cause is that the API returns a 200 OK with an error body instead of a 4xx code. In that case, you need to add the error pattern to \`auth_error_patterns\` so FlowDot can detect it from the body.
+
+## endpoint_config Reference (HTTP Tools)
+
+\`endpoint_config\` is the heart of an HTTP tool. The Step 2 example above only showed \`url\` + \`method\`, but the full schema is much richer. Every template string supports \`{{credential.KEY_NAME}}\` and \`{{input.field_name}}\` substitution.
+
+| Field | Type | Purpose |
+|---|---|---|
+| \`url\` | string (template) | API endpoint URL. Embed path params via \`{{input.X}}\` (e.g., \`https://api.example.com/users/{{input.user_id}}\`). |
+| \`method\` | enum | \`GET\` / \`POST\` / \`PUT\` / \`PATCH\` / \`DELETE\`. |
+| \`headers\` | object<string, template> | Request headers. Each value supports template substitution. Use this for static auth headers like \`Authorization: Bearer {{credential.API_KEY}}\`. |
+| \`query_params\` | object<string, template> | Query string params. Prefer this over embedding params in \`url\` so they're URL-encoded correctly. **Empty templated values are skipped** — see Behavior Notes. |
+| \`body_template\` | object | JSON body for POST/PUT/PATCH/DELETE. Recursively interpolated. **Empty string values are stripped** — see Behavior Notes. |
+| \`body_format\` | enum | \`json\` (default) or \`form\` for \`application/x-www-form-urlencoded\` (used by OAuth token endpoints). |
+| \`response_mapping\` | object<string, JSONPath> | Optional projection of response fields, e.g., \`{ "id": "$.data.id", "items": "$.data.results" }\`. When present, the tool returns only the mapped fields. |
+| \`signing\` | object | Per-request signed-request auth (Ed25519, HMAC). See "Signed-Request Auth" section below. |
+
+### Worked example — Stripe API key in header, GET with query filters
+
+\`\`\`javascript
+create_toolkit_tool({
+  toolkit_id: "toolkit-abc123",
+  name: "list-subscriptions",
+  title: "List Subscriptions",
+  description: "List Stripe subscriptions, optionally filtered by customer or status.",
+  tool_type: "http",
+  credential_keys: ["STRIPE_API_KEY"],
+  endpoint_config: {
+    method: "GET",
+    url: "https://api.stripe.com/v1/subscriptions",
+    headers: {
+      "Authorization": "Bearer {{credential.STRIPE_API_KEY}}"
+    },
+    query_params: {
+      "customer": "{{input.customer_id}}",
+      "status": "{{input.status}}",
+      "limit": "{{input.limit}}"
+    },
+    response_mapping: {
+      "subscriptions": "$.data",
+      "has_more": "$.has_more"
+    }
+  },
+  input_schema: {
+    type: "object",
+    properties: {
+      customer_id: { type: "string", description: "Stripe customer ID, e.g., cus_..." },
+      status: { type: "string", enum: ["active", "canceled", "past_due"] },
+      limit: { type: "number", minimum: 1, maximum: 100 }
+    }
+    // No required fields — all filters are optional thanks to empty-skip behavior
+  }
+})
+\`\`\`
+
+### Worked example — POST with form body (OAuth token refresh)
+
+\`\`\`javascript
+create_toolkit_tool({
+  toolkit_id: "toolkit-abc123",
+  name: "refresh-token",
+  tool_type: "http",
+  credential_keys: ["REFRESH_TOKEN", "CLIENT_ID", "CLIENT_SECRET"],
+  endpoint_config: {
+    method: "POST",
+    url: "https://oauth.example.com/token",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body_format: "form",
+    body_template: {
+      grant_type: "refresh_token",
+      refresh_token: "{{credential.REFRESH_TOKEN}}",
+      client_id: "{{credential.CLIENT_ID}}",
+      client_secret: "{{credential.CLIENT_SECRET}}"
+    }
+  }
+})
+\`\`\`
+
+## Behavior Notes (Important for Tool Authors)
+
+These behaviors of the HTTP executor matter when designing tools. Get them wrong and your tool will silently fail.
+
+1. **Empty templated values are skipped from \`query_params\` and \`body_template\`.** When the agent omits an input, \`{{input.foo}}\` interpolates to \`""\` and the executor drops the field rather than sending \`?foo=\` or \`"foo": ""\`. This lets you declare optional inputs and XOR fields naturally:
+
+   \`\`\`javascript
+   body_template: {
+     limit_price: "{{input.limit_price}}",      // required, always present
+     asset_quantity: "{{input.asset_quantity}}", // XOR with quote_amount
+     quote_amount: "{{input.quote_amount}}"      // XOR with asset_quantity
+   }
+   \`\`\`
+
+   The agent provides one of \`asset_quantity\` / \`quote_amount\`; the unused one is dropped from the body. APIs like Robinhood reject \`""\` for these fields, so the empty-skip is essential.
+
+2. **POST/PUT/PATCH/DELETE without \`body_template\` send an empty body** (not Laravel's default \`[]\` JSON). Some APIs (e.g., Robinhood's \`cancel-order\`) require POST with no body and a signature computed over an empty body string. Just omit \`body_template\` and the executor sends a body-less request.
+
+3. **\`headers\` does NOT skip empty values.** A header template that resolves to \`""\` is sent as \`Header: \` so the upstream API rejects the request loudly. This is intentional — silently stripping an auth header would mask a misconfigured credential.
+
+4. **\`url\` interpolation runs before \`query_params\` are appended.** Path params and query params can both be templated and they don't interfere.
+
+5. **\`response_mapping\` runs only on JSON responses.** If the API returns non-JSON (HTML, plain text), the raw body is returned as-is and \`response_mapping\` is ignored.
+
+6. **\`credential_keys\` on the tool gate which credentials the executor resolves.** If you reference \`{{credential.X}}\` in any template but \`X\` isn't in the tool's \`credential_keys\` array, the resolution returns empty and the substitution becomes \`""\`. Always declare every credential your tool references.
+
+## Signed-Request Auth (Crypto Exchanges & Similar APIs)
+
+Some APIs — most notably crypto exchanges (**Robinhood Crypto, Binance, Coinbase Pro, Kraken, Bybit, OKX, BitMEX**) — require a **fresh cryptographic signature on every request**, computed over a message like \`apiKey + timestamp + path + method + body\`. Static credential types (api_key, oauth, etc.) cannot do this.
+
+For these APIs, declare the \`signing\` block on \`endpoint_config\`. The executor will generate a fresh timestamp, compute the signature, and inject the signed headers per request — no code, no workflow.
+
+### Schema
+
+\`\`\`javascript
+endpoint_config: {
+  method: "GET",
+  url: "https://trading.robinhood.com/api/v1/crypto/trading/accounts/",
+  signing: {
+    algorithm: "ed25519",                       // "ed25519" | "hmac-sha256" | "hmac-sha512"
+    key_credential: "ROBINHOOD_PRIVATE_KEY",    // credential key holding the signing key
+    message_template:
+      "{{credential.ROBINHOOD_API_KEY}}{{__timestamp}}{{__path}}{{__method}}{{__body}}",
+    timestamp_format: "unix_seconds",           // "unix_seconds" | "unix_millis" | "iso8601"
+    headers: {
+      "x-api-key":   "{{credential.ROBINHOOD_API_KEY}}",
+      "x-timestamp": "{{__timestamp}}",
+      "x-signature": "{{__signature_b64}}"      // also "{{__signature_hex}}"
+    }
+  }
+}
+\`\`\`
+
+### Special template variables (only valid inside \`signing\`)
+
+| Variable | Resolves to |
+|---|---|
+| \`{{__timestamp}}\` | Generated per request, formatted per \`timestamp_format\` |
+| \`{{__path}}\` | URL path component, **including query string** after templating |
+| \`{{__method}}\` | HTTP method (uppercase) |
+| \`{{__body}}\` | \`""\` for GET (or any method without \`body_template\`); JSON-encoded body otherwise |
+| \`{{__signature_b64}}\` | Computed signature, base64 |
+| \`{{__signature_hex}}\` | Computed signature, lowercase hex |
+
+\`{{credential.X}}\` works inside the signing block too — that's how you reference the API key alongside the signature.
+
+### Algorithm choice
+
+| API | Algorithm | Key format |
+|---|---|---|
+| Robinhood Crypto | \`ed25519\` | Base64 32-byte seed (or 64-byte secretKey) |
+| Binance, Coinbase Pro, Kraken, Bybit, OKX | \`hmac-sha256\` | Raw secret string (no base64 needed) |
+| BitMEX | \`hmac-sha256\` | Raw secret string |
+
+For \`ed25519\`, the executor accepts either a 32-byte seed (it derives the keypair) or a 64-byte secretKey directly. For HMAC variants, the credential value is used as-is as the HMAC key.
+
+### Worked example — full Robinhood get-account tool
+
+\`\`\`javascript
+create_toolkit_tool({
+  toolkit_id: "toolkit-abc123",
+  name: "get-account",
+  title: "Get Crypto Account",
+  description: "Get the user's Robinhood Crypto account: account number, status, and buying power in USD.",
+  tool_type: "http",
+  credential_keys: ["ROBINHOOD_API_KEY", "ROBINHOOD_PRIVATE_KEY"],
+  input_schema: { type: "object", properties: {} },
+  endpoint_config: {
+    method: "GET",
+    url: "https://trading.robinhood.com/api/v1/crypto/trading/accounts/",
+    signing: {
+      algorithm: "ed25519",
+      key_credential: "ROBINHOOD_PRIVATE_KEY",
+      message_template:
+        "{{credential.ROBINHOOD_API_KEY}}{{__timestamp}}{{__path}}{{__method}}{{__body}}",
+      timestamp_format: "unix_seconds",
+      headers: {
+        "x-api-key":   "{{credential.ROBINHOOD_API_KEY}}",
+        "x-timestamp": "{{__timestamp}}",
+        "x-signature": "{{__signature_b64}}"
+      }
+    }
+  },
+  output_schema: {
+    type: "object",
+    properties: {
+      account_number: { type: "string" },
+      status: { type: "string", enum: ["active", "deactivated", "sell_only"] },
+      buying_power: { type: "string" },
+      buying_power_currency: { type: "string" }
+    }
+  }
+})
+\`\`\`
+
+### Common pitfalls
+
+- **The path used in signing includes the query string.** If you put query params in \`url\` (e.g., \`?symbol=BTC-USD\`) instead of \`query_params\`, signing still works because \`{{__path}}\` reflects the post-substitution URL. But prefer \`query_params\` for proper encoding.
+- **POST without body but with signing**: omit \`body_template\` entirely. \`{{__body}}\` resolves to \`""\` and the executor sends an empty-body request. Required for endpoints like \`cancel-order\`.
+- **Key material safety**: the Hub never logs the credential value, the signing message, or the resulting signature. Exception messages on signing failure include only the credential **key name**, never the bytes.
+- **Don't put \`{{__signature_b64}}\` in \`message_template\`** — the signature is computed *from* the message, so it can't reference itself. Use it only in the \`headers\` map.
 
 ## Installing & Using Toolkits
 
