@@ -211,6 +211,8 @@ import {
   handleToggleToolkitActive,
   checkToolkitCredentialsTool,
   handleCheckToolkitCredentials,
+  testToolkitInstallationTool,
+  handleTestToolkitInstallation,
   updateToolkitInstallationTool,
   handleUpdateToolkitInstallation,
   invokeToolkitToolTool,
@@ -449,6 +451,7 @@ const tools = [
   listInstalledToolkitsTool,
   toggleToolkitActiveTool,
   checkToolkitCredentialsTool,
+  testToolkitInstallationTool,
   updateToolkitInstallationTool,
   invokeToolkitToolTool,
   listToolkitToolsTool,
@@ -1162,6 +1165,9 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'mcp__flowdot__check_toolkit_credentials':
         return handleCheckToolkitCredentials(api, args as { installation_id: string });
+
+      case 'mcp__flowdot__test_toolkit_installation':
+        return handleTestToolkitInstallation(api, args as { installation_id: string });
 
       case 'mcp__flowdot__update_toolkit_installation':
         return handleUpdateToolkitInstallation(api, args as {

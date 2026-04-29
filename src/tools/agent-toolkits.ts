@@ -357,6 +357,22 @@ Optional OAuth fields:
 - **auth_error_codes**: HTTP codes indicating auth failure (default: [401, 403])
 - **auth_error_patterns**: Error message patterns indicating auth failure
 - **extra_auth_params**: Additional URL params for authorization request
+- **token_endpoint_auth_method**: How client credentials are sent to token_endpoint.
+  "client_secret_post" (default) — client_id + client_secret in body params.
+  "client_secret_basic" — Authorization: Basic base64(client_id:client_secret) header.
+                          Required by Schwab and some other providers; check the
+                          provider's docs.
+  "none" — public client (PKCE-only). client_id in body, no secret.
+- **token_endpoint_extra_params**: Object of extra body params for token requests
+  (e.g., \`{ resource: "..." }\` for some Microsoft tenants).
+- **callback_mode**: "server" (default) routes the OAuth redirect back to the
+  FlowDot Hub. "localhost" routes it to a localhost URL — use this for providers
+  whose developer console only accepts \`https://127.0.0.1\` style callbacks
+  (e.g., Schwab). The user is shown a manual code-paste UI in this mode.
+- **localhost_redirect_uri**: The redirect URI to use when callback_mode=localhost.
+- **auto_refresh_enabled**: When true (default), the executor automatically refreshes
+  expired access tokens via the stored refresh_token before bubbling a re-auth
+  prompt. Set to false for providers that do not issue refresh tokens.
 
 ## Example: OAuth Toolkit Setup (e.g., Schwab API)
 
@@ -380,17 +396,32 @@ credential_requirements: [
     label: "Schwab Access Token",
     credential_type: "oauth",
     is_required: true,
-    description: "OAuth access token (auto-refreshed via Reconnect)",
+    description: "OAuth access token (auto-refreshed by FlowDot)",
     oauth_config: {
       authorization_url: "https://api.schwabapi.com/v1/oauth/authorize",
       token_endpoint: "https://api.schwabapi.com/v1/oauth/token",
       scopes: ["api"],
       client_id_credential_key: "SCHWAB_APP_KEY",
       client_secret_credential_key: "SCHWAB_APP_SECRET",
-      pkce_enabled: true
+      token_endpoint_auth_method: "client_secret_basic",
+      callback_mode: "localhost",
+      localhost_redirect_uri: "https://127.0.0.1",
+      auto_refresh_enabled: true,
+      pkce_enabled: false
     }
   }
-]`,
+]
+
+Each API tool that uses an OAuth credential must declare a header that injects
+the access token, e.g.:
+  endpoint_config: {
+    method: "GET",
+    url: "https://api.schwabapi.com/trader/v1/accounts/accountNumbers",
+    headers: { "Authorization": "Bearer {{credential.SCHWAB_ACCESS_TOKEN}}" }
+  }
+The platform does not auto-add an Authorization header for the oauth credential
+type — this is intentional so signed-request toolkits (HMAC, Ed25519) keep
+their custom auth scheme.`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -506,6 +537,28 @@ credential_requirements: [
                   type: 'object',
                   description: 'Additional URL parameters to include in authorization request',
                 },
+                token_endpoint_auth_method: {
+                  type: 'string',
+                  enum: ['client_secret_basic', 'client_secret_post', 'none'],
+                  description: 'How client credentials are sent to token_endpoint. "client_secret_post" (default) sends them in the body. "client_secret_basic" sends them as a Basic auth header (required by Schwab and some other providers). "none" sends only client_id (public clients).',
+                },
+                token_endpoint_extra_params: {
+                  type: 'object',
+                  description: 'Additional body params to include in token-endpoint requests (provider quirks).',
+                },
+                callback_mode: {
+                  type: 'string',
+                  enum: ['server', 'localhost'],
+                  description: '"server" (default) routes the OAuth redirect to the FlowDot Hub. "localhost" routes it to a localhost URL — for providers like Schwab whose developer console only accepts https://127.0.0.1 style callbacks. The user is shown a manual code-paste UI in this mode.',
+                },
+                localhost_redirect_uri: {
+                  type: 'string',
+                  description: 'The redirect URI to use when callback_mode is "localhost" (e.g., "https://127.0.0.1").',
+                },
+                auto_refresh_enabled: {
+                  type: 'boolean',
+                  description: 'When true (default), the executor automatically refreshes expired access tokens before returning a re-auth prompt. Set false for providers that do not issue refresh tokens.',
+                },
               },
             },
           },
@@ -602,6 +655,10 @@ For OAuth credentials, include oauth_config with:
 - **client_id_credential_key**: Key name of credential containing client ID
 - **client_secret_credential_key**: Key name of credential containing client secret
 - **pkce_enabled**: Enable PKCE (default: true)
+- **token_endpoint_auth_method**: "client_secret_basic" | "client_secret_post" | "none" (default: "client_secret_post"). Use "client_secret_basic" for Schwab.
+- **callback_mode**: "server" | "localhost" (default: "server"). Use "localhost" for providers like Schwab.
+- **localhost_redirect_uri**: Required when callback_mode="localhost".
+- **auto_refresh_enabled**: boolean (default: true). Disable for providers without refresh tokens.
 
 See mcp__flowdot__create_agent_toolkit documentation for full OAuth configuration details and examples.`,
   inputSchema: {
@@ -692,6 +749,14 @@ See mcp__flowdot__create_agent_toolkit documentation for full OAuth configuratio
                 auth_error_codes: { type: 'array', items: { type: 'number' } },
                 auth_error_patterns: { type: 'array', items: { type: 'string' } },
                 extra_auth_params: { type: 'object' },
+                token_endpoint_auth_method: {
+                  type: 'string',
+                  enum: ['client_secret_basic', 'client_secret_post', 'none'],
+                },
+                token_endpoint_extra_params: { type: 'object' },
+                callback_mode: { type: 'string', enum: ['server', 'localhost'] },
+                localhost_redirect_uri: { type: 'string' },
+                auto_refresh_enabled: { type: 'boolean' },
               },
             },
           },
@@ -1196,7 +1261,12 @@ export async function handleListInstalledToolkits(
 
 ${installationsInfo.join('\n\n')}`;
 
-    return { content: [{ type: 'text', text }] };
+    return {
+      content: [
+        { type: 'text', text },
+        { type: 'text', text: JSON.stringify({ installations }) },
+      ],
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return {
@@ -1311,6 +1381,91 @@ Use mcp__flowdot__update_toolkit_installation to map these credentials to your A
     const message = error instanceof Error ? error.message : 'Unknown error';
     return {
       content: [{ type: 'text', text: `Error checking credentials: ${message}` }],
+      isError: true,
+    };
+  }
+}
+
+export const testToolkitInstallationTool: Tool = {
+  name: 'mcp__flowdot__test_toolkit_installation',
+  description: `Run a Test Connection diagnostic against an installed toolkit.
+
+Resolves the toolkit's health-check tool (the one designated by
+\`health_check_tool_id\`, or auto-detected as the first GET-method HTTP tool with
+no required inputs) and invokes it with empty inputs. Returns a structured
+diagnostic outcome. Use this to verify a toolkit is actually working before
+running production tools.
+
+Possible \`test_outcome\` values:
+- **success** — health-check call returned 2xx; toolkit is healthy.
+- **auth_failure** — the executor signaled needs_oauth_reauth. Response includes
+  an oauth_reauth payload pointing at the \`initiate_url\` the user should hit
+  to re-authorize.
+- **tool_error** — non-auth 4xx/5xx from the underlying API.
+- **connection_error** — network/transport failure.
+- **no_health_check_tool** — toolkit has no eligible tool. Owner should set
+  health_check_tool_id via update_agent_toolkit.
+- **inactive** — installation has is_active=false; test still ran for diagnostics.
+
+When \`auth_failure\`, prompt the user to open the FlowDot reconnect URL:
+\`<flowdot-web-base>/toolkits?reauth_installation_id=<id>&reauth_credential_key=<key>\`
+which auto-opens the manual code paste flow for the credential.`,
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      installation_id: {
+        type: 'string',
+        description: 'The installation ID (numeric, as a string).',
+      },
+    },
+    required: ['installation_id'],
+  },
+};
+
+export async function handleTestToolkitInstallation(
+  api: FlowDotApiClient,
+  args: Record<string, unknown>
+): Promise<CallToolResult> {
+  try {
+    const installationId = Number(args.installation_id);
+    if (!Number.isFinite(installationId) || installationId <= 0) {
+      return {
+        content: [{ type: 'text', text: 'installation_id must be a positive integer' }],
+        isError: true,
+      };
+    }
+
+    const result = await api.testToolkitInstallation(installationId);
+
+    const lines = [
+      `## Test Connection: ${result.tested_tool_name ?? '(no tool selected)'}`,
+      '',
+      `**Outcome:** ${result.test_outcome}`,
+      result.tested_tool_title ? `**Tool:** ${result.tested_tool_title} (${result.tested_tool_name})` : '',
+      result.http_status !== null ? `**HTTP status:** ${result.http_status}` : '',
+      `**Message:** ${result.message}`,
+    ].filter(Boolean);
+
+    if (result.response_excerpt) {
+      lines.push('', '**Response excerpt:**', '```', result.response_excerpt, '```');
+    }
+
+    if (result.needs_oauth_reauth && result.oauth_reauth) {
+      lines.push(
+        '',
+        `**Reauthorize required for credential** \`${result.oauth_reauth.credential_key}\` (${result.oauth_reauth.credential_label}).`,
+        `User should open: \`<flowdot-web-base>/toolkits?reauth_installation_id=${result.oauth_reauth.installation_id}&reauth_credential_key=${result.oauth_reauth.credential_key}\``,
+      );
+    }
+
+    return {
+      content: [{ type: 'text', text: lines.join('\n') }],
+      isError: result.test_outcome !== 'success',
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      content: [{ type: 'text', text: `Error running test connection: ${message}` }],
       isError: true,
     };
   }
@@ -1500,7 +1655,12 @@ export async function handleListToolkitTools(
 
 ${toolsInfo.join('\n\n')}`;
 
-    return { content: [{ type: 'text', text }] };
+    return {
+      content: [
+        { type: 'text', text },
+        { type: 'text', text: JSON.stringify({ tools }) },
+      ],
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return {

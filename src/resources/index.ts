@@ -2293,21 +2293,35 @@ create_agent_toolkit({
       label: "Schwab Access Token",
       credential_type: "oauth",
       is_required: true,
-      description: "OAuth access token (auto-refreshed via Reconnect)",
+      description: "OAuth access token (auto-refreshed by FlowDot via stored refresh token)",
       oauth_config: {
         authorization_url: "https://api.schwabapi.com/v1/oauth/authorize",
         token_endpoint: "https://api.schwabapi.com/v1/oauth/token",
         scopes: ["api"],
         client_id_credential_key: "SCHWAB_APP_KEY",
         client_secret_credential_key: "SCHWAB_APP_SECRET",
-        pkce_enabled: true,
+        token_endpoint_auth_method: "client_secret_basic",
+        callback_mode: "localhost",
+        localhost_redirect_uri: "https://127.0.0.1",
+        auto_refresh_enabled: true,
+        pkce_enabled: false,
         auth_error_codes: [401, 403],
-        auth_error_patterns: ["invalid_token", "expired_token"]
+        auth_error_patterns: ["invalid_token", "expired_token", "Unauthorized"]
       }
     }
   ]
 })
 \`\`\`
+
+Each Schwab API tool's \`endpoint_config\` must declare a Bearer header to inject the access token, e.g.:
+\`\`\`javascript
+endpoint_config: {
+  method: "GET",
+  url: "https://api.schwabapi.com/trader/v1/accounts/accountNumbers",
+  headers: { "Authorization": "Bearer {{credential.SCHWAB_ACCESS_TOKEN}}" }
+}
+\`\`\`
+The platform does **not** auto-add an Authorization header for the \`oauth\` credential type — toolkit authors declare it. This is intentional so signed-request toolkits (HMAC, Ed25519) can keep their custom auth scheme without a special case.
 
 **OAuth Config Fields:**
 - **authorization_url:** OAuth authorization endpoint
@@ -2315,7 +2329,12 @@ create_agent_toolkit({
 - **scopes:** Array of OAuth scopes
 - **client_id_credential_key:** Key name of credential with client ID
 - **client_secret_credential_key:** Key name of credential with client secret
-- **pkce_enabled:** Enable PKCE (recommended)
+- **token_endpoint_auth_method:** \`"client_secret_post"\` (default) sends client_id/secret in body. \`"client_secret_basic"\` sends them as a \`Authorization: Basic …\` header — required by Schwab and some other providers. \`"none"\` is for public clients (PKCE-only).
+- **token_endpoint_extra_params:** Optional object of extra body params for token requests (provider quirks).
+- **callback_mode:** \`"server"\` (default) routes the OAuth redirect to the FlowDot Hub. \`"localhost"\` routes it to a localhost URL — for providers like Schwab whose developer console only accepts \`https://127.0.0.1\` callbacks. The user is shown a manual code-paste UI in this mode.
+- **localhost_redirect_uri:** Required when \`callback_mode: "localhost"\` (e.g., \`"https://127.0.0.1"\`).
+- **auto_refresh_enabled:** Boolean (default \`true\`). When true, the executor auto-refreshes expired access tokens using the stored refresh_token before bubbling a re-auth prompt.
+- **pkce_enabled:** Enable PKCE (recommended for any provider that supports it; Schwab does not).
 - **auth_error_codes:** HTTP codes indicating auth failure
 - **auth_error_patterns:** Error message patterns for auth failure
 
@@ -2337,21 +2356,40 @@ The only reason to leave PKCE off is if the provider explicitly doesn't support 
 
 ### How Token Refresh Actually Works
 
-When a tool call returns one of the \`auth_error_codes\` (typically 401 or 403), or when the response body matches one of the \`auth_error_patterns\` (e.g., \`"invalid_token"\`, \`"expired_token"\`), FlowDot automatically:
+When a tool call returns one of the \`auth_error_codes\` (typically 401 or 403), or the response body matches one of the \`auth_error_patterns\` (e.g., \`"invalid_token"\`, \`"expired_token"\`), FlowDot:
 
-1. Uses the stored refresh token to call \`token_endpoint\`
-2. Receives a new access token + (usually) a new refresh token
-3. Stores both back in the user's encrypted credential vault
-4. Retries the original tool call with the new access token
+1. Looks up the stored refresh_token from the encrypted \`agent_toolkit_oauth_tokens\` table for this (user, installation, credential_key).
+2. POSTs to \`token_endpoint\` with \`grant_type=refresh_token\` using the configured \`token_endpoint_auth_method\` (Basic auth or body params).
+3. Persists the new \`access_token\` (and the new \`refresh_token\` if the response includes one — many providers, including Schwab inside the 7-day window, return the same refresh_token unchanged).
+4. Retries the original tool call exactly once with the new access token. If it still 401s, the platform falls through to a re-auth response (\`needs_oauth_reauth: true\`) so the calling client (CLI / native / mobile / web) can prompt the user.
 
-The agent never has to handle this. From the agent's perspective, the call just succeeds.
+The retry is bounded at one attempt to prevent loops if the refresh succeeds but the new token is also rejected.
 
 **Things you must get right for refresh to work:**
-- \`auth_error_codes\` must include every status code the API returns on token expiry (some APIs use 401, some use 403, some use both)
-- \`auth_error_patterns\` should include the actual error string the API returns — check the API docs for the exact wording
-- \`client_id_credential_key\` and \`client_secret_credential_key\` must point to credentials that are actually populated at refresh time (not just at install time)
+- \`token_endpoint_auth_method\` must match what the provider accepts. Schwab requires \`"client_secret_basic"\`. Most modern providers accept both; default is \`"client_secret_post"\`.
+- \`auth_error_codes\` must include every status code the API returns on token expiry (some APIs use 401, some use 403, some use both).
+- \`auth_error_patterns\` should include the actual error string the API returns — check the API docs for the exact wording.
+- \`client_id_credential_key\` and \`client_secret_credential_key\` must point to credentials that are actually populated at refresh time (not just at install time).
+- The user must complete one initial OAuth dance (via the web "Reconnect" UI) before auto-refresh is possible. The dance is what populates \`agent_toolkit_oauth_tokens\` with both access AND refresh tokens.
 
-**If refresh is failing:** the most common cause is that the API returns a 200 OK with an error body instead of a 4xx code. In that case, you need to add the error pattern to \`auth_error_patterns\` so FlowDot can detect it from the body.
+**If refresh is failing:** the most common cause is that the API returns a 200 OK with an error body instead of a 4xx code. In that case, add the error pattern to \`auth_error_patterns\` so FlowDot can detect it from the body. Second most common cause: \`token_endpoint_auth_method\` mismatch — try toggling between \`"client_secret_basic"\` and \`"client_secret_post"\`.
+
+### When Refresh Tokens Themselves Expire
+
+Refresh tokens have provider-defined lifetimes (Schwab: 7 days; Google: indefinite until revoked; many others: 30-90 days). When the refresh-token grant fails, the executor returns:
+\`\`\`json
+{
+  "success": false,
+  "needs_oauth_reauth": true,
+  "oauth_reauth": {
+    "credential_key": "SCHWAB_ACCESS_TOKEN",
+    "credential_label": "Schwab Access Token",
+    "installation_id": 33,
+    "initiate_url": "/hub/toolkit-oauth/initiate/33/SCHWAB_ACCESS_TOKEN"
+  }
+}
+\`\`\`
+The CLI / native / mobile app should open \`<flowdot-web-base>/toolkits?reauth_installation_id=<id>&reauth_credential_key=<key>\` in the user's browser. The web app auto-launches the Reconnect modal for that specific credential. After the user completes the OAuth dance once, automated runs resume.
 
 ## endpoint_config Reference (HTTP Tools)
 
