@@ -89,7 +89,7 @@ FlowDot exposes 10 \`learn://\` resources that explain every major feature of th
 
 1. **\`learn://overview\`** — High-level overview of all FlowDot components and how they work together. Start here if you don't know where to start.
 2. **\`learn://workflows\`** — Complete guide to creating, managing, and executing FlowDot workflows (visual node-and-connection automations). Read before using \`create_workflow\`, \`add_node\`, \`add_connection\`, \`execute_workflow\`, etc.
-3. **\`learn://recipes\`** — Complete guide to agent recipes — orchestration workflows for complex automation (agent, parallel, loop, gate, branch, invoke steps). Read before using \`create_recipe\`, \`add_recipe_step\`, \`add_recipe_store\`, \`link_recipe\`, etc.
+3. **\`learn://recipes\`** — Complete guide to agent recipes — orchestration workflows for complex automation (agent, parallel, loop, gate, branch, invoke, output steps). Read before using \`create_recipe\`, \`add_recipe_step\`, \`add_recipe_store\`, \`link_recipe\`, etc.
 4. **\`learn://custom-nodes\`** — Complete guide to creating and managing custom nodes (reusable JavaScript nodes with optional LLM calls). Read before using \`create_custom_node\`, \`update_custom_node\`, etc.
 5. **\`learn://apps\`** — Complete guide to building multi-file React applications with FlowDot (sandboxed frontends that can invoke workflows). Read before using \`create_app\`, \`create_app_file\`, \`edit_app_code\`, etc.
 6. **\`learn://toolkits\`** — Complete guide to creating and managing MCP agent toolkits (extend agents with new tools, credential-scoped). Read before using any \`mcp__flowdot__*toolkit*\` tool.

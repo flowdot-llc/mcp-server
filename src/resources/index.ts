@@ -471,6 +471,7 @@ The building blocks of a recipe:
 - **gate:** Require approval or user input
 - **branch:** Conditional routing based on data
 - **invoke:** Call another recipe (subroutines)
+- **output:** Emit a coloured message to the terminal (no LLM, instant) — config: \`message\` (supports \`{{stores.x}}\`), \`color\` (\`green\`|\`red\`|\`yellow\`, default \`green\`)
 
 ### Stores
 Variables that hold data throughout execution:

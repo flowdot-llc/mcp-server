@@ -290,7 +290,9 @@ Recipes are reusable agentic programs with multiple step types and persistent st
 - `vote_recipe` — Vote on a public recipe
 - `favorite_recipe` — Add/remove from favorites
 
-**Step types:** `agent` (LLM with tools), `parallel` (concurrent), `loop` (iterate array), `gate` (approval checkpoint), `branch` (conditional), `invoke` (subroutine)
+**Step types:** `agent` (LLM with tools), `parallel` (concurrent), `loop` (iterate array), `gate` (approval checkpoint), `branch` (conditional), `invoke` (subroutine), `output` (emit coloured message to terminal)
+
+> **Output step config:** `message` — template string (supports `{{stores.x}}` interpolation), `color` — `green | red | yellow` (default `green`). Executes instantly with no LLM call. Use it to emit progress updates, warnings, or final summaries during long-running recipes.
 
 > To **execute** a recipe, use the FlowDot CLI:
 > ```bash

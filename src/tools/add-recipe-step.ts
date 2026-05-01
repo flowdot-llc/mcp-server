@@ -55,6 +55,12 @@ Set \`parallel: true\` to execute iterations concurrently. Use \`max_concurrent\
 { "recipe_hash": "xyz", "input_mapping": {"target_input": "{{source_store}}"}, "output_mapping": {"target_output": "local_store"} }
 \`\`\`
 
+**output** - Emit a coloured message to the terminal (no LLM, executes instantly)
+\`\`\`json
+{ "message": "Found {{stores.count}} results — starting analysis...", "color": "green" }
+\`\`\`
+Colors: \`green\` (default), \`red\`, \`yellow\`. Message supports \`{{stores.x}}\` interpolation.
+
 **Interpolation Syntax:**
 - \`{{inputs.request}}\` - Access CLI task argument (user runs: \`flowdot alias "task text"\`)
 - \`{{store_key}}\` - Reference any store value by its key
@@ -73,7 +79,7 @@ Set \`parallel: true\` to execute iterations concurrently. Use \`max_concurrent\
       },
       type: {
         type: 'string',
-        enum: ['agent', 'loop', 'parallel', 'gate', 'branch', 'invoke'],
+        enum: ['agent', 'loop', 'parallel', 'gate', 'branch', 'invoke', 'output'],
         description: 'Step type',
       },
       description: {
