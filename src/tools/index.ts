@@ -42,6 +42,8 @@ import { cancelExecutionTool, handleCancelExecution } from './cancel-execution.j
 import { retryExecutionTool, handleRetryExecution } from './retry-execution.js';
 import { streamExecutionTool, handleStreamExecution } from './stream-execution.js';
 import { panicStopTool, handlePanicStop } from './panic-stop.js';
+import { panicStatusTool, handlePanicStatus } from './panic-status.js';
+import { panicClearTool, handlePanicClear } from './panic-clear.js';
 
 // ============================================
 // Discovery & Organization Tools (discovery:read)
@@ -135,6 +137,10 @@ import { addWorkflowCommentTool, handleAddWorkflowComment } from './add-workflow
 import { addSharedResultCommentTool, handleAddSharedResultComment } from './add-shared-result-comment.js';
 import { voteWorkflowTool, handleVoteWorkflow } from './vote-workflow.js';
 import { voteSharedResultTool, handleVoteSharedResult } from './vote-shared-result.js';
+import { listSharedRecipeRunsTool, handleListSharedRecipeRuns } from './list-shared-recipe-runs.js';
+import { getSharedRecipeRunTool, handleGetSharedRecipeRun } from './get-shared-recipe-run.js';
+import { listRecipeBenchmarksTool, handleListRecipeBenchmarks } from './list-recipe-benchmarks.js';
+import { getRecipeBenchmarkTool, handleGetRecipeBenchmark } from './get-recipe-benchmark.js';
 
 // ============================================
 // Input Preset Tools (presets:read / presets:manage)
@@ -334,6 +340,8 @@ const tools = [
   retryExecutionTool,
   streamExecutionTool,
   panicStopTool,
+  panicStatusTool,
+  panicClearTool,
   // Discovery & Organization (4)
   getWorkflowTagsTool,
   setWorkflowTagsTool,
@@ -405,6 +413,11 @@ const tools = [
   addSharedResultCommentTool,
   voteWorkflowTool,
   voteSharedResultTool,
+  // Recipe runs & benchmarks (4)
+  listSharedRecipeRunsTool,
+  getSharedRecipeRunTool,
+  listRecipeBenchmarksTool,
+  getRecipeBenchmarkTool,
   // Input Presets (7)
   listInputPresetsTool,
   getInputPresetTool,
@@ -603,6 +616,12 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'panic_stop':
         return handlePanicStop(api, args as { confirm: boolean });
+
+      case 'panic_status':
+        return handlePanicStatus(api);
+
+      case 'panic_clear':
+        return handlePanicClear(api, args as { confirm: boolean; password: string });
 
       // ============================================
       // Discovery & Organization Tools
@@ -872,6 +891,27 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
 
       case 'get_shared_result_comments':
         return handleGetSharedResultComments(api, args as { workflow_id: string; result_hash: string });
+
+      case 'list_shared_recipe_runs':
+        return handleListSharedRecipeRuns(api, args as {
+          recipe_hash: string;
+          sort?: string;
+          limit?: number;
+          page?: number;
+        });
+
+      case 'get_shared_recipe_run':
+        return handleGetSharedRecipeRun(api, args as { recipe_hash: string; run_hash: string });
+
+      case 'list_recipe_benchmarks':
+        return handleListRecipeBenchmarks(api, args as {
+          recipe_hash: string;
+          limit?: number;
+          page?: number;
+        });
+
+      case 'get_recipe_benchmark':
+        return handleGetRecipeBenchmark(api, args as { recipe_hash: string; benchmark_hash: string });
 
       case 'create_shared_result':
         return handleCreateSharedResult(api, args as {

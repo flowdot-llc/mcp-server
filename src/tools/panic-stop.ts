@@ -1,9 +1,14 @@
 /**
  * panic_stop MCP Tool — TRUST P4 PANIC
  *
- * Immediately stops ALL active workflow executions and agent sessions
- * for the authenticated user. Requires confirm: true to prevent
- * accidental invocation.
+ * Activates a sticky emergency stop for the authenticated user. Halts all
+ * running workflows, recipes, agent streams, queued jobs, and relay
+ * sessions, and politely declines inbound webhooks until cleared. The
+ * stop is sticky — it remains active until the user clears it from a
+ * user-initiated session (web, mobile, native, VR, CLI, or the panic_clear
+ * MCP tool with their account password).
+ *
+ * Use the companion `panic_clear` and `panic_status` tools to manage state.
  */
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -12,15 +17,17 @@ import type { FlowDotApiClient } from '../api-client.js';
 export const panicStopTool: Tool = {
   name: 'panic_stop',
   description:
-    'EMERGENCY STOP: Immediately terminates ALL active workflow executions and agent sessions for your account. ' +
-    'You must pass confirm: true to prevent accidental use. ' +
-    'Use this when you need to halt all AI activity immediately.',
+    'EMERGENCY STOP: Activates a sticky emergency stop for your account. ' +
+    'Halts all running workflows, recipes, agent streams, queued jobs, and relay sessions. ' +
+    'Inbound webhooks (email, Telegram, Discord, Slack, vendor integrations) will be politely declined. ' +
+    'Outbound calls will return HTTP 423 Locked until you clear the stop. ' +
+    'Pass confirm: true to invoke. The stop is sticky — clear it via panic_clear or from /settings/panic on the web.',
   inputSchema: {
     type: 'object',
     properties: {
       confirm: {
         type: 'boolean',
-        description: 'Must be set to true to confirm the panic stop. This is an irreversible action.',
+        description: 'Must be set to true to confirm the panic stop. The flag stays active until cleared.',
       },
     },
     required: ['confirm'],
