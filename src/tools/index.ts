@@ -255,6 +255,10 @@ import { listRecipeStoresTool, handleListRecipeStores } from './list-recipe-stor
 import { addRecipeStoreTool, handleAddRecipeStore } from './add-recipe-store.js';
 import { updateRecipeStoreTool, handleUpdateRecipeStore } from './update-recipe-store.js';
 import { deleteRecipeStoreTool, handleDeleteRecipeStore } from './delete-recipe-store.js';
+import { listRecipeVersionsTool, handleListRecipeVersions } from './list-recipe-versions.js';
+import { getRecipeVersionTool, handleGetRecipeVersion } from './get-recipe-version.js';
+import { checkpointRecipeTool, handleCheckpointRecipe } from './checkpoint-recipe.js';
+import { restoreRecipeVersionTool, handleRestoreRecipeVersion } from './restore-recipe-version.js';
 import { voteRecipeTool, handleVoteRecipe } from './vote-recipe.js';
 import { favoriteRecipeTool, handleFavoriteRecipe } from './favorite-recipe.js';
 import { linkRecipeTool, handleLinkRecipe } from './link-recipe.js';
@@ -490,6 +494,10 @@ const tools = [
   addRecipeStoreTool,
   updateRecipeStoreTool,
   deleteRecipeStoreTool,
+  listRecipeVersionsTool,
+  getRecipeVersionTool,
+  checkpointRecipeTool,
+  restoreRecipeVersionTool,
   voteRecipeTool,
   favoriteRecipeTool,
   linkRecipeTool,
@@ -1352,6 +1360,28 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
         return handleDeleteRecipeStore(api, args as {
           hash: string;
           store_id: string;
+          confirm: boolean;
+        });
+
+      case 'list_recipe_versions':
+        return handleListRecipeVersions(api, args as { hash: string });
+
+      case 'get_recipe_version':
+        return handleGetRecipeVersion(api, args as {
+          hash: string;
+          version_number: number;
+        });
+
+      case 'checkpoint_recipe':
+        return handleCheckpointRecipe(api, args as {
+          hash: string;
+          label?: string;
+        });
+
+      case 'restore_recipe_version':
+        return handleRestoreRecipeVersion(api, args as {
+          hash: string;
+          version_number: number;
           confirm: boolean;
         });
 

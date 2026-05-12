@@ -100,6 +100,9 @@ View your account info and active token details.
 6. \`link_recipe\` - Create CLI alias
 7. Run via CLI: \`npx flowdot recipes run <alias>\`
 
+### Rolling Back a Recipe Edit
+Every recipe edit you make is automatically snapshotted (last 20 retained, coalesced within a 60-second window). Tools: \`list_recipe_versions\`, \`get_recipe_version\`, \`checkpoint_recipe\`, \`restore_recipe_version\`. Before any non-trivial recipe rewrite, drop a \`checkpoint_recipe(hash, label: "...")\` first. See \`learn://recipes\` → "Versioning & Undo" for the full guide.
+
 ## Where to Start
 
 - **New to FlowDot?** Read \`learn://workflows\` first
@@ -460,6 +463,8 @@ Recipes are **agent orchestration workflows** that combine AI agents, conditiona
 \`\`\`bash
 npx flowdot recipes run <alias> --input '{"key":"value"}'
 \`\`\`
+
+**TIP — every edit is reversible.** Every \`update_recipe\`, \`add_recipe_step\`, \`update_recipe_step\`, \`delete_recipe_step\`, \`add_recipe_store\`, \`update_recipe_store\`, and \`delete_recipe_store\` you make creates an automatic version snapshot. If the user dislikes your changes, call \`list_recipe_versions\` then \`restore_recipe_version\` to roll back. Before any non-trivial rewrite, drop a \`checkpoint_recipe\` first so the user has a precise labeled rollback point. See **Versioning & Undo** at the bottom of this guide.
 
 ## Key Concepts
 
@@ -1132,6 +1137,141 @@ Before declaring a recipe done, verify:
 - [ ] Common failure modes called out as DO NOT instructions (Principle 5)
 - [ ] Any external capability (browser, trading, email, etc.) is wired via an \`mcp__*\` or \`toolkit__*\` tool reference rather than hacked around with \`execute-command\`
 - [ ] Required MCP servers / toolkits listed in the recipe description so users know what to configure
+
+## Versioning & Undo
+
+Every recipe edit you make through MCP is reversible. The Hub captures a version snapshot of the entire recipe definition (metadata + every step + every store + entry_step_id) before each mutating call, retains the last 20 snapshots per recipe, and exposes them through four tools you can call any time.
+
+**This means you can confidently rewrite a recipe.** If the user dislikes the result, roll back. If they then change their mind, undo the rollback. The system never silently destroys prior state.
+
+### What triggers an auto-snapshot
+
+Any mutation through MCP, the Hub web editor, or the CLI:
+- \`update_recipe\` (metadata, visibility, entry_step_id)
+- \`add_recipe_step\`, \`update_recipe_step\`, \`delete_recipe_step\`
+- \`add_recipe_store\`, \`update_recipe_store\`, \`delete_recipe_store\`
+- \`delete_recipe\` (yes — even delete is undoable until the soft-delete is purged)
+
+What does **not** trigger a snapshot (no recipe edit happened):
+- \`get_recipe\`, \`list_recipe_steps\`, \`get_recipe_definition\` (read-only)
+- \`vote_recipe\`, \`favorite_recipe\`, \`link_recipe\` (social/personal state, not the recipe)
+- \`fork_recipe\` (creates a new recipe with its own fresh version chain)
+- \`create_recipe\` (the recipe is new — first edit will be its v1)
+
+### Coalescing — one snapshot per "agent turn"
+
+If you make several mutations in quick succession (same user + same source within 60 seconds), they coalesce into a single snapshot capturing the state *before* the burst. So if you add 8 steps and update 3 of them in one Claude turn, the version history shows ONE rollback point ("before that agent turn") — not 11 noisy rows.
+
+Coalescing only applies to \`parent_kind: "mutation"\` snapshots. Manual checkpoints (\`checkpoint_recipe\`) and restore markers always create their own row regardless of the window.
+
+### The four tools
+
+**\`list_recipe_versions(hash)\`** — read scope. Returns up to 20 versions newest-first. Each entry:
+\`\`\`
+{
+  version_number: 14,
+  source: "mcp",
+  label: null,                          // or "before agent rewrite"
+  parent_kind: "mutation",              // | "checkpoint" | "restore" | "initial"
+  restored_from_version_id: null,       // set on restore markers
+  created_at: "2026-05-12T18:33:12+00:00",
+  created_by: { name: "Elliot", hash: "..." },
+  definition_size_bytes: 4823
+}
+\`\`\`
+
+**\`get_recipe_version(hash, version_number)\`** — read scope. Returns the full definition snapshot for ONE version. Use this to inspect what's in a version BEFORE restoring, so you can describe the change to the user accurately ("v12 has 5 steps, v14 has 7 — restoring would remove the new email-sender and notification steps").
+
+**\`checkpoint_recipe(hash, label?)\`** — manage scope. Creates an explicit snapshot RIGHT NOW, bypassing coalescing. Always pass a \`label\` so the version list is human-readable later. Use this BEFORE any risky multi-step rewrite — you'll get a precise rollback point.
+
+**\`restore_recipe_version(hash, version_number, confirm: true)\`** — manage scope. Applies a prior version's definition as the new live state. Before applying, the service:
+1. Snapshots current state as a "pre-restore" version (so this restore is itself undoable)
+2. Wipes current steps + stores
+3. Replays the snapshotted steps + stores
+4. Writes a "post-restore" marker pointing at the version that was applied
+
+The response gives you back both marker numbers:
+\`\`\`
+{
+  restored_to: 12,
+  new_head_version: 18,         // the post-restore marker
+  pre_restore_version: 17       // pass this to restore_recipe_version to undo the rollback
+}
+\`\`\`
+
+\`confirm: true\` is REQUIRED — there is no implicit confirmation.
+
+### Decision rule — when to manually checkpoint
+
+| Situation | Checkpoint? |
+|---|---|
+| User asks for a single small edit ("change this prompt") | No — auto-snapshot covers it |
+| User asks you to "rewrite the recipe to do X instead" | **Yes** — \`checkpoint_recipe(hash, label: "before X rewrite")\` first |
+| You're about to delete several steps | **Yes** — easier rollback than reconstructing from auto-snapshot |
+| User says "experiment with a different approach" | **Yes** — label the checkpoint with the prior approach name |
+| You're adding one new step | No — auto-snapshot covers it |
+
+### Worked example: rewriting a recipe
+
+User: "Rewrite the scanner recipe to use parallel search instead of sequential."
+
+Right approach:
+\`\`\`
+1. checkpoint_recipe(hash: "g0AENsn8Wq", label: "sequential scanner v1")
+   → response: { version_number: 12, ... }
+
+2. Make your edits: update_recipe_step, add_recipe_step, etc.
+   These auto-coalesce into a single pre-mutation snapshot (v13)
+   plus the final state lives on the recipe itself.
+
+3. Tell the user: "Done. You're now on the parallel version. If you
+   want to roll back, the sequential version is checkpoint v12 —
+   I can restore it with one call."
+\`\`\`
+
+If they say roll back:
+\`\`\`
+1. list_recipe_versions(hash: "g0AENsn8Wq")
+   → confirm v12 is the checkpoint you made
+2. restore_recipe_version(hash: "g0AENsn8Wq", version_number: 12, confirm: true)
+   → response: { restored_to: 12, new_head_version: 15, pre_restore_version: 14 }
+3. Tell the user: "Restored. If you change your mind, the parallel
+   version is v14 — I can restore that to bring it back."
+\`\`\`
+
+### How to talk about versions
+
+When you call \`list_recipe_versions\` and present results to the user, format them human-readably. Don't dump JSON. Do something like:
+
+\`\`\`
+Version history for "scanner":
+  v15 (just now)  · restore       · restored to v12
+  v14             · restore       · pre-restore snapshot
+  v13             · mutation      · 14:32, 6 step edits
+  v12             · checkpoint    · "sequential scanner v1"
+  v11             · mutation      · 13:08
+\`\`\`
+
+Only call \`get_recipe_version\` if the user (or your own judgment) actually needs the full definition to make a decision. The summary list usually suffices.
+
+### Common pitfalls
+
+- **\`confirm: true\` is mandatory on restore.** Forgetting it returns an error.
+- **Versions are per-recipe.** You can't restore one recipe's version onto a different recipe (rejected with \`InvalidArgumentException\`).
+- **Forking starts a fresh history.** The forked recipe's version chain begins empty; the source recipe's versions don't carry over.
+- **20 is the retention ceiling.** Once a recipe accumulates 20 versions, the oldest one drops off when the 21st arrives. If something old matters, drop a checkpoint with a descriptive label — labels survive as long as the version row does, and the label makes it findable.
+- **Don't restore without inspecting first** unless the user explicitly asked for a specific version. When in doubt, \`get_recipe_version\` to confirm what's in the snapshot.
+- **Restore replaces stores AND steps.** If the user added a store between snapshots and you restore an earlier version, that store goes away. Mention this when you describe the restore.
+
+### Source attribution
+
+The \`source\` field tells the user where each edit came from:
+- \`mcp\` — Claude Desktop, Cursor, voice agent, native app (anything through MCP)
+- \`web\` — Hub recipe editor
+- \`cli\` — \`flowdot recipes versions checkpoint\` ran from the terminal
+- \`system\` — unattributed
+
+When you read the history back to a user, source helps disambiguate "I made that edit" from "the web editor made that edit" from "a cron job made that edit".
 
 ## Related Resources
 
