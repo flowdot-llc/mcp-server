@@ -42,6 +42,7 @@
   "homepage": "https://flowdot.ai/docs/mcp",
   "dependencies": {
     "@flowdot.ai/api": "file:../flowdot-api",
+    "@flowdot-llc/guardian-agent": "file:../guardian-agent-ts",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/acorn": "^4.0.6",
     "acorn": "^8.15.0",

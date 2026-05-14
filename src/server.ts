@@ -9,13 +9,27 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { FlowDotApiClient } from './api-client.js';
 import { registerTools } from './tools/index.js';
 import { registerResources } from './resources/index.js';
+import { createSupervisor, type Supervisor } from './supervisor.js';
 
 const MCP_TOKEN_PREFIX = 'fd_mcp_';
 
 /**
- * Create and configure the FlowDot MCP server.
+ * Result of createServer: the MCP Server plus the supervisor (if enabled).
+ * Held by startServer so the audit log can be flushed on shutdown.
  */
-export async function createServer(): Promise<Server> {
+export interface CreatedServer {
+  server: Server;
+  supervisor: Supervisor | null;
+}
+
+/**
+ * Create and configure the FlowDot MCP server.
+ *
+ * NOTE: this signature now returns `CreatedServer` rather than just `Server`
+ * so callers can flush the supervisor on shutdown. The previous behavior is
+ * preserved if you only need the server itself: destructure `{ server } = await createServer()`.
+ */
+export async function createServer(): Promise<CreatedServer> {
   // Get configuration from environment
   const apiToken = process.env.FLOWDOT_API_TOKEN;
   const hubUrl = process.env.FLOWDOT_HUB_URL || 'https://flowdot.ai';
@@ -108,8 +122,17 @@ If the user asks about a FlowDot feature area you haven't touched in this sessio
     }
   );
 
-  // Register tools
-  registerTools(server, apiClient);
+  // Build the supervisor (in-process audit + emergency-stop). May be null if
+  // disabled via FLOWDOT_SUPERVISOR=off.
+  const supervisor = await createSupervisor({ agentId: 'flowdot-mcp-server' });
+  if (supervisor) {
+    console.error(`Supervisor enabled — audit log at ${supervisor.auditPath}`);
+  } else {
+    console.error('Supervisor disabled (FLOWDOT_SUPERVISOR=off).');
+  }
+
+  // Register tools — pass supervisor so every tool call gets audited + halt-checked.
+  registerTools(server, apiClient, supervisor);
 
   // Register learning resources
   registerResources(server);
@@ -132,17 +155,46 @@ If the user asks about a FlowDot feature area you haven't touched in this sessio
   console.error('  • Plus: Analytics, discovery, teams, and more');
   console.error('');
 
-  return server;
+  return { server, supervisor };
 }
 
 /**
  * Start the MCP server with stdio transport.
+ *
+ * Wires SIGINT/SIGTERM so the supervisor's audit log is flushed before
+ * exit. This is the only place the process owns its own lifecycle; callers
+ * embedding createServer() handle their own shutdown.
  */
 export async function startServer(): Promise<void> {
-  const server = await createServer();
+  const { server, supervisor } = await createServer();
   const transport = new StdioServerTransport();
 
   await server.connect(transport);
+
+  if (supervisor) {
+    const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+      console.error(`Received ${signal} — flushing audit log…`);
+      try {
+        await supervisor.close();
+      } catch (err) {
+        console.error('Supervisor close failed:', err);
+      }
+      process.exit(0);
+    };
+    process.once('SIGINT', () => void shutdown('SIGINT'));
+    process.once('SIGTERM', () => void shutdown('SIGTERM'));
+
+    // SIGUSR2 → press the in-process emergency stop. SIGUSR1 is reserved by
+    // Node for the debugger inspector, so we use USR2. No-op on Windows
+    // (Node's POSIX signal handlers are silently ignored there).
+    process.on('SIGUSR2', () => {
+      void supervisor.estop.press({
+        reason: 'sigusr2',
+        initiator: 'operator',
+      });
+      console.error('Received SIGUSR2 — emergency stop pressed.');
+    });
+  }
 
   console.error('FlowDot MCP Server running on stdio.');
 }

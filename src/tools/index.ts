@@ -8,8 +8,10 @@ import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { runUnderSupervisor, type Supervisor } from '../supervisor.js';
 
 // ============================================
 // Core Tools (Existing)
@@ -549,17 +551,43 @@ const tools = [
 /**
  * Register all tools with the MCP server.
  */
-export function registerTools(server: Server, api: FlowDotApiClient): void {
+export function registerTools(
+  server: Server,
+  api: FlowDotApiClient,
+  supervisor?: Supervisor | null,
+): void {
   // Handle tools/list request
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return { tools };
   });
 
-  // Handle tools/call request
+  // Handle tools/call request — wrapped under supervisor when one is provided.
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    if (supervisor) {
+      return runUnderSupervisor(
+        supervisor,
+        name,
+        () => dispatchToolCall(api, request),
+        args,
+      );
+    }
+    return dispatchToolCall(api, request);
+  });
+}
 
-    switch (name) {
+/**
+ * Central tool-call dispatch. Pure function: given an api client + the parsed
+ * MCP request, returns the tool result. Exported for testability and used by
+ * both the supervised and unsupervised paths.
+ */
+export async function dispatchToolCall(
+  api: FlowDotApiClient,
+  request: { params: { name: string; arguments?: unknown } },
+): Promise<CallToolResult> {
+  const { name, arguments: args } = request.params;
+
+  switch (name) {
       // ============================================
       // Core Tools
       // ============================================
@@ -1610,6 +1638,5 @@ export function registerTools(server: Server, api: FlowDotApiClient): void {
           ],
           isError: true,
         };
-    }
-  });
+  }
 }
