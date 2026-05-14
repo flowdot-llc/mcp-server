@@ -23,16 +23,22 @@ import type { KeyObject } from 'node:crypto';
 
 import {
   AuditLogWriter,
+  DEFAULT_BUCKETS,
   EStopLocal,
   GuardianHaltedError,
   GuardianRuntime,
+  MultiRateLimiter,
+  type Attestor,
   type AuditRecord,
+  type BucketConfig,
+  type CapabilityClass,
+  type CapabilityRule,
+  type HoneytokenSet,
   type ModelAttribution,
 } from '@flowdot-llc/guardian-agent';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { loadOrCreateAuditKey } from './audit-keys.js';
-import { RateLimiter } from './rate-limiter.js';
 import { redactArgs } from './redaction.js';
 
 export interface SupervisorOptions {
@@ -55,10 +61,29 @@ export interface SupervisorOptions {
   /** Optional override for the audit-key directory (testing). */
   keyDir?: string;
   /**
-   * Max sustained tool calls per second before rate-limiting kicks in.
-   * Default 50. Set to 0 to disable rate-limiting entirely.
+   * Max sustained tool calls per second for the default (untagged-tool)
+   * bucket. Default 50. Set to 0 to disable rate-limiting entirely. SPEC §5.
    */
   maxCallsPerSecond?: number;
+  /**
+   * Per-class bucket overrides. Merged on top of library DEFAULT_BUCKETS.
+   */
+  bucketOverrides?: Partial<Record<CapabilityClass, BucketConfig>>;
+  /** Honeytoken set scanned against every tool call. SPEC §11. */
+  honeytokens?: HoneytokenSet;
+  /**
+   * Capability-rule set evaluated after every dispatched tool call.
+   * v0.8 ships Yellow-only — audit-only, no behavior change.
+   */
+  capabilityRules?: CapabilityRule[];
+  /**
+   * External chain attestor. When set, the writer publishes the current
+   * chain head every {@link attestEvery} records + on session_close.
+   * Default off. SPEC §2.7.
+   */
+  attestor?: Attestor;
+  /** Records between attestations. Default 100. */
+  attestEvery?: number;
 }
 
 export interface Supervisor {
@@ -69,7 +94,7 @@ export interface Supervisor {
   /** Absolute path to the public key (for verification with guardian-verify). */
   readonly publicKeyPath: string | null;
   /** Rate-limiter consulted on every tool call. Null when disabled. */
-  readonly rateLimiter: RateLimiter | null;
+  readonly rateLimiter: MultiRateLimiter | null;
   /**
    * If true, suppress further `x_rate_limit_breached` events until the next
    * allowed call lands. We don't want the audit log itself to flood when a
@@ -133,6 +158,8 @@ export async function createSupervisor(
         recoveryRecord = last;
       }
     },
+    ...(options.attestor === undefined ? {} : { attestor: options.attestor }),
+    ...(options.attestEvery === undefined ? {} : { attestEvery: options.attestEvery }),
   });
   const estop = new EStopLocal({ audit });
   const runtime = new GuardianRuntime({
@@ -140,6 +167,8 @@ export async function createSupervisor(
     sessionId,
     audit,
     estop,
+    ...(options.honeytokens === undefined ? {} : { honeytokens: options.honeytokens }),
+    ...(options.capabilityRules === undefined ? {} : { capabilityRules: options.capabilityRules }),
   });
 
   await runtime.openSession();
@@ -159,13 +188,21 @@ export async function createSupervisor(
     });
   }
 
-  // Rate limiter. maxCallsPerSecond=0 disables.
+  // Multi-class rate limiter. Untagged tools (capability='unknown') hit
+  // the defaultBucket (preserves the prior single-bucket behavior). Tagged
+  // tools additionally pass through their per-class bucket from
+  // DEFAULT_BUCKETS, with optional overrides.
   const envRate = process.env.FLOWDOT_SUPERVISOR_RATE
     ? Number(process.env.FLOWDOT_SUPERVISOR_RATE)
     : undefined;
   const configuredRate = options.maxCallsPerSecond ?? envRate ?? 50;
   const rateLimiter =
-    configuredRate > 0 ? new RateLimiter({ maxCallsPerSecond: configuredRate }) : null;
+    configuredRate > 0
+      ? new MultiRateLimiter({
+          buckets: { ...DEFAULT_BUCKETS, ...(options.bucketOverrides ?? {}) },
+          defaultBucket: { maxCallsPerSecond: configuredRate },
+        })
+      : null;
 
   return {
     audit,
@@ -203,10 +240,13 @@ export async function runUnderSupervisor(
   dispatch: () => Promise<CallToolResult>,
   rawArgs?: unknown,
   model?: ModelAttribution,
+  capabilities?: CapabilityClass[],
 ): Promise<CallToolResult> {
-  // 1. Rate-limit gate.
+  const effectiveCapabilities: CapabilityClass[] = capabilities ?? ['unknown'];
+
+  // 1. Per-class rate-limit gate. First class to deny wins.
   if (supervisor.rateLimiter) {
-    const consume = supervisor.rateLimiter.tryConsume();
+    const consume = supervisor.rateLimiter.tryConsume(effectiveCapabilities);
     if (!consume.allowed) {
       // Emit one breach event per burst (flag flips back when a call
       // succeeds again).
@@ -218,6 +258,7 @@ export async function runUnderSupervisor(
           initiator: 'system',
           detail: {
             tool: toolName,
+            class: consume.class,
             retry_after_ms: consume.retryAfterMs,
           },
         });
@@ -227,7 +268,7 @@ export async function runUnderSupervisor(
           {
             type: 'text',
             text:
-              `Rate limit exceeded for MCP tool dispatch. ` +
+              `Rate limit exceeded for MCP tool dispatch (capability "${consume.class}"). ` +
               `Retry in ~${consume.retryAfterMs}ms.`,
           },
         ],
@@ -267,7 +308,14 @@ export async function runUnderSupervisor(
       }
       return dispatch();
     },
-    model === undefined ? { name: toolName } : { name: toolName, model },
+    (() => {
+      const opts: { name: string; model?: ModelAttribution; capabilities: CapabilityClass[] } = {
+        name: toolName,
+        capabilities: effectiveCapabilities,
+      };
+      if (model !== undefined) opts.model = model;
+      return opts;
+    })(),
   );
   try {
     return await wrapped(redactedArgs);
