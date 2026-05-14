@@ -181,6 +181,35 @@ describe('runUnderSupervisor', () => {
     expect(halted).toBeDefined();
   });
 
+  it('records ModelAttribution chain on tool_call', async () => {
+    const supervisor = await createSupervisor({ auditDir: tmp, keyDir: tmp });
+    await runUnderSupervisor(
+      supervisor!,
+      'send_email',
+      async () => ({ content: [{ type: 'text', text: 'ok' }] }),
+      { to: 'a@b' },
+      {
+        surface: 'FlowDot',
+        aggregator: 'RedPill',
+        provider: 'Anthropic',
+        id: 'claude-opus-4.5',
+      },
+    );
+    await supervisor!.close();
+
+    const reader = await AuditLogReader.open(supervisor!.auditPath);
+    const records = [];
+    for await (const r of reader.records()) records.push(r);
+    await reader.close();
+    const call = records.find((r) => r.kind === 'tool_call');
+    expect(call?.model).toEqual({
+      provider: 'Anthropic',
+      id: 'claude-opus-4.5',
+      surface: 'FlowDot',
+      aggregator: 'RedPill',
+    });
+  });
+
   it('audit log passes verifyChain after several calls', async () => {
     const supervisor = await createSupervisor({ auditDir: tmp, keyDir: tmp });
 

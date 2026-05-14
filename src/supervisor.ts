@@ -27,6 +27,7 @@ import {
   GuardianHaltedError,
   GuardianRuntime,
   type AuditRecord,
+  type ModelAttribution,
 } from '@flowdot-llc/guardian-agent';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
@@ -201,6 +202,7 @@ export async function runUnderSupervisor(
   toolName: string,
   dispatch: () => Promise<CallToolResult>,
   rawArgs?: unknown,
+  model?: ModelAttribution,
 ): Promise<CallToolResult> {
   // 1. Rate-limit gate.
   if (supervisor.rateLimiter) {
@@ -265,7 +267,7 @@ export async function runUnderSupervisor(
       }
       return dispatch();
     },
-    { name: toolName },
+    model === undefined ? { name: toolName } : { name: toolName, model },
   );
   try {
     return await wrapped(redactedArgs);
