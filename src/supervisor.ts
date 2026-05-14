@@ -27,6 +27,7 @@ import {
   EStopLocal,
   GuardianHaltedError,
   GuardianRuntime,
+  HeartbeatMonitor,
   MultiRateLimiter,
   type Attestor,
   type AuditRecord,
@@ -35,6 +36,7 @@ import {
   type CapabilityRule,
   type HoneytokenSet,
   type ModelAttribution,
+  type OperatorConfirmationGate,
 } from '@flowdot-llc/guardian-agent';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
@@ -84,6 +86,21 @@ export interface SupervisorOptions {
   attestor?: Attestor;
   /** Records between attestations. Default 100. */
   attestEvery?: number;
+  /**
+   * Two-key operator gate. When set, tools marked with
+   * `requiresOperatorConfirmation` suspend pending operator decision.
+   * SPEC §4.5. v0.4.0+.
+   */
+  operatorGate?: OperatorConfirmationGate;
+  /** Default operator-confirmation timeout (ms). Default 5 minutes. */
+  operatorTimeoutMs?: number;
+  /**
+   * Dead-man's heartbeat. Opt-in. Default OFF. SPEC §6. v0.4.0+.
+   */
+  heartbeat?: {
+    softMs: number;
+    hardMs: number;
+  };
 }
 
 export interface Supervisor {
@@ -95,6 +112,8 @@ export interface Supervisor {
   readonly publicKeyPath: string | null;
   /** Rate-limiter consulted on every tool call. Null when disabled. */
   readonly rateLimiter: MultiRateLimiter | null;
+  /** Heartbeat monitor. Null when not configured. v0.4.0+. */
+  readonly heartbeat: HeartbeatMonitor | null;
   /**
    * If true, suppress further `x_rate_limit_breached` events until the next
    * allowed call lands. We don't want the audit log itself to flood when a
@@ -169,6 +188,8 @@ export async function createSupervisor(
     estop,
     ...(options.honeytokens === undefined ? {} : { honeytokens: options.honeytokens }),
     ...(options.capabilityRules === undefined ? {} : { capabilityRules: options.capabilityRules }),
+    ...(options.operatorGate === undefined ? {} : { operatorGate: options.operatorGate }),
+    ...(options.operatorTimeoutMs === undefined ? {} : { operatorTimeoutMs: options.operatorTimeoutMs }),
   });
 
   await runtime.openSession();
@@ -204,6 +225,17 @@ export async function createSupervisor(
         })
       : null;
 
+  // Heartbeat — opt-in. Default OFF.
+  const heartbeat = options.heartbeat
+    ? new HeartbeatMonitor({
+        softMs: options.heartbeat.softMs,
+        hardMs: options.heartbeat.hardMs,
+        audit,
+        estop,
+      })
+    : null;
+  if (heartbeat) heartbeat.start();
+
   return {
     audit,
     runtime,
@@ -212,7 +244,9 @@ export async function createSupervisor(
     publicKeyPath,
     rateLimiter,
     rateBreachActive: false,
+    heartbeat,
     async close(): Promise<void> {
+      if (heartbeat) heartbeat.stop();
       await runtime.close();
     },
   };
