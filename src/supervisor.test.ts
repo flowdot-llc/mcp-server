@@ -10,7 +10,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { AuditLogReader } from '@flowdot-llc/guardian-agent';
+import { AuditLogReader } from '@flowdot.ai/guardian-agent';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createSupervisor, runUnderSupervisor } from './supervisor.js';
@@ -310,7 +310,7 @@ describe('signed audit records', () => {
     }));
     await supervisor!.close();
 
-    const { loadPublicKey } = await import('@flowdot-llc/guardian-agent');
+    const { loadPublicKey } = await import('@flowdot.ai/guardian-agent');
     const { readFileSync } = await import('node:fs');
     const pubPem = readFileSync(supervisor!.publicKeyPath!, 'utf-8');
     const pubkey = loadPublicKey(pubPem);

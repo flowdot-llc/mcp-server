@@ -11,7 +11,7 @@ import {
   AuditLogReader,
   callbackOperatorGate,
   denyAllOperatorGate,
-} from '@flowdot-llc/guardian-agent';
+} from '@flowdot.ai/guardian-agent';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createSupervisor } from './supervisor.js';

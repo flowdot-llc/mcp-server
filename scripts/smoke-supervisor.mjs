@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { AuditLogReader } from '@flowdot-llc/guardian-agent';
+import { AuditLogReader } from '@flowdot.ai/guardian-agent';
 import { createSupervisor, runUnderSupervisor } from '../dist/supervisor.js';
 
 const tmp = mkdtempSync(join(tmpdir(), 'mcp-smoke-'));

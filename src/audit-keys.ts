@@ -25,7 +25,7 @@ import {
   generateEd25519KeyPair,
   loadPrivateKey,
   loadPublicKey,
-} from '@flowdot-llc/guardian-agent';
+} from '@flowdot.ai/guardian-agent';
 
 export interface AuditKeyPaths {
   privateKeyPath: string;

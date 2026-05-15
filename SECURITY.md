@@ -4,7 +4,7 @@ This document describes what the supervisor layer **does** defend against, what 
 
 ## What the supervisor is
 
-When started, the FlowDot MCP server constructs a `Supervisor` (see `src/supervisor.ts`) holding three primitives from `@flowdot-llc/guardian-agent`:
+When started, the FlowDot MCP server constructs a `Supervisor` (see `src/supervisor.ts`) holding three primitives from `@flowdot.ai/guardian-agent`:
 
 - **`AuditLogWriter`** — appends hash-chained, ed25519-signed JSON-Lines records for every tool call. Default path `~/.flowdot/audit/mcp.jsonl`.
 - **`EStopLocal`** — in-process halt flag. Pressed via `SIGUSR2` or the in-process API. Subsequent tool calls return `isError: true` with the reason.
@@ -61,7 +61,7 @@ Overridable via env:
 After running the server, verify the integrity of any audit log with the public key:
 
 ```bash
-node node_modules/@flowdot-llc/guardian-agent/dist/cli/guardian-verify.js \
+node node_modules/@flowdot.ai/guardian-agent/dist/cli/guardian-verify.js \
   ~/.flowdot/audit/mcp.jsonl \
   --pubkey ~/.flowdot/keys/audit.pub.pem
 ```

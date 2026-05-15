@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { AuditLogReader } from '@flowdot-llc/guardian-agent';
+import { AuditLogReader } from '@flowdot.ai/guardian-agent';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { FlowDotApiClient } from '../api-client.js';

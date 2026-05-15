@@ -1,5 +1,5 @@
 /**
- * MCP-side supervisor: wraps every tool call in the @flowdot-llc/guardian-agent
+ * MCP-side supervisor: wraps every tool call in the @flowdot.ai/guardian-agent
  * runtime so we get a hash-chained audit log + in-process emergency stop.
  *
  * The supervisor is OPTIONAL — `createSupervisor` returns null when:
@@ -37,7 +37,7 @@ import {
   type HoneytokenSet,
   type ModelAttribution,
   type OperatorConfirmationGate,
-} from '@flowdot-llc/guardian-agent';
+} from '@flowdot.ai/guardian-agent';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { loadOrCreateAuditKey } from './audit-keys.js';

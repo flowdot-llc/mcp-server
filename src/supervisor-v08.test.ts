@@ -12,7 +12,7 @@ import {
   defineHoneytokenSet,
   type AttestationPayload,
   type Attestor,
-} from '@flowdot-llc/guardian-agent';
+} from '@flowdot.ai/guardian-agent';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createSupervisor, runUnderSupervisor } from './supervisor.js';

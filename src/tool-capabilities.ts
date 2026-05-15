@@ -13,7 +13,7 @@
  * The function is pure: same input → same output. No side effects.
  */
 
-import type { CapabilityClass } from '@flowdot-llc/guardian-agent';
+import type { CapabilityClass } from '@flowdot.ai/guardian-agent';
 
 /**
  * Tools that don't fit any prefix pattern, or where the prefix is misleading.
