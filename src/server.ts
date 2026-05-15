@@ -124,7 +124,22 @@ If the user asks about a FlowDot feature area you haven't touched in this sessio
 
   // Build the supervisor (in-process audit + emergency-stop). May be null if
   // disabled via FLOWDOT_SUPERVISOR=off.
-  const supervisor = await createSupervisor({ agentId: 'flowdot-mcp-server' });
+  const supervisor = await createSupervisor({
+    agentId: 'flowdot-mcp-server',
+    // v0.8 Yellow-only capability rule. Audit-only: emits
+    // x_capability_yellow when the exfil-shape combination fires within
+    // window_ms. Telemetry calibrates the Red-line promotion in v0.10.
+    // SPEC §13.
+    capabilityRules: [
+      {
+        id: 'exfil-shape',
+        description: 'credential + network-egress + write within 1 min',
+        combination: ['credential', 'network-egress', 'write'],
+        window_ms: 60_000,
+        level: 'yellow',
+      },
+    ],
+  });
   if (supervisor) {
     console.error(`Supervisor enabled — audit log at ${supervisor.auditPath}`);
   } else {

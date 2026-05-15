@@ -12,6 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
 import { runUnderSupervisor, type Supervisor } from '../supervisor.js';
+import { capabilitiesFor } from '../tool-capabilities.js';
 
 // ============================================
 // Core Tools (Existing)
@@ -570,6 +571,8 @@ export function registerTools(
         name,
         () => dispatchToolCall(api, request),
         args,
+        undefined,            // model: out of scope here
+        capabilitiesFor(name), // SPEC §13.1
       );
     }
     return dispatchToolCall(api, request);
