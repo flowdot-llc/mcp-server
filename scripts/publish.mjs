@@ -26,6 +26,11 @@ const SWAPS = [
     depName: '@flowdot.ai/api',
     fileRef: 'file:../flowdot-api',
   },
+  {
+    pkgField: 'dependencies',
+    depName: '@flowdot.ai/guardian-agent',
+    fileRef: 'file:../guardian-agent-ts',
+  },
 ];
 
 function run(cmd, opts = {}) {
