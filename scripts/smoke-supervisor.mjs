@@ -29,7 +29,7 @@ const r1 = await runUnderSupervisor(supervisor, 'list_workflows', async () => ({
 }));
 console.error(`smoke: list_workflows ok — content=${JSON.stringify(r1.content)}`);
 
-const r2 = await runUnderSupervisor(supervisor, 'get_workflow_details', async () => ({
+const _r2 = await runUnderSupervisor(supervisor, 'get_workflow_details', async () => ({
   content: [{ type: 'text', text: 'mock-details-result' }],
 }));
 console.error(`smoke: get_workflow_details ok`);
