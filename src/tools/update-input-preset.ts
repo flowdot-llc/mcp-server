@@ -33,6 +33,10 @@ export const updateInputPresetTool: Tool = {
         type: 'object',
         description: 'Updated input values (optional)',
       },
+      is_community: {
+        type: 'boolean',
+        description: 'Toggle community discovery for this preset (true = appears in /search; false = remains visible on the workflow page but hidden from global browse).',
+      },
     },
     required: ['workflow_id', 'preset_hash'],
   },
@@ -46,11 +50,17 @@ export async function handleUpdateInputPreset(
     title?: string;
     description?: string;
     inputs?: Record<string, unknown>;
+    is_community?: boolean;
   }
 ): Promise<CallToolResult> {
   try {
     // Build update object
-    const updates: { title?: string; description?: string; inputs?: Record<string, unknown> } = {};
+    const updates: {
+      title?: string;
+      description?: string;
+      inputs?: Record<string, unknown>;
+      is_community?: boolean;
+    } = {};
 
     if (args.title !== undefined) {
       updates.title = args.title;
@@ -61,10 +71,13 @@ export async function handleUpdateInputPreset(
     if (args.inputs !== undefined) {
       updates.inputs = args.inputs;
     }
+    if (args.is_community !== undefined) {
+      updates.is_community = args.is_community;
+    }
 
     if (Object.keys(updates).length === 0) {
       return {
-        content: [{ type: 'text', text: 'Error: No updates provided. Specify at least one field to update (title, description, or inputs).' }],
+        content: [{ type: 'text', text: 'Error: No updates provided. Specify at least one field to update (title, description, inputs, or is_community).' }],
         isError: true,
       };
     }
@@ -77,6 +90,7 @@ export async function handleUpdateInputPreset(
       `**Hash:** ${result.hash}`,
       `**Title:** ${result.title}`,
       `**URL:** ${result.public_url}`,
+      `**Community-listed:** ${result.is_community ? 'yes' : 'no'}`,
       `**Updated:** ${result.updated_at}`,
     ];
 

@@ -155,6 +155,8 @@ import { updateInputPresetTool, handleUpdateInputPreset } from './update-input-p
 import { deleteInputPresetTool, handleDeleteInputPreset } from './delete-input-preset.js';
 import { voteInputPresetTool, handleVoteInputPreset } from './vote-input-preset.js';
 import { toggleCommunityInputsTool, handleToggleCommunityInputs } from './toggle-community-inputs.js';
+import { listMyInputPresetsTool, handleListMyInputPresets } from './list-my-input-presets.js';
+import { browseCommunityInputPresetsTool, handleBrowseCommunityInputPresets } from './browse-community-input-presets.js';
 
 // ============================================
 // Team Tools (teams:read)
@@ -425,7 +427,7 @@ const tools = [
   getSharedRecipeRunTool,
   listRecipeBenchmarksTool,
   getRecipeBenchmarkTool,
-  // Input Presets (7)
+  // Input Presets (9)
   listInputPresetsTool,
   getInputPresetTool,
   createInputPresetTool,
@@ -433,6 +435,8 @@ const tools = [
   deleteInputPresetTool,
   voteInputPresetTool,
   toggleCommunityInputsTool,
+  listMyInputPresetsTool,
+  browseCommunityInputPresetsTool,
   // Teams (1)
   listUserTeamsToolDef,
   // Knowledge Base (15)
@@ -1026,6 +1030,22 @@ export async function dispatchToolCall(
 
       case 'toggle_community_inputs':
         return handleToggleCommunityInputs(api, args as { workflow_id: string; enabled: boolean });
+
+      case 'list_my_input_presets':
+        return handleListMyInputPresets(api, args as {
+          sort?: 'newest' | 'oldest' | 'most_used' | 'popular';
+          page?: number;
+          per_page?: number;
+        });
+
+      case 'browse_community_input_presets':
+        return handleBrowseCommunityInputPresets(api, args as {
+          q?: string;
+          author?: string;
+          sort?: 'popular' | 'newest' | 'oldest' | 'most_used';
+          page?: number;
+          per_page?: number;
+        });
 
       // ============================================
       // Team Tools

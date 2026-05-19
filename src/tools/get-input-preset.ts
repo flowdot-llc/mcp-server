@@ -39,6 +39,7 @@ export async function handleGetInputPreset(
       `**Hash:** ${preset.hash}`,
       `**URL:** ${preset.public_url}`,
       `**Votes:** ${preset.vote_count} | **Uses:** ${preset.usage_count}`,
+      `**Community-listed:** ${preset.is_community ? 'yes' : 'no'}`,
     ];
 
     if (preset.description) {

@@ -29,6 +29,10 @@ export const createInputPresetTool: Tool = {
         type: 'object',
         description: 'The input values as a JSON object (keys are input names, values are the input values)',
       },
+      is_community: {
+        type: 'boolean',
+        description: 'Opt this preset in to global community discovery via /search (default: false). The workflow owner must still have allow_community_inputs enabled for the preset to be visible at all.',
+      },
     },
     required: ['workflow_id', 'title', 'inputs'],
   },
@@ -41,6 +45,7 @@ export async function handleCreateInputPreset(
     title: string;
     description?: string;
     inputs: Record<string, unknown>;
+    is_community?: boolean;
   }
 ): Promise<CallToolResult> {
   try {
@@ -63,6 +68,7 @@ export async function handleCreateInputPreset(
       title: args.title,
       description: args.description,
       inputs: args.inputs,
+      is_community: args.is_community,
     });
 
     const lines = [
@@ -71,6 +77,7 @@ export async function handleCreateInputPreset(
       `**Hash:** ${result.hash}`,
       `**Title:** ${result.title}`,
       `**URL:** ${result.public_url}`,
+      `**Community-listed:** ${result.is_community ? 'yes' : 'no'}`,
       '',
       'Anyone can now use this preset to run the workflow with your pre-configured inputs.',
     ];
