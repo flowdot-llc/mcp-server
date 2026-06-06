@@ -82,6 +82,11 @@ Voice-call personas with persona prompt + TTS + STT + LLM config. Required for t
 View your account info and active token details.
 - **Quick start:** Use \`whoami\`
 
+### 12. **Images & Vision**
+Generate images, edit images, and analyze images (vision) — via workflow nodes, the aggregator API, or BYOK image toolkits. Provider-agnostic, no fallback.
+- **Learn more:** \`learn://images\`
+- **Quick start:** Read \`learn://images\`, then use an \`image_manipulation\` node or a BYOK image toolkit
+
 ## Common Workflows
 
 ### Creating a Simple Workflow
@@ -113,6 +118,7 @@ Every recipe edit you make is automatically snapshotted (last 20 retained, coale
 - **Sending notifications?** Read \`learn://comms\` first
 - **Setting up autonomous goals or scheduled tasks?** Read \`learn://goals\` first
 - **Setting up a voice-call character?** Read \`learn://characters\` first
+- **Generating, editing, or analyzing images?** Read \`learn://images\` first
 
 ## Getting Help
 
@@ -2250,6 +2256,8 @@ Individual capabilities within a toolkit:
 - **Input schema:** Define required parameters
 - **Output schema:** Define expected responses
 
+> **Building an image toolkit?** See \`learn://images\` — image toolkits are HTTP tools authenticated by the user's own provider key (BYOK), with the model passed as an input and an opt-in \`endpoint_config.persist_images: true\` that stores results to the user's bucket and returns served URLs instead of multi-MB base64.
+
 ### Credentials
 Authentication requirements:
 - **api_key:** Standard API keys
@@ -2477,7 +2485,13 @@ The platform does **not** auto-add an Authorization header for the \`oauth\` cre
 - **auto_refresh_enabled:** Boolean (default \`true\`). When true, the executor auto-refreshes expired access tokens using the stored refresh_token before bubbling a re-auth prompt.
 - **pkce_enabled:** Enable PKCE (recommended for any provider that supports it; Schwab does not).
 - **auth_error_codes:** HTTP codes indicating auth failure
-- **auth_error_patterns:** Error message patterns for auth failure
+- **auth_error_patterns:** Error message patterns for auth failure. These now run on **every** response (including HTTP 200) so providers that signal failure with \`200 OK\` + an error code in the body (TikTok's \`{"code":40105}\`, some Meta endpoints) are correctly classified.
+
+**Non-Standard OAuth Provider Fields** (for providers that deviate from RFC 6749):
+- **param_overrides:** Rename map for standard OAuth 2.0 param names. Used when a provider renames \`client_id\`, \`client_secret\`, \`code\`, \`refresh_token\`, etc. Example for TikTok Marketing: \`{ client_id: "app_id", client_secret: "secret", code: "auth_code" }\`. Keys may be any of: \`client_id\`, \`client_secret\`, \`code\`, \`redirect_uri\`, \`response_type\`, \`state\`, \`scope\`, \`grant_type\`, \`refresh_token\`, \`code_verifier\`, \`code_challenge\`, \`code_challenge_method\`. Standard names not in the map pass through unchanged, so spec-compliant providers ignore this field.
+- **scope_separator:** Separator used when joining multiple scopes in the authorize-URL \`scope\` param. Default is a single space (RFC 6749 §3.3). Some providers expect \`","\` (TikTok Content) or \`"+"\`.
+- **body_format:** Body encoding for the token-endpoint POST. \`"form"\` (default) is \`application/x-www-form-urlencoded\` per RFC 6749 §4.1.3. \`"json"\` is required by TikTok Marketing's token endpoint.
+- **response_field_paths:** Dot-notation paths for extracting standard fields from a **nested** token-endpoint response. Use when a provider wraps the token block — TikTok Marketing returns \`{ "code": 0, "data": { "access_token": "...", "refresh_token": "...", "expires_in": ... } }\`. Map: \`{ access_token: "data.access_token", refresh_token: "data.refresh_token", expires_in: "data.expires_in" }\`. Keys may be any of: \`access_token\`, \`refresh_token\`, \`expires_in\`, \`token_type\`, \`scope\`. Standard fields not mapped resolve at the top level.
 
 ### When to Use Each Credential Type
 
@@ -4073,6 +4087,135 @@ Pass that to \`create_agent_character\` and the response carries \`is_complete: 
 - \`learn://recipes\` — recipes are agentic *programs*; characters are voice *personas*. Different. Recipes can reference characters but not vice-versa.
 - \`Docs/LIVE_CALLS_TRUTH.md\` (in the Hub repo) — the no-fallback runtime contract these tools mirror.
 - \`mcp__fish-audio__fish_audio_voices\` / \`mcp__elevenlabs__*\` (if installed) — pick a real \`voice_id\` before calling \`create_agent_character\`.
+`,
+  },
+  'learn://images': {
+    name: 'Images & Vision Complete Guide',
+    description: 'How to generate images, edit images, and analyze images (vision) on FlowDot — including building image toolkits and persisting images to the user bucket',
+    mimeType: 'text/markdown',
+    content: `# FlowDot Images & Vision - Complete Guide
+
+Everything about doing **image things** on FlowDot: generating images, editing images, and **vision** (feeding an image in for analysis) — plus how to package image capabilities into a toolkit and store generated images so they serve from a direct link.
+
+## Two rules that govern ALL image work
+
+1. **100% provider/model-agnostic.** There are NO hardcoded model ids or provider names anywhere in the platform. A model is "known" to do image-gen or vision only because its own metadata says so. **The model is always an input you pass in — never something you guess or hardcode.** Do not put a model name like a specific "nano banana" build into a tool, a UI, or a prompt; pass it as a parameter at call time.
+2. **No fallback.** If the chosen provider/model/default isn't configured, the error surfaces. FlowDot never silently substitutes a different model or provider. Design for explicit configuration, not graceful degradation.
+
+## The three surfaces (pick by who pays and who calls)
+
+| Surface | Use when | Auth / who pays | Returns |
+|---|---|---|---|
+| **Workflow nodes** (\`image_manipulation\`, \`vision_analysis\`) | The work happens *inside a workflow*, as the user | The user's chosen provider — their BYOK vault key, or the FlowDot aggregator (credits) | image data / analysis text |
+| **Aggregator API** (\`POST /api/v1/images/generations\`, \`/images/edits\`, vision via \`/chat/completions\`) | An **external** OpenAI-compatible client is calling FlowDot | FlowDot aggregator with an \`fd_agg_\` key (vault keys + credits) | OpenAI-shaped JSON |
+| **Agent toolkits (HTTP, BYOK)** | An agent/MCP tool should do images using the **user's own** provider key (like the fal.ai toolkit) | The user's own key in their vault (\`user_api_keys\`) | provider-native JSON, optionally persisted to a served URL |
+
+**As an MCP agent, your two main levers are workflow nodes and HTTP toolkits.** The aggregator API is for external apps that hold an \`fd_agg_\` key — do NOT use an \`fd_agg_\` key to wire a FlowDot-native toolkit back to FlowDot.
+
+## General image use — how a user "ties images to the provider of their choice"
+
+Users pick their image and vision providers in **Settings → Image & Vision**. This stores, under their settings:
+- \`preferredModels.image_generation\` = \`{ provider, model, size, quality, style }\`
+- \`preferredModels.vision\` = \`{ provider, model }\`
+
+\`provider\` is either a **BYOK provider** (authenticated by the user's own vault key) or \`flowdot\` plus a prescribed aggregated \`model\`. Either way the model is explicit.
+
+**Workflow nodes resolve against this with no fallback:**
+- A node whose \`llm_provider\` is set to a concrete provider uses it directly.
+- A node set to \`default\` resolves \`provider\` + \`model\` from \`preferredModels.image_generation\` / \`.vision\`. **If the user hasn't set a default, the node throws** ("No default image-generation/vision model configured. Set one in Settings → Image & Vision") — it does NOT fall back to the user's text model.
+
+So if a user asks you to add image generation to a workflow: add an \`image_manipulation\` node (use \`list_available_nodes\` / \`get_node_schema\` to confirm the exact sockets and properties), and either leave it on \`default\` (and tell them to set their Image & Vision default) or set a concrete provider+model they've chosen.
+
+### Vision (image input) in chat / workflows
+Vision means passing an image *in* for analysis. In a workflow, that's the \`vision_analysis\` node (inputs: \`Image\` + \`Instructions\`). Through the aggregator API it's a normal \`/chat/completions\` call with a multimodal \`content\` array (\`[{type:'text'}, {type:'image_url'}]\`); FlowDot preserves the multimodal content and converts \`image_url\` to each provider's native shape. A model only accepts vision input if its metadata advertises the \`vision\` capability.
+
+## Images in toolkits — the BYOK image toolkit pattern
+
+This is the native "let an agent do image things with the user's own key" path. Reference implementation: the **Gemini Image (BYOK)** toolkit with \`generate-image\` and \`edit-image\` tools.
+
+### Why HTTP, not a workflow tool
+Workflow-type toolkit tools are **not wired** (the Hub would post to a Node \`/api/hub/internal/toolkit-workflow-execute\` route that does not exist). Every working toolkit is an **HTTP tool**. So an image toolkit is an HTTP tool that hits the provider's image endpoint directly, authenticated by the user's own vault credential.
+
+### Building one
+1. **\`create_agent_toolkit\`** — declare a credential requirement for the user's provider key (e.g. \`GOOGLE_API_KEY\`, type \`api_key\`, required). This is the user's OWN key, not an \`fd_agg_\` key.
+2. **\`create_toolkit_tool\`** (\`tool_type: "http"\`) — point at the provider's image endpoint, pass the API key from the credential, and **make the model an input**:
+\`\`\`json
+{
+  "name": "generate-image",
+  "tool_type": "http",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "model": { "type": "string", "description": "The image model to use" },
+      "prompt": { "type": "string" }
+    },
+    "required": ["model", "prompt"]
+  },
+  "credential_keys": ["GOOGLE_API_KEY"],
+  "endpoint_config": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/models/{{input.model}}:generateContent",
+    "headers": {
+      "x-goog-api-key": "{{credential.GOOGLE_API_KEY}}",
+      "Content-Type": "application/json"
+    },
+    "body_template": {
+      "contents": [{ "role": "user", "parts": [{ "text": "{{input.prompt}}" }] }],
+      "generationConfig": { "responseModalities": ["TEXT", "IMAGE"] }
+    },
+    "persist_images": true
+  }
+}
+\`\`\`
+Note \`{{input.model}}\` in the URL — the model is supplied per call, never baked in.
+
+### \`persist_images\` — store to the user's bucket, serve a direct link
+Most image APIs return the image as multi-MB inline base64, which is brutal for an agent's context. Set **\`endpoint_config.persist_images: true\`** and the executor will, on success:
+- recursively find image bytes in the response **by encoding** (\`inline_data\` / \`inlineData\` / \`b64_json\` / \`data:image…base64\`) — no provider names involved,
+- store each image in the **calling user's** image bucket (quota-enforced),
+- return a compact \`{ images: [{ id, url, mime_type, size_bytes }], text? }\` **instead of the base64**.
+
+The \`url\` is a **public direct link with an unguessable key** (\`{userId}/{uuid}.{ext}\`) — the URL itself is the access secret, fal-style. So a user can take the returned link and embed it directly.
+
+**Quota:** persisted images count toward the user's per-tier storage (\`storage_mb\`), alongside knowledge documents. If a generation would exceed the limit, the tool returns \`{ success: false, code: "storage_quota_exceeded" }\` — no partial write, no silent drop. Free tier is intentionally small (a handful of images).
+
+### Invoking it
+Once installed (\`install_toolkit\`, mapping the credential to the user's stored key), call \`invoke_toolkit_tool\` with the model + prompt. Expect the compact \`{ images: [{ url }] }\` shape when \`persist_images\` is on. If you get raw base64 back, \`persist_images\` wasn't set on that tool.
+
+## Uploading an existing image — \`upload_image\` / \`list_images\` / \`delete_image\`
+
+When you already HAVE the bytes (e.g. you authored a precise SVG and rasterized it to PNG with the image tools, or you have a screenshot) and just need it hosted on FlowDot with a public URL, skip generation and upload directly:
+
+- **\`upload_image\`** \`{ image_base64, mime_type, label? }\` → persists to your bucket and returns \`{ id, url, mime_type, size_bytes }\`. Same bucket, same unguessable public URL, same quota as \`persist_images\`.
+- **\`list_images\`** \`{ per_page? }\` → your uploaded images, most recent first.
+- **\`delete_image\`** \`{ id }\` → removes the stored object and frees quota. Only your own images.
+
+Scopes: \`images:manage\` (upload/delete), \`images:read\` (list). **Raster only** — \`image/png\`, \`image/jpeg\`, \`image/webp\`. **SVG is rejected** (it can carry script and is served from our domain); rasterize vector art to PNG first. This is the right tool for accurate, label-perfect diagrams that image generation can't reliably render.
+
+## Hard constraints (do not violate)
+
+- **Google cannot be aggregated through FlowDot.** FlowDot has no permission to proxy Google/Gemini. Google image gen (including "nano banana" class models) is **BYOK only** (the user's own Google key, via a toolkit or a BYOK node) **or** via **Bedrock**-served models that FlowDot is allowed to aggregate. Never route Google through the FlowDot aggregator or an \`fd_agg_\` key.
+- **Aggregatable image models** = only what FlowDot is permitted to serve (e.g. Bedrock image models), registered as image-gen + priced + available-for-aggregation. For everything else, the user brings their own key.
+- **Never hardcode a model or provider name** in a tool, prompt, or UI. A toolkit may target one provider's *API* (that's its purpose), but the **model is always an input**.
+- **No fallback.** Surface configuration errors; don't substitute.
+
+## Debugging image work
+
+| Symptom | Likely cause |
+|---|---|
+| Node throws "No default image-generation/vision model configured" | User hasn't set a default in **Settings → Image & Vision**, and the node is on \`default\`. Set a default or pin a concrete provider+model on the node. |
+| Tool returns giant base64 instead of a URL | \`endpoint_config.persist_images\` is not \`true\` on that tool. |
+| \`storage_quota_exceeded\` | The user's per-tier \`storage_mb\` is full. Persisted images count toward it; they must free space or upgrade. |
+| "model required" / \`model_not_available\` from the aggregator | No model passed, or the model isn't registered as aggregatable+priced. The aggregator no longer defaults to any model. |
+| Model you expect isn't selectable as image/vision in the picker | Its metadata doesn't advertise the \`image_generation\` / \`vision\` capability. Fix it at discovery (capabilities/modality), never with a name check. |
+| Google model fails through the aggregator | Expected — Google is not aggregatable. Use a BYOK toolkit/node with the user's Google key. |
+
+## Related Resources
+
+- **Toolkits:** \`learn://toolkits\` — full toolkit/tool/credential mechanics (the image toolkit is a regular HTTP toolkit).
+- **Workflows:** \`learn://workflows\` — adding and wiring the \`image_manipulation\` / \`vision_analysis\` nodes.
+- **Overview:** \`learn://overview\` — where image/vision sits in the platform.
+- **Deep dive (Hub repo):** \`Docs/DevGuides/IMAGES_VISION.md\` — the developer guide with file-level detail and the substrate.
 `,
   },
 };

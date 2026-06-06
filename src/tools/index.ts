@@ -53,6 +53,7 @@ import { panicClearTool, handlePanicClear } from './panic-clear.js';
 // ============================================
 import { getWorkflowTagsTool, handleGetWorkflowTags } from './get-workflow-tags.js';
 import { setWorkflowTagsTool, handleSetWorkflowTags } from './set-workflow-tags.js';
+import { setWorkflowReadmeTool, handleSetWorkflowReadme } from './set-workflow-readme.js';
 import { searchWorkflowsTool, handleSearchWorkflows } from './search-workflows.js';
 import { getPublicWorkflowsTool, handleGetPublicWorkflows } from './get-public-workflows.js';
 import { searchTool, handleSearch } from './search.js';
@@ -176,6 +177,9 @@ import { getKnowledgeDocumentContentToolDef, handleGetKnowledgeDocumentContent }
 import { updateKnowledgeDocumentContentToolDef, handleUpdateKnowledgeDocumentContent } from './update-knowledge-document-content.js';
 import { patchKnowledgeDocumentSectionToolDef, handlePatchKnowledgeDocumentSection } from './patch-knowledge-document-section.js';
 import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-text-document.js';
+import { uploadImageToolDef, handleUploadImage } from './upload-image.js';
+import { listImagesToolDef, handleListImages } from './list-images.js';
+import { deleteImageToolDef, handleDeleteImage } from './delete-image.js';
 import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
 import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
 import { transferDocumentOwnershipToolDef, handleTransferDocumentOwnership } from './transfer-document-ownership.js';
@@ -354,6 +358,7 @@ const tools = [
   // Discovery & Organization (4)
   getWorkflowTagsTool,
   setWorkflowTagsTool,
+  setWorkflowReadmeTool,
   searchWorkflowsTool,
   searchTool,
   getPublicWorkflowsTool,
@@ -450,6 +455,9 @@ const tools = [
   updateKnowledgeDocumentContentToolDef,
   patchKnowledgeDocumentSectionToolDef,
   uploadTextDocumentToolDef,
+  uploadImageToolDef,
+  listImagesToolDef,
+  deleteImageToolDef,
   uploadDocumentFromUrlToolDef,
   moveDocumentToCategoryToolDef,
   transferDocumentOwnershipToolDef,
@@ -674,6 +682,9 @@ export async function dispatchToolCall(
 
       case 'set_workflow_tags':
         return handleSetWorkflowTags(api, args as { workflow_id: string; tags: string[] });
+
+      case 'set_workflow_readme':
+        return handleSetWorkflowReadme(api, args as { workflow_id: string; readme?: string; og_image_urls?: string[] });
 
       case 'search_workflows':
         return handleSearchWorkflows(api, args as { query: string; tags?: string[]; page?: number });
@@ -1115,6 +1126,19 @@ export async function dispatchToolCall(
           team_id?: number;
           mime_type?: 'text/plain' | 'text/markdown' | 'application/json';
         });
+
+      case 'upload_image':
+        return handleUploadImage(api, args as {
+          image_base64: string;
+          mime_type: 'image/png' | 'image/jpeg' | 'image/webp';
+          label?: string;
+        });
+
+      case 'list_images':
+        return handleListImages(api, args as { per_page?: number });
+
+      case 'delete_image':
+        return handleDeleteImage(api, args as { id: number });
 
       case 'upload_document_from_url':
         return handleUploadDocumentFromUrl(api, args as {

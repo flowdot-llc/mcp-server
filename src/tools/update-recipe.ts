@@ -35,6 +35,15 @@ update_recipe({ hash: "abc", entry_step_id: "first-step-uuid" })
         type: 'string',
         description: 'New description',
       },
+      readme: {
+        type: 'string',
+        description: 'GitHub-style markdown README shown on the public /recipe/{hash} page. Pass an empty string to clear it. Max 100,000 chars.',
+      },
+      og_image_urls: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Author-defined social-share (OG) image URLs (absolute http(s), max 4). The first is the primary social card image.',
+      },
       category: {
         type: 'string',
         description: 'New category',
@@ -64,6 +73,8 @@ export async function handleUpdateRecipe(
     hash: string;
     name?: string;
     description?: string;
+    readme?: string;
+    og_image_urls?: string[];
     category?: string;
     tags?: string[];
     visibility?: 'private' | 'public' | 'unlisted';
@@ -74,6 +85,8 @@ export async function handleUpdateRecipe(
     const input: UpdateRecipeInput = {};
     if (args.name !== undefined) input.name = args.name;
     if (args.description !== undefined) input.description = args.description;
+    if (args.readme !== undefined) input.readme = args.readme;
+    if (args.og_image_urls !== undefined) input.og_image_urls = args.og_image_urls;
     if (args.category !== undefined) input.category = args.category;
     if (args.tags !== undefined) input.tags = args.tags;
     if (args.visibility !== undefined) input.visibility = args.visibility;

@@ -97,9 +97,9 @@ export async function createServer(): Promise<CreatedServer> {
 
 **READ THIS FIRST.** Before using any FlowDot tool, you should read the FlowDot learning resources. They are **MCP resources** (not tools), so they won't appear in your tool list — you must fetch them explicitly via the MCP resource-read mechanism (URIs below).
 
-## The 10 Learning Resources
+## The 12 Learning Resources
 
-FlowDot exposes 10 \`learn://\` resources that explain every major feature of the platform. Each is a complete guide with concepts, tool reference, and worked examples. Read the one that matches the user's task *before* calling tools in that area.
+FlowDot exposes 12 \`learn://\` resources that explain every major feature of the platform. Each is a complete guide with concepts, tool reference, and worked examples. Read the one that matches the user's task *before* calling tools in that area.
 
 1. **\`learn://overview\`** — High-level overview of all FlowDot components and how they work together. Start here if you don't know where to start.
 2. **\`learn://workflows\`** — Complete guide to creating, managing, and executing FlowDot workflows (visual node-and-connection automations). Read before using \`create_workflow\`, \`add_node\`, \`add_connection\`, \`execute_workflow\`, etc.
@@ -111,6 +111,8 @@ FlowDot exposes 10 \`learn://\` resources that explain every major feature of th
 8. **\`learn://email\`** — Complete guide to reading and sending emails via Gmail, Outlook, or IMAP/SMTP integrations. Read before using \`email_search\`, \`email_send\`, \`email_reply\`, \`list_email_integrations\`, etc.
 9. **\`learn://comms\`** — Complete guide to notifications and messaging via Telegram, Discord, and other configured channels. Read before using \`send_notification\`, \`list_comms_channels\`, etc.
 10. **\`learn://goals\`** — Complete guide to FlowDot Goals — persistent long-running objectives and daemon scheduling. Read before setting up goals, adding tasks, invoking recipes from goals, or configuring the daemon.
+11. **\`learn://characters\`** — Complete guide to agent characters (voice-call personas: persona prompt + TTS + STT + LLM config). Read before using \`create_agent_character\`, \`update_agent_character\`, \`list_agent_characters\`, etc.
+12. **\`learn://images\`** — Complete guide to generating, editing, and analyzing images (vision) — workflow nodes, the aggregator API, and BYOK image toolkits, plus persisting images to the user's bucket. Read before doing any image/vision work or building an image toolkit.
 
 ## How to Read a Learning Resource
 
@@ -158,7 +160,7 @@ If the user asks about a FlowDot feature area you haven't touched in this sessio
   console.error('  Use learn:// resources to understand FlowDot concepts before using tools');
   console.error('  Available: learn://overview, learn://workflows, learn://recipes,');
   console.error('            learn://custom-nodes, learn://apps, learn://toolkits, learn://knowledge-base,');
-  console.error('            learn://email, learn://comms, learn://goals');
+  console.error('            learn://email, learn://comms, learn://goals, learn://characters, learn://images');
   console.error('');
   console.error('Available tool categories:');
   console.error('  • Workflows: Core execution, management, building, validation');

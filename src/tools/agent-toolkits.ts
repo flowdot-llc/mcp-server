@@ -374,6 +374,21 @@ Optional OAuth fields:
   expired access tokens via the stored refresh_token before bubbling a re-auth
   prompt. Set to false for providers that do not issue refresh tokens.
 
+Non-standard OAuth providers (TikTok Marketing, TikTok Content, etc.):
+- **param_overrides**: Object mapping standard param names to provider-specific names.
+  Standard names: client_id, client_secret, code, redirect_uri, response_type, state,
+  scope, grant_type, refresh_token, code_verifier, code_challenge, code_challenge_method.
+  TikTok Marketing: \`{ client_id: "app_id", client_secret: "secret", code: "auth_code" }\`.
+  TikTok Content: \`{ client_id: "client_key" }\`.
+- **scope_separator**: Joins multiple scopes in the authorize-URL \`scope\` param.
+  Default " " per RFC 6749 §3.3. Use "," for TikTok Content.
+- **body_format**: "form" (default, application/x-www-form-urlencoded per RFC 6749 §4.1.3)
+  or "json" (required by TikTok Marketing's token endpoint).
+- **response_field_paths**: Dot-notation map for extracting standard fields from a
+  nested token-endpoint response. Standard fields: access_token, refresh_token,
+  expires_in, token_type, scope. TikTok Marketing wraps the token block in \`data\`:
+  \`{ access_token: "data.access_token", refresh_token: "data.refresh_token", expires_in: "data.expires_in" }\`.
+
 ## Example: OAuth Toolkit Setup (e.g., Schwab API)
 
 credential_requirements: [
@@ -421,7 +436,44 @@ the access token, e.g.:
   }
 The platform does not auto-add an Authorization header for the oauth credential
 type — this is intentional so signed-request toolkits (HMAC, Ed25519) keep
-their custom auth scheme.`,
+their custom auth scheme.
+
+## Example: Non-Standard OAuth Provider (TikTok Marketing API)
+
+TikTok Marketing renames standard params (client_id → app_id, client_secret → secret,
+code → auth_code), requires JSON body, and wraps token responses in a "data" block.
+Use the override fields to support it through the same oauth credential type:
+
+oauth_config: {
+  authorization_url: "https://business-api.tiktok.com/portal/auth",
+  token_endpoint: "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/",
+  scopes: [],
+  client_id_credential_key: "TIKTOK_APP_ID",
+  client_secret_credential_key: "TIKTOK_APP_SECRET",
+  token_endpoint_auth_method: "none",
+  pkce_enabled: false,
+  auto_refresh_enabled: false,
+  auth_error_patterns: ["Access token is incorrect", "has been revoked", "code:40105"],
+  param_overrides: {
+    client_id: "app_id",
+    client_secret: "secret",
+    code: "auth_code"
+  },
+  body_format: "json",
+  response_field_paths: {
+    access_token: "data.access_token",
+    refresh_token: "data.refresh_token",
+    expires_in: "data.expires_in"
+  }
+}
+
+Each TikTok Marketing tool sends the token in the "Access-Token" header instead
+of "Authorization: Bearer":
+  endpoint_config: {
+    method: "GET",
+    url: "https://business-api.tiktok.com/open_api/v1.3/advertiser/info/",
+    headers: { "Access-Token": "{{credential.TIKTOK_MARKETING_ACCESS_TOKEN}}" }
+  }`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -559,6 +611,23 @@ their custom auth scheme.`,
                   type: 'boolean',
                   description: 'When true (default), the executor automatically refreshes expired access tokens before returning a re-auth prompt. Set false for providers that do not issue refresh tokens.',
                 },
+                param_overrides: {
+                  type: 'object',
+                  description: 'Rename map for standard OAuth 2.0 param names. Use for providers that deviate from the spec — TikTok Marketing renames client_id → app_id, client_secret → secret, code → auth_code; TikTok Content renames client_id → client_key. Standard names not in the map pass through unchanged. Keys may be any of: client_id, client_secret, code, redirect_uri, response_type, state, scope, grant_type, refresh_token, code_verifier, code_challenge, code_challenge_method. Example: { "client_id": "app_id", "client_secret": "secret", "code": "auth_code" }.',
+                },
+                scope_separator: {
+                  type: 'string',
+                  description: 'Separator used when joining multiple scopes into the authorize-URL `scope` param. Default is a single space per RFC 6749 §3.3. Some providers expect "," (TikTok Content) or "+".',
+                },
+                body_format: {
+                  type: 'string',
+                  enum: ['form', 'json'],
+                  description: 'Body encoding for the token-endpoint POST. "form" (default) is application/x-www-form-urlencoded per RFC 6749 §4.1.3. "json" is required by TikTok Marketing\'s token endpoint at business-api.tiktok.com/open_api/v1.3/oauth2/access_token/.',
+                },
+                response_field_paths: {
+                  type: 'object',
+                  description: 'Dot-notation paths for extracting standard fields from the token-endpoint JSON response. Use for providers that nest the token block — TikTok Marketing wraps everything in a `data` object. Keys may be any of: access_token, refresh_token, expires_in, token_type, scope. Values are dot-notation paths into the response JSON. Example: { "access_token": "data.access_token", "refresh_token": "data.refresh_token", "expires_in": "data.expires_in" }.',
+                },
               },
             },
           },
@@ -644,6 +713,12 @@ export const updateAgentToolkitTool: Tool = {
 
 Modify title, description, category, tags, and other toolkit properties.
 
+## Updating the public README
+
+Use \`readme\` to set the GitHub-style markdown README shown on the public toolkit
+page (\`/toolkit/{hash}\`). Only the toolkit's author (or a team member with edit
+rights) can change it. Pass an empty string to clear it. Max 100,000 characters.
+
 ## Updating Credential Requirements
 
 Use credential_requirements to update the toolkit's credential definitions. This REPLACES all existing credentials.
@@ -659,6 +734,16 @@ For OAuth credentials, include oauth_config with:
 - **callback_mode**: "server" | "localhost" (default: "server"). Use "localhost" for providers like Schwab.
 - **localhost_redirect_uri**: Required when callback_mode="localhost".
 - **auto_refresh_enabled**: boolean (default: true). Disable for providers without refresh tokens.
+
+Non-standard OAuth providers (TikTok Marketing, TikTok Content, Reddit, etc.):
+- **param_overrides**: Rename map for standard OAuth param names. Keys are any of:
+  client_id, client_secret, code, redirect_uri, response_type, state, scope,
+  grant_type, refresh_token, code_verifier, code_challenge, code_challenge_method.
+  Example: \`{ client_id: "app_id", client_secret: "secret", code: "auth_code" }\` for TikTok Marketing.
+- **scope_separator**: Joins scopes in the authorize-URL scope param. Default " " per RFC 6749. Use "," for TikTok Content.
+- **body_format**: "form" (default) or "json". Use "json" for TikTok Marketing.
+- **response_field_paths**: Dot-notation map for nested token responses. Keys: access_token, refresh_token, expires_in, token_type, scope.
+  Example: \`{ access_token: "data.access_token", refresh_token: "data.refresh_token", expires_in: "data.expires_in" }\` for TikTok Marketing.
 
 See mcp__flowdot__create_agent_toolkit documentation for full OAuth configuration details and examples.`,
   inputSchema: {
@@ -691,6 +776,15 @@ See mcp__flowdot__create_agent_toolkit documentation for full OAuth configuratio
       icon: {
         type: 'string',
         description: 'New icon',
+      },
+      readme: {
+        type: 'string',
+        description: 'Full GitHub-style markdown README shown on the public toolkit page (/toolkit/{hash}). Author-only. Pass an empty string to clear. Max 100,000 chars.',
+      },
+      og_image_urls: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Author-defined social-share (OG) image URLs for the public toolkit page (max 4, absolute http(s) URLs). The first is the primary card image shown when the link is shared; the rest become additional og:image tags. Pass an empty array to clear.',
       },
       tags: {
         type: 'array',
@@ -757,6 +851,23 @@ See mcp__flowdot__create_agent_toolkit documentation for full OAuth configuratio
                 callback_mode: { type: 'string', enum: ['server', 'localhost'] },
                 localhost_redirect_uri: { type: 'string' },
                 auto_refresh_enabled: { type: 'boolean' },
+                param_overrides: {
+                  type: 'object',
+                  description: 'Rename map for standard OAuth 2.0 param names. Keys: client_id, client_secret, code, redirect_uri, response_type, state, scope, grant_type, refresh_token, code_verifier, code_challenge, code_challenge_method. Example: { "client_id": "app_id", "client_secret": "secret", "code": "auth_code" } for TikTok Marketing.',
+                },
+                scope_separator: {
+                  type: 'string',
+                  description: 'Scope separator for authorize-URL `scope` param. Default " " per RFC 6749. Use "," for TikTok Content.',
+                },
+                body_format: {
+                  type: 'string',
+                  enum: ['form', 'json'],
+                  description: 'Token-endpoint body encoding. "form" (default, form-urlencoded) or "json". TikTok Marketing requires "json".',
+                },
+                response_field_paths: {
+                  type: 'object',
+                  description: 'Dot-notation paths for nested token-endpoint responses. Keys: access_token, refresh_token, expires_in, token_type, scope. Example for TikTok Marketing: { "access_token": "data.access_token", "refresh_token": "data.refresh_token", "expires_in": "data.expires_in" }.',
+                },
               },
             },
           },
@@ -782,6 +893,15 @@ export async function handleUpdateAgentToolkit(
     if (args.category) input.category = String(args.category);
     if (args.version) input.version = String(args.version);
     if (args.icon) input.icon = String(args.icon);
+    // Use !== undefined (not truthy) so an empty string can clear the README.
+    if (args.readme !== undefined) {
+      input.readme = args.readme === null ? null : String(args.readme);
+    }
+    if (args.og_image_urls !== undefined) {
+      input.og_image_urls = Array.isArray(args.og_image_urls)
+        ? args.og_image_urls.map(u => String(u))
+        : null;
+    }
     if (args.tags && Array.isArray(args.tags)) {
       input.tags = args.tags.map(t => String(t));
     }

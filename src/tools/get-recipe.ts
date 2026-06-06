@@ -78,6 +78,9 @@ export async function handleGetRecipe(
 
 **Description:** ${recipe.description || 'No description'}
 
+**README:**
+${recipe.readme ? recipe.readme : '_No README yet. Set one with update_recipe({ hash, readme }) to document this recipe on its public page._'}
+
 **Step Types:** ${stepTypesStr || 'No steps'}${storeInfo}${stepsInfo}`;
 
     return {
