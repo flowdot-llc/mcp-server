@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const PKG_PATH = path.resolve('package.json');
+const LOCK_PATH = path.resolve('package-lock.json');
 
 const SWAPS = [
   {
@@ -61,6 +62,15 @@ function main() {
     console.log(`[ci-prepare] ${swap.depName}: ${current} -> ${pinned}`);
   }
   fs.writeFileSync(PKG_PATH, JSON.stringify(pkg, null, 2) + '\n');
+  // Delete the lockfile so it regenerates cleanly from the updated package.json.
+  // Keeping the existing lockfile makes npm report "up to date" and preserve the
+  // stale "file:../flowdot-api" / "file:../guardian-agent-ts" link entries we just
+  // removed from package.json. Those sibling dirs don't exist on CI, so `npm ci`
+  // then silently omits the packages and tests fail with ERR_MODULE_NOT_FOUND.
+  if (fs.existsSync(LOCK_PATH)) {
+    fs.unlinkSync(LOCK_PATH);
+    console.log('[ci-prepare] removed stale package-lock.json');
+  }
   run('npm install --package-lock-only --ignore-scripts');
   console.log('[ci-prepare] OK');
 }

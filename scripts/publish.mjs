@@ -80,6 +80,16 @@ function main() {
     // Write swapped package.json
     fs.writeFileSync(PKG_PATH, JSON.stringify(pkg, null, 2) + '\n');
 
+    // Delete the lockfile so it regenerates cleanly from the swapped package.json.
+    // Keeping it makes npm report "up to date" and preserve the stale
+    // "file:../flowdot-api" / "file:../guardian-agent-ts" link entries, which fail
+    // to resolve on a CI runner where the sibling dirs don't exist. The original
+    // lockfile is snapshotted above and restored in the finally block.
+    if (fs.existsSync(LOCK_PATH)) {
+      fs.unlinkSync(LOCK_PATH);
+      console.log('[publish] removed stale package-lock.json (regenerating)');
+    }
+
     // Update lockfile to match new pinned versions
     run('npm install --package-lock-only --ignore-scripts');
 
