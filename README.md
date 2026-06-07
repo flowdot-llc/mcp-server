@@ -168,6 +168,8 @@ The server exposes **150 tools** organized into 17 categories.
 - `clone_app` — Clone a public app to your library
 - `link_app_workflow` — Link a workflow to an app for `invokeWorkflow()` use
 - `unlink_app_workflow` — Unlink a workflow from an app
+- `link_app_toolkit` — Link a toolkit to an app for `invokeTool()` use
+- `unlink_app_toolkit` — Unlink a toolkit from an app
 - `get_app_template` — Get starter code templates (basic, chat, dashboard, form-builder, data-viewer)
 
 #### Surgical Code Editing (4)

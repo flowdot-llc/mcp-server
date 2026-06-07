@@ -113,6 +113,8 @@ import { unpublishAppTool, handleUnpublishApp } from './unpublish-app.js';
 import { cloneAppTool, handleCloneApp } from './clone-app.js';
 import { linkAppWorkflowTool, handleLinkAppWorkflow } from './link-app-workflow.js';
 import { unlinkAppWorkflowTool, handleUnlinkAppWorkflow } from './unlink-app-workflow.js';
+import { linkAppToolkitTool, handleLinkAppToolkit } from './link-app-toolkit.js';
+import { unlinkAppToolkitTool, handleUnlinkAppToolkit } from './unlink-app-toolkit.js';
 import { getAppTemplateTool, handleGetAppTemplate } from './get-app-template.js';
 // App Code Editing Tools (surgical operations)
 import { editAppCodeTool, handleEditAppCode } from './edit-app-code.js';
@@ -403,6 +405,8 @@ const tools = [
   cloneAppTool,
   linkAppWorkflowTool,
   unlinkAppWorkflowTool,
+  linkAppToolkitTool,
+  unlinkAppToolkitTool,
   getAppTemplateTool,
   // App Code Editing (surgical operations)
   editAppCodeTool,
@@ -853,6 +857,12 @@ export async function dispatchToolCall(
 
       case 'unlink_app_workflow':
         return handleUnlinkAppWorkflow(api, args as { app_id: string; workflow_hash: string });
+
+      case 'link_app_toolkit':
+        return handleLinkAppToolkit(api, args as { app_id: string; toolkit_hash: string; alias?: string });
+
+      case 'unlink_app_toolkit':
+        return handleUnlinkAppToolkit(api, args as { app_id: string; toolkit_hash: string });
 
       case 'get_app_template':
         return handleGetAppTemplate(args as { template?: string });

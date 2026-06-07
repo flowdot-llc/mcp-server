@@ -104,6 +104,8 @@
     { "name": "clone_app", "description": "Clone a public app into your library" },
     { "name": "link_app_workflow", "description": "Link a workflow to an app for invokeWorkflow() use" },
     { "name": "unlink_app_workflow", "description": "Unlink a workflow from an app" },
+    { "name": "link_app_toolkit", "description": "Link a toolkit to an app for invokeTool() use" },
+    { "name": "unlink_app_toolkit", "description": "Unlink a toolkit from an app" },
     { "name": "get_app_template", "description": "Get starter code templates (basic, chat, dashboard, form-builder, data-viewer)" },
     { "name": "edit_app_code", "description": "Surgical find/replace in app code" },
     { "name": "append_app_code", "description": "Append content before the closing brace of an app file" },

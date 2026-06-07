@@ -1745,6 +1745,7 @@ Apps run in a sandboxed iframe with:
 - **Tailwind CSS** (full utility classes)
 - **FlowDot color tokens:** primary-50 to primary-900, secondary-50 to secondary-900
 - **invokeWorkflow()** function to call linked workflows
+- **invokeTool()** function to call tools from linked toolkits (see "Toolkit Integration")
 
 ### Multi-File Structure
 All apps are multi-file by default:
@@ -2052,6 +2053,60 @@ if (data) {
   // use data
 }
 \`\`\`
+
+## Toolkit Integration
+
+Apps can also call **toolkit tools** — the same way they call workflows. This lets you build
+a custom front-end on top of any installed toolkit (a Spotify search box, a trading dashboard,
+an email triage UI, etc.).
+
+### Linking a toolkit
+
+\`\`\`javascript
+link_app_toolkit({
+  app_id: "app-abc123",
+  toolkit_hash: "TOOLKIT_HASH",   // your own toolkit OR any public one
+  alias: "spotify"                // optional friendly name
+})
+\`\`\`
+
+### Calling a tool with invokeTool()
+
+\`\`\`javascript
+// invokeTool(toolkitHashOrAlias, toolName, inputs)
+const result = await invokeTool('spotify', 'search-tracks', {
+  query: 'Miles Davis',
+  type: 'track'
+});
+\`\`\`
+
+The result is the tool's own response object (the same shape \`invoke_toolkit_tool\` returns) —
+there is no node-output wrapper, so you use it directly. The call resolves the standard
+\`{ success, data, error }\` envelope; \`invokeTool()\` resolves with \`data\` on success and rejects
+on failure.
+
+### Per-user installations & the connect prompt (IMPORTANT)
+
+Unlike workflows (which run by hash), a toolkit tool runs against the **viewing user's own
+installation**, using **their own credentials**. The app author links the toolkit, but each
+viewer connects their own keys.
+
+If a viewer has not installed/connected the toolkit, the tool call rejects and the app runner
+shows an inline **"Connect <toolkit>"** prompt that deep-links to the toolkit page. Always wrap
+\`invokeTool()\` in try/catch so your UI degrades gracefully while the viewer connects:
+
+\`\`\`javascript
+try {
+  const tracks = await invokeTool('spotify', 'search-tracks', { query, type: 'track' });
+  setResults(tracks);
+} catch (err) {
+  // Viewer may need to connect the toolkit — the runner surfaces the connect prompt.
+  setError(err.message);
+}
+\`\`\`
+
+Credentials never leave their owner. Linking a public toolkit is fine and expected — viewers
+authenticate with their own accounts.
 
 ## Managing Apps
 
