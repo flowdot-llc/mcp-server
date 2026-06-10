@@ -14,8 +14,13 @@ import {
 /**
  * Learning resources for FlowDot system components.
  * Use URI format: learn://component-name
+ *
+ * Exported so the manifest emitter (scripts/emit-manifest.ts) can serialize
+ * these guides into the Hub's resources/mcp/learn-resources.json, keeping the
+ * remote (OAuth) connector's `learn://` resources in sync with this single
+ * source of truth.
  */
-const LEARN_RESOURCES = {
+export const LEARN_RESOURCES = {
   'learn://overview': {
     name: 'FlowDot Platform Overview',
     description: 'High-level overview of all FlowDot components and how they work together',
@@ -2054,6 +2059,74 @@ if (data) {
 }
 \`\`\`
 
+## File & Media Attachments
+
+Apps can pass **files (PDF/TXT/CSV/JSON), images, and audio** into workflows as ordinary
+input values — no upload endpoint, no extra linking. The attachment rides inside the
+\`invokeWorkflow\` inputs as a base64 data URL.
+
+### The contract
+
+For an input name that maps to a \`file_upload\`, \`image_input\`, or \`audio_input\` node,
+pass either a bare data-URL string or (preferred) an object:
+
+\`\`\`javascript
+{
+  dataUrl: 'data:application/pdf;base64,JVBERi0x...',  // required
+  name: 'resume.pdf',        // strongly recommended for files: the extension drives parsing
+  mimeType: 'audio/webm',    // optional (audio)
+  duration: 12.5             // optional (audio, seconds)
+}
+\`\`\`
+
+**Input names:** \`text_input\` nodes are addressed by their \`frontend_label\`; \`file_upload\`,
+\`image_input\`, and \`audio_input\` nodes are addressed by their **node title**. Keep input
+node titles unique within a workflow.
+
+### Reading a file in the sandbox
+
+\`<input type="file">\` and FileReader work inside the app sandbox. A \`readFileAsDataUrl(file)\`
+helper is injected alongside \`invokeWorkflow\`:
+
+\`\`\`javascript
+function ResumeUpload() {
+  const handleFile = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const dataUrl = await readFileAsDataUrl(f);
+    const result = await invokeWorkflow('workflow-hash', {
+      'Resume File': { dataUrl, name: f.name },
+      'Notes': 'optional text inputs still work alongside attachments'
+    });
+    // ... getNodeOutput(...) as usual
+  };
+  return <input type="file" accept=".pdf,.txt" onChange={handleFile} />;
+}
+\`\`\`
+
+### What the workflow sees
+
+- \`file_upload\` node: the file is parsed server-side (PDF text extraction, UTF-8 for
+  txt/csv/json) and emitted on **File Content** / **File Info** — same as an editor upload.
+  Unknown file types yield empty content.
+- \`image_input\` node: emits the data URL on **Image URL** / **Image Data**, ready for
+  \`vision_analysis\`.
+- \`audio_input\` node: emits **Audio Data** \`{ dataUrl, filename, duration, mimeType }\`,
+  ready for \`speech_to_text\`.
+- If a node's socket is fed by a real connection, the connection wins over the attachment.
+
+### Size limits
+
+Keep each file at or under **10MB raw** (base64 adds ~33%) and total inputs under **20MB**
+(the server rejects larger payloads with a clear error; file decode is capped at 15MB).
+On mobile, stay nearer 10MB total.
+
+### Rendering media results
+
+Workflow outputs that contain data URLs (e.g. \`image_manipulation\` → **Image Data**) can be
+rendered directly: \`<img src={dataUrl} />\` or \`<audio src={dataUrl} controls />\` — the
+sandbox CSP allows \`data:\` and \`blob:\` for images and media.
+
 ## Toolkit Integration
 
 Apps can also call **toolkit tools** — the same way they call workflows. This lets you build
@@ -2069,6 +2142,12 @@ link_app_toolkit({
   alias: "spotify"                // optional friendly name
 })
 \`\`\`
+
+**You MUST link a toolkit before the app can call it**, and in your code you reference it by the
+**alias** you set here OR by the toolkit **hash** — the toolkit's \`name\` field is NOT a valid
+reference. An unlinked toolkit (or one referenced by name) fails every call with
+\`Toolkit "X" is not linked to this app\`. So: pick an alias when you link, then pass that exact
+alias as the first arg of \`invokeTool()\`. Link one toolkit per \`link_app_toolkit\` call.
 
 ### Calling a tool with invokeTool()
 
@@ -2107,6 +2186,32 @@ try {
 
 Credentials never leave their owner. Linking a public toolkit is fine and expected — viewers
 authenticate with their own accounts.
+
+### Rate limits & dashboards that fan out many calls
+
+The in-app tool endpoint is rate-limited (~60 calls/min per user). A dashboard that fires many
+\`invokeTool()\` calls at once on load (several toolkits in parallel, or per-item detail calls)
+will trip this and get HTTP 429 **"Too Many Attempts."** Cap concurrency and back off — route
+every call through a small governor instead of calling \`invokeTool()\` directly:
+
+\`\`\`javascript
+const MAX = 2; let active = 0; const q = [];
+const pump = () => { while (active < MAX && q.length) { const j = q.shift(); active++;
+  Promise.resolve().then(j.fn).then(j.res, j.rej).finally(() => { active--; pump(); }); } };
+const gate = (fn) => new Promise((res, rej) => { q.push({ fn, res, rej }); pump(); });
+async function callTool(tk, tool, inputs) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await gate(() => invokeTool(tk, tool, inputs)); }
+    catch (e) {
+      if (/429|too many/i.test(e.message) && attempt < 5) {
+        await new Promise(r => setTimeout(r, 700 * 2 ** attempt)); continue;
+      }
+      throw e;
+    }
+  }
+}
+// then: const data = await callTool('spotify', 'search-tracks', { query, type: 'track' });
+\`\`\`
 
 ## Managing Apps
 

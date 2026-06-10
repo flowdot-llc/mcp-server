@@ -333,8 +333,12 @@ import { addGoalMilestoneTool, handleAddGoalMilestone } from './add-goal-milesto
 import { completeGoalMilestoneTool, handleCompleteGoalMilestone } from './complete-goal-milestone.js';
 import { deleteGoalMilestoneTool, handleDeleteGoalMilestone } from './delete-goal-milestone.js';
 
-// All available tools
-const tools = [
+// All available tools.
+// Exported so the manifest emitter (scripts/emit-manifest.ts) can serialize
+// the canonical {name, description, inputSchema} catalog consumed by the Hub's
+// remote MCP connector. This array is the single source of truth for tool
+// schemas across the stdio server and the remote (OAuth) connector.
+export const tools = [
   // Core (4)
   listWorkflowsTool,
   executeWorkflowTool,
