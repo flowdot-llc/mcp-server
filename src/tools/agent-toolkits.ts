@@ -719,6 +719,14 @@ Use \`readme\` to set the GitHub-style markdown README shown on the public toolk
 page (\`/toolkit/{hash}\`). Only the toolkit's author (or a team member with edit
 rights) can change it. Pass an empty string to clear it. Max 100,000 characters.
 
+## Updating the install guide
+
+Use \`install_guide\` to set an optional markdown setup guide shown **next to the credential
+fields when a user installs the toolkit**. It supports fenced mermaid diagram blocks and links
+that open in a new tab — the ideal place for "get your key here" links so a non-technical user
+can grab each API key and paste it into the matching field. Author-only. Pass an empty string to
+clear. Max 100,000 characters.
+
 ## Updating Credential Requirements
 
 Use credential_requirements to update the toolkit's credential definitions. This REPLACES all existing credentials.
@@ -780,6 +788,10 @@ See mcp__flowdot__create_agent_toolkit documentation for full OAuth configuratio
       readme: {
         type: 'string',
         description: 'Full GitHub-style markdown README shown on the public toolkit page (/toolkit/{hash}). Author-only. Pass an empty string to clear. Max 100,000 chars.',
+      },
+      install_guide: {
+        type: 'string',
+        description: 'Optional author-written installation guide (markdown; may include fenced mermaid diagram blocks and \'get your key here\' links that open in a new tab). Rendered next to the credential fields when a user installs the toolkit, to walk a non-technical user through obtaining each key and pasting it into the right field. Author-only. Pass an empty string to clear. Max 100,000 chars.',
       },
       og_image_urls: {
         type: 'array',
@@ -896,6 +908,10 @@ export async function handleUpdateAgentToolkit(
     // Use !== undefined (not truthy) so an empty string can clear the README.
     if (args.readme !== undefined) {
       input.readme = args.readme === null ? null : String(args.readme);
+    }
+    // Use !== undefined (not truthy) so an empty string can clear the install guide.
+    if (args.install_guide !== undefined) {
+      input.install_guide = args.install_guide === null ? null : String(args.install_guide);
     }
     if (args.og_image_urls !== undefined) {
       input.og_image_urls = Array.isArray(args.og_image_urls)

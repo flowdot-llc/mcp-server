@@ -76,6 +76,12 @@ const result = await invokeWorkflow('hash', { input });
 const data = getNodeOutput(result, 'Output Node');
 if (data) { /* use data */ }
 
+## RESEARCH (web search + URL fetch)
+Set config.researchEnabled: true to let the app run web search / URL fetch server-side as the
+viewing user, using that user's own research providers + keys (no linking call needed):
+  await research.search('query')        -> { results: [{ title, url, snippet, source }], provider }
+  await research.fetch('https://...')   -> { url, title, content, codeBlocks, contentLength }
+
 After creating an app, use link_app_workflow to connect workflows that the app can invoke.
 Use get_app_template to see example code and patterns.`,
   inputSchema: {
@@ -95,7 +101,7 @@ Use get_app_template to see example code and patterns.`,
       },
       config: {
         type: 'object',
-        description: 'Configuration object for the app (optional)',
+        description: 'Configuration object (optional). Supported keys: displayMode ("windowed"|"fullscreen"|"embedded"), and researchEnabled (boolean — enables the research.search()/research.fetch() web-search + URL-fetch bridge in app code).',
       },
       category: {
         type: 'string',

@@ -25,7 +25,11 @@ Use this to:
 - Change the name or description
 - Add/update mobile-specific code
 - Set display mode via config: { displayMode: "windowed" | "fullscreen" | "embedded" }
-- Update category and tags`,
+- Enable web research via config: { researchEnabled: true } (adds research.search()/research.fetch())
+- Update category and tags
+
+NOTE: config is replaced wholesale — include every key you want to keep (e.g. send
+{ displayMode, researchEnabled } together), not just the one you are changing.`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -51,7 +55,7 @@ Use this to:
       },
       config: {
         type: 'object',
-        description: 'Updated configuration object',
+        description: 'Updated configuration object (replaces config wholesale). Supported keys: displayMode ("windowed"|"fullscreen"|"embedded"), researchEnabled (boolean — enables the research.search()/research.fetch() web bridge).',
       },
       category: {
         type: 'string',

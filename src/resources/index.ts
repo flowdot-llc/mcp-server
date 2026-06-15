@@ -183,12 +183,17 @@ list_available_nodes()
 // Returns categories and node types
 \`\`\`
 
-Common node types:
-- \`TextInput\` - Accept text input
-- \`LLMNode\` - AI processing
-- \`TextOutput\` - Return text result
-- \`HTTPRequest\` - API calls
+Common node types (the names below are illustrative — always confirm exact types and socket names with \`list_available_nodes\` + \`get_node_schema\`):
+- \`text_input\` - Accept text input (output socket: \`Text\`)
+- \`llm_query_generator\` - AI text generation (inputs: \`Prompt\`, \`System Prompt\`; output: \`Response\`)
+- \`text_output\` - Display text in the dashboard (input: \`Text\`)
+- \`mcp_output\` - **Return a value to MCP / toolkit / app callers** (input: \`Value\`; property \`output_key\`)
+- \`http_request\` - API calls
 - \`custom_node_xxx\` - Custom nodes
+
+> **Two things that trip up programmatic builders (fail-loud, no fallback — see Docs/MODEL_ROUTING.md):**
+> 1. **LLM nodes need an EXPLICIT model.** Set the node's \`llm_provider\` + \`llm_model\` properties to a real provider and a concrete model id (e.g. \`llm_provider: "flowdot"\`, \`llm_model: "redpill/google/gemini-2.5-flash-lite"\`). A node left at \`llm_model: "default"\` has no model to call and produces empty output; the platform never silently substitutes one. (Tier/mode only governs custom-node LLM calls, not a standard LLM node's blank model.)
+> 2. **To return data to a non-dashboard caller (MCP \`execute_workflow\`, a workflow-type toolkit tool, or an app), add an \`mcp_output\` node** with an \`output_key\` and connect your result to it. A \`text_output\` alone shows in the UI but is not returned to the caller.
 
 ### Step 3: Add Nodes
 \`\`\`javascript
@@ -1751,6 +1756,7 @@ Apps run in a sandboxed iframe with:
 - **FlowDot color tokens:** primary-50 to primary-900, secondary-50 to secondary-900
 - **invokeWorkflow()** function to call linked workflows
 - **invokeTool()** function to call tools from linked toolkits (see "Toolkit Integration")
+- **research.search() / research.fetch()** for web search + URL fetch, available when the app has \`config.researchEnabled\` (see "Research Integration")
 
 ### Multi-File Structure
 All apps are multi-file by default:
@@ -1810,7 +1816,7 @@ Beyond React (which is global), the bundler has a whitelist of external librarie
 | **clsx / classnames** | Conditional className helper | \`import clsx from 'clsx';\` |
 | **date-fns** | Date manipulation | \`import { format } from 'date-fns';\` |
 
-Anything else — including \`fetch\`, \`axios\`, Node built-ins, or arbitrary npm packages — will fail at bundle time. **If you need network access, call a workflow via \`invokeWorkflow()\` instead** — workflows run on the server side and can hit external APIs freely.
+Anything else — including \`fetch\`, \`axios\`, Node built-ins, or arbitrary npm packages — will fail at bundle time. **If you need network access, use a server-side bridge instead of client-side fetch:** call a workflow via \`invokeWorkflow()\`, a toolkit tool via \`invokeTool()\`, or — for plain web search / page fetch — \`research.search()\` / \`research.fetch()\` once the app has \`config.researchEnabled\` (see "Research Integration"). All of these run server-side, under the viewer's permissions, and can hit external resources freely.
 
 If you're not sure whether a library is allowed, the bundler error message will tell you. The error is loud and immediate, not silent.
 
@@ -1889,12 +1895,12 @@ The "no imports, no forms, no fetch" rules aren't arbitrary — they exist becau
 | Restriction | Reason |
 |-------------|--------|
 | **No \`<form>\` tags** | The sandbox blocks form submissions because they would trigger a full-page navigation that escapes the iframe. Use buttons + state instead. |
-| **No \`fetch\` / \`XMLHttpRequest\`** | The sandbox has no network access. This prevents apps from leaking user data, calling third-party APIs without consent, or being used as exfiltration vectors. **All network calls go through \`invokeWorkflow()\`**, which runs server-side under the user's permissions and is auditable. |
+| **No \`fetch\` / \`XMLHttpRequest\`** | The sandbox has no direct network access. This prevents apps from leaking user data, calling third-party APIs without consent, or being used as exfiltration vectors. **Network access goes through a server-side bridge** — \`invokeWorkflow()\`, \`invokeTool()\`, or \`research.search()\`/\`research.fetch()\` — each running under the viewer's permissions and auditable. |
 | **No Node built-ins** | This is a browser, not Node — but more importantly, things like \`fs\`, \`child_process\`, or \`os\` would be a security disaster even if they worked. |
 | **No imports for React itself** | React is injected as a global so the bundle stays small and consistent. Letting users import their own React would let them load unchecked versions. |
 | **All buttons need \`type="button"\`** | Default \`<button>\` type is \`submit\`, which inside any form-like context tries to navigate. Setting \`type="button"\` is harmless and prevents the sandbox from blocking the click. |
 
-**Mental model:** An app is a *renderer*. It draws UI, manages local state, and calls workflows. It does not talk to the network or the host browser directly. If you want to do something an app can't do, the answer is almost always "make a workflow that does it and invoke it from the app."
+**Mental model:** An app is a *renderer*. It draws UI, manages local state, and calls server-side bridges — workflows, toolkit tools, and research. It does not talk to the network or the host browser directly; those bridges do, under the viewer's permissions. If you want to do something an app can't do, the answer is almost always "make a workflow (or enable research) and invoke it from the app."
 
 ## Creating an App
 
@@ -2022,19 +2028,20 @@ const result = await invokeWorkflow('workflow-hash', {
 \`\`\`
 
 ### Workflow Response Structure
+
+\`invokeWorkflow\` resolves to the node results object **directly** — there is
+NO \`{ success, data }\` wrapper. The result IS the nodeId-keyed map:
+
 \`\`\`javascript
 {
-  success: boolean,
-  data: {
-    "[nodeId]": {
-      nodeId: "uuid",
-      nodeTitle: "My Output Node",
-      nodeType: "text_output",
-      outputs: {
-        "Consolidated Text": {
-          value: "the actual data",
-          metadata: {...}
-        }
+  "[nodeId]": {
+    nodeId: "uuid",
+    nodeTitle: "My Output Node",
+    nodeType: "text_output",
+    outputs: {
+      "Consolidated Text": {
+        value: "the actual data",
+        metadata: {...}
       }
     }
   }
@@ -2046,8 +2053,8 @@ const result = await invokeWorkflow('workflow-hash', {
 
 \`\`\`javascript
 const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-  if (!result?.data) return null;
-  const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
+  if (!result) return null;
+  const node = Object.values(result).find(n => n.nodeTitle === nodeTitle);
   return node?.outputs?.[socketName]?.value;
 };
 
@@ -2058,6 +2065,18 @@ if (data) {
   // use data
 }
 \`\`\`
+
+### Public Demo (automatic — no app code needed)
+
+When a **logged-out visitor** opens the app's public page (\`/app/{hash}\`), the
+platform shows the author's frozen DOM snapshot rendered statically (no
+execution), and any interaction prompts sign-up. This is **app-agnostic and
+fully automatic** — apps need NO demo code and must not read any
+\`window.__FLOWDOT_*\` globals. Build the app normally.
+
+Authors attach a demo by getting the app into the state they want to showcase at
+\`/app/{hash}\` and clicking **"Save this view as demo"** (the platform snapshots
+the rendered \`#root\`, stored server-side in the \`app_demos\` table, size-capped).
 
 ## File & Media Attachments
 
@@ -2212,6 +2231,63 @@ async function callTool(tk, tool, inputs) {
 }
 // then: const data = await callTool('spotify', 'search-tracks', { query, type: 'track' });
 \`\`\`
+
+## Research Integration (web search + URL fetch)
+
+Apps can run **web search** and **URL fetch** server-side as the viewing user, using that
+user's own research providers + API keys (configured in Settings → Research) — never the
+author's. This is the sanctioned way to pull web data into an app: for plain search / page
+fetch you do **not** need to build a workflow.
+
+### Enabling it — one flag, no linking call
+
+Unlike toolkits and workflows, research is **not** a linked entity — there is no
+\`link_app_research\`. You turn it on with a single config flag when you create or update the
+app:
+
+\`\`\`javascript
+create_app({
+  name: "Research Helper",
+  config: { researchEnabled: true },   // <-- the only step to connect research
+  // ...files...
+})
+
+// or flip it on for an existing app:
+update_app({ app_id: "app-abc123", config: { researchEnabled: true } })
+\`\`\`
+
+\`config\` is replaced wholesale on update, so include any other config keys you want to keep
+(e.g. \`displayMode\`) in the same call. When enabled, the app shows a "Connected research" row
+in its hover helper and the two bridge functions become available in app code.
+
+### Calling research.search() / research.fetch()
+
+\`\`\`javascript
+// Web search — up to 10 results from the viewer's highest-priority provider.
+const { results, provider } = await research.search('best react chart libraries 2024');
+// results: [{ title, url, snippet, source }]
+
+// Fetch + extract a page's main text (server-side, SSRF-protected; ~15k char cap).
+const page = await research.fetch('https://example.com/article');
+// page: { url, title, content, codeBlocks, contentLength }
+\`\`\`
+
+Both are async and run server-side — wrap them in try/catch with loading/error states. A
+rejected call may carry \`err.code === 'rate_limited'\` (with \`err.rateLimit\` details). Calling
+research from an app that was not opted in rejects with \`"Research is not enabled for this app"\`.
+
+### Viewer-scoped, never the author's
+
+Like toolkit installations, research uses the **viewing user's own** configured providers +
+keys. The author supplies no keys and can never spend a viewer's search quota or read their
+keys. If the viewer has configured no providers, search falls back to the always-available
+DuckDuckGo provider, so \`research.search()\` works out of the box.
+
+### Rate limits
+
+The research endpoints are rate-limited (~60 calls/min per user, like the toolkit endpoint).
+Don't fire many \`research.*\` calls at once on load — cap concurrency and back off using the
+same governor pattern shown for \`invokeTool()\` above.
 
 ## Managing Apps
 
@@ -2515,6 +2591,49 @@ create_toolkit_tool({
       }
     },
     required: ["playlist_id"]
+  }
+})
+\`\`\`
+
+### How workflow tools execute (model resolution — READ THIS)
+
+A \`workflow\` tool runs the linked workflow server-side on behalf of the **installing user**, waits for completion, and returns the workflow's **MCP Output** node values as the tool result. Rules that decide whether it works:
+
+- **Inputs map by NAME.** The property names in the tool's \`input_schema\` must match the workflow's input-node labels exactly (e.g. \`"Resume"\`, \`"Job Posting"\`). They are mapped onto the workflow's input nodes automatically. Expose only the inputs the caller should supply; any workflow input you do NOT expose falls back to that input node's own default value — this is how you bake a fixed instruction/system-prompt into the workflow while the caller passes only the variable data.
+- **The result is the MCP Output, not the Text Output.** Add one or more **MCP Output** nodes (\`mcp_output\`) to the workflow, each with an \`output_key\`, and connect the value you want returned. The tool returns \`{ <output_key>: <value>, ... }\`. A workflow whose result only lands in a Text Output node returns nothing useful to the tool — you MUST add \`mcp_output\`.
+- **Model tier.** Workflow tools resolve an LLM tier to run at. Default is \`capable\`. Pin a different tier per tool with \`endpoint_config: { tier: "simple" | "capable" | "complex" }\`. The tier resolves to the user's \`preferredModels[tier]\`, or the admin FlowDot sponsored default for that tier. An unknown tier normalizes to \`capable\`.
+- **Every LLM node in the workflow MUST carry an explicit model.** FlowDot model routing is **fail-loud with NO fallback** (see Docs/MODEL_ROUTING.md). An \`llm_query_generator\` (or any LLM) node uses its OWN \`llm_provider\` + \`llm_model\` properties, and those must be a real provider plus a concrete model id — for a FlowDot-billed call: \`llm_provider: "flowdot"\`, \`llm_model: "redpill/google/gemini-2.5-flash-lite"\`. A node left at the placeholder \`llm_model: "default"\` resolves to no model and produces empty output. Set the model ON THE NODE when you build the workflow (via \`add_node\`/\`update_node\` properties); the tier only governs custom-node LLM calls and the execution context, it does not fill in a standard LLM node's blank model.
+
+Worked pattern — instruction baked into the workflow, caller passes only resume + posting:
+
+\`\`\`javascript
+// 1) Build the workflow first:
+//    TextInput("Resume") + TextInput("Job Posting")
+//      -> [Resume + Posting Combiner custom node]
+//      -> llm_query_generator  (set properties: system_prompt = your instruction,
+//                               llm_provider = "flowdot",
+//                               llm_model = "redpill/google/gemini-2.5-flash-lite")
+//      -> mcp_output(output_key: "ats_report")
+//    (Bake a fixed instruction via the LLM node's system_prompt property, or via an
+//     Instruction TextInput whose default text is the instruction and which the tool
+//     does NOT expose.)
+//
+// 2) Wrap it as a turnkey tool that only asks for resume + posting:
+create_toolkit_tool({
+  toolkit_id: "toolkit-abc123",
+  name: "ats_scan",
+  title: "ATS Scan",
+  description: "Analyze a resume for ATS-friendliness against a job posting.",
+  tool_type: "workflow",
+  workflow_hash: "mV17uLegvN",
+  endpoint_config: { tier: "capable" },          // optional; default is capable
+  input_schema: {
+    type: "object",
+    properties: {
+      "Resume": { type: "string", description: "Full plain-text resume." },
+      "Job Posting": { type: "string", description: "Target job description text." }
+    },
+    required: ["Resume"]
   }
 })
 \`\`\`
@@ -2903,6 +3022,13 @@ create_toolkit_tool({
 - **POST without body but with signing**: omit \`body_template\` entirely. \`{{__body}}\` resolves to \`""\` and the executor sends an empty-body request. Required for endpoints like \`cancel-order\`.
 - **Key material safety**: the Hub never logs the credential value, the signing message, or the resulting signature. Exception messages on signing failure include only the credential **key name**, never the bytes.
 - **Don't put \`{{__signature_b64}}\` in \`message_template\`** — the signature is computed *from* the message, so it can't reference itself. Use it only in the \`headers\` map.
+
+## Author Docs: README & Install Guide
+
+Two optional, author-only markdown fields (max 100,000 chars each; pass an empty string to clear), both set via the \`update_agent_toolkit\` tool:
+
+- **\`readme\`** — long-form markdown shown on the public toolkit page (\`/toolkit/{hash}\`).
+- **\`install_guide\`** — a step-by-step setup guide rendered **next to the credential fields when a user installs the toolkit**. It supports fenced mermaid code blocks (rendered as diagrams) and markdown links (which open in a new tab) — the ideal place for *get-your-key-here* links so a non-technical user can grab each API key and paste it into the matching field. Set it with \`update_agent_toolkit({ toolkit_id, install_guide })\`.
 
 ## Installing & Using Toolkits
 

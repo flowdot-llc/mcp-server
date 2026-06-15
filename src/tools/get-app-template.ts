@@ -41,24 +41,23 @@ The sandbox does not allow form submissions. NEVER use <form> tags.
 </div>
 
 ## WORKFLOW RESPONSE FORMAT
-invokeWorkflow returns data in this structure:
+invokeWorkflow returns the node results object DIRECTLY (not wrapped — there is
+NO { data } wrapper):
 {
-  "data": {
-    "[nodeId]": {
-      "nodeId": "uuid",
-      "nodeTitle": "My Output Node",
-      "nodeType": "text_output",
-      "outputs": {
-        "Consolidated Text": { "value": "the actual data", "metadata": {...} }
-      }
+  "[nodeId]": {
+    "nodeId": "uuid",
+    "nodeTitle": "My Output Node",
+    "nodeType": "text_output",
+    "outputs": {
+      "Consolidated Text": { "value": "the actual data", "metadata": {...} }
     }
   }
 }
 
 IMPORTANT: Use this helper function to extract outputs safely:
 const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-  if (!result?.data) return null;
-  const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
+  if (!result) return null;
+  const node = Object.values(result).find(n => n.nodeTitle === nodeTitle);
   return node?.outputs?.[socketName]?.value;
 };
 
@@ -66,6 +65,12 @@ Example:
 const result = await invokeWorkflow('hash', { input });
 const data = getNodeOutput(result, 'Output Node');
 if (data) { /* use data */ }
+
+## PUBLIC DEMO (automatic — no app code needed)
+Public demos are automatic. The author gets the app into the state they want to
+showcase and clicks "Save this view"; the platform snapshots the rendered DOM
+and shows it statically to logged-out visitors, with any interaction prompting
+sign-up. Apps need NO demo code and must not read any window.__FLOWDOT_* globals.
 
 ## DISPLAY MODES
 Set config.displayMode to:
@@ -105,13 +110,14 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
 
   // Helper to extract output from workflow response by node title
   const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-    if (!result?.data) return null;
-    const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
+    if (!result) return null;
+    const node = Object.values(result).find(n => n.nodeTitle === nodeTitle);
     return node?.outputs?.[socketName]?.value;
   };
 
-  const handleSubmit = async () => {
-    if (!input.trim() || loading) return;
+  const handleSubmit = async (textOverride) => {
+    const text = typeof textOverride === 'string' ? textOverride : input;
+    if (!text.trim() || loading) return;
 
     setLoading(true);
     setError(null);
@@ -119,7 +125,7 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
     try {
       // Replace 'YOUR_WORKFLOW_HASH' with your actual workflow hash
       const response = await invokeWorkflow('YOUR_WORKFLOW_HASH', {
-        text: input
+        text
       });
       // Extract the output - replace 'Output' with your node's title
       const output = getNodeOutput(response, 'Output');
@@ -130,6 +136,17 @@ const TEMPLATES: Record<string, { name: string; description: string; code: strin
       setLoading(false);
     }
   };
+
+  // PUBLIC DEMO CONTRACT: when a logged-out visitor opens the public app page,
+  // the platform injects window.__FLOWDOT_DEMO__ (the author's captured run).
+  // Fill the inputs and fire the normal run path — invokeWorkflow resolves
+  // instantly with the frozen result. No-op for logged-in viewers.
+  React.useEffect(() => {
+    const demo = window.__FLOWDOT_DEMO__;
+    if (!demo || !demo.inputs || typeof demo.inputs.text !== 'string') return;
+    setInput(demo.inputs.text);
+    handleSubmit(demo.inputs.text);
+  }, []);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !loading) {
@@ -198,7 +215,7 @@ export default BasicFormApp;`,
 
   // Helper to extract output from workflow response by node title
   const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-    const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+    const node = Object.values(result || {}).find(n => n.nodeTitle === nodeTitle);
     return node?.outputs?.[socketName]?.value;
   };
 
@@ -333,7 +350,7 @@ export default ChatApp;`,
 
   // Helper to extract output from workflow response by node title
   const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-    const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+    const node = Object.values(result || {}).find(n => n.nodeTitle === nodeTitle);
     return node?.outputs?.[socketName]?.value;
   };
 
@@ -460,8 +477,8 @@ export default DashboardApp;`,
 
   // Helper to extract output from workflow response by node title
   const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-    if (!result?.data) return null;
-    const node = Object.values(result.data).find(n => n.nodeTitle === nodeTitle);
+    if (!result) return null;
+    const node = Object.values(result).find(n => n.nodeTitle === nodeTitle);
     return node?.outputs?.[socketName]?.value;
   };
 
@@ -619,7 +636,7 @@ export default DynamicFormApp;`,
 
   // Helper to extract output from workflow response by node title
   const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-    const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+    const node = Object.values(result || {}).find(n => n.nodeTitle === nodeTitle);
     return node?.outputs?.[socketName]?.value;
   };
 
@@ -801,17 +818,16 @@ Apps run in a sandboxed browser iframe with:
 
 ## WORKFLOW RESPONSE FORMAT
 
-invokeWorkflow returns data in this structure:
+invokeWorkflow returns the node results object DIRECTLY (not wrapped — there is
+NO { data } wrapper):
 \`\`\`json
 {
-  "data": {
-    "[nodeId]": {
-      "nodeId": "uuid",
-      "nodeTitle": "My Output Node",
-      "nodeType": "text_output",
-      "outputs": {
-        "Consolidated Text": { "value": "the actual data", "metadata": {...} }
-      }
+  "[nodeId]": {
+    "nodeId": "uuid",
+    "nodeTitle": "My Output Node",
+    "nodeType": "text_output",
+    "outputs": {
+      "Consolidated Text": { "value": "the actual data", "metadata": {...} }
     }
   }
 }
@@ -820,12 +836,20 @@ invokeWorkflow returns data in this structure:
 **IMPORTANT**: Use this helper function to extract outputs by node title:
 \`\`\`javascript
 const getNodeOutput = (result, nodeTitle, socketName = 'Consolidated Text') => {
-  const node = Object.values(result?.data || {}).find(n => n.nodeTitle === nodeTitle);
+  const node = Object.values(result || {}).find(n => n.nodeTitle === nodeTitle);
   return node?.outputs?.[socketName]?.value;
 };
 \`\`\`
 
 Example: \`const weatherData = getNodeOutput(result, 'Weather Results', 'Consolidated Text');\`
+
+## PUBLIC DEMO CONTRACT (REQUIRED in every app that invokes workflows)
+
+The platform injects window.__FLOWDOT_DEMO__ = { inputs, results, runs } for
+logged-out visitors. On mount, fill your input state from __FLOWDOT_DEMO__.inputs
+and call your normal run handler (do NOT read .results directly) — invokeWorkflow
+resolves instantly with the frozen result, so guests see the author's real run
+rendered on page load. See the demo-hydration effect in the basic template.
 
 ## DISPLAY MODES
 
@@ -876,19 +900,20 @@ ${template.code}
 2. Replace 'YOUR_WORKFLOW_HASH' with your actual workflow hash
 3. Replace node titles in getNodeOutput() calls with your actual node names
 4. Link the workflow using link_app_workflow
-5. Test and publish when ready
+5. Keep the demo-hydration effect (window.__FLOWDOT_DEMO__) so logged-out
+   visitors see the author's captured run rendered on page load
+6. Test and publish when ready
 
 ## Workflow Response Format
 
-invokeWorkflow returns data in this structure:
+invokeWorkflow returns the node results object DIRECTLY (not wrapped — there is
+NO { data } wrapper):
 \`\`\`json
 {
-  "data": {
-    "[nodeId]": {
-      "nodeId": "uuid",
-      "nodeTitle": "My Output Node",
-      "outputs": { "Consolidated Text": { "value": "the data" } }
-    }
+  "[nodeId]": {
+    "nodeId": "uuid",
+    "nodeTitle": "My Output Node",
+    "outputs": { "Consolidated Text": { "value": "the data" } }
   }
 }
 \`\`\`
