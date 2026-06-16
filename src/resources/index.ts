@@ -190,10 +190,24 @@ Common node types (the names below are illustrative — always confirm exact typ
 - \`mcp_output\` - **Return a value to MCP / toolkit / app callers** (input: \`Value\`; property \`output_key\`)
 - \`http_request\` - API calls
 - \`custom_node_xxx\` - Custom nodes
+- \`toolkit_{toolkitId}_{toolName}\` - **Call a tool from an installed toolkit** directly (signed third-party APIs, no agent) — see "Calling toolkit tools from a workflow" below
 
 > **Two things that trip up programmatic builders (fail-loud, no fallback — see Docs/MODEL_ROUTING.md):**
 > 1. **LLM nodes need an EXPLICIT model.** Set the node's \`llm_provider\` + \`llm_model\` properties to a real provider and a concrete model id (e.g. \`llm_provider: "flowdot"\`, \`llm_model: "redpill/google/gemini-2.5-flash-lite"\`). A node left at \`llm_model: "default"\` has no model to call and produces empty output; the platform never silently substitutes one. (Tier/mode only governs custom-node LLM calls, not a standard LLM node's blank model.)
 > 2. **To return data to a non-dashboard caller (MCP \`execute_workflow\`, a workflow-type toolkit tool, or an app), add an \`mcp_output\` node** with an \`output_key\` and connect your result to it. A \`text_output\` alone shows in the UI but is not returned to the caller.
+
+### Calling toolkit tools from a workflow (no agent/LLM)
+
+Any tool of an **installed** toolkit can be dropped into a workflow as a node — this is how a
+workflow reads/writes real third-party APIs (including signed ones: Kalshi RSA-PSS, Schwab OAuth)
+**deterministically, with no agent step**.
+
+- **Node type:** \`toolkit_{toolkitId}_{toolName}\` — e.g. \`toolkit_xS03HmGAag_get_markets\`, \`toolkit_xS03HmGAag_create_order\` (Kalshi toolkit \`xS03HmGAag\`).
+- **Discover them:** \`list_available_nodes\` lists installed toolkits + this convention; \`list_toolkit_tools("<toolkitId>")\` gives exact tool names; \`get_node_schema\` confirms sockets.
+- **Sockets:** the tool's inputs auto-expose as input sockets (e.g. \`series_ticker\`, \`status\`, \`limit\`); each required credential becomes a \`_cred_<KEY>\` input resolved from the viewer's installation at run time; the node outputs a single \`result\` (json).
+- **Add one:** \`add_node({ workflow_id, node_type: "toolkit_xS03HmGAag_get_markets", position })\`, then feed its inputs and read \`result\` downstream (e.g. into a custom node).
+
+This unlocks a fully deterministic, money-safe pattern with no LLM: \`toolkit_* (fetch) → custom node (logic/math) → conditional_branch → toolkit_* (write)\`, which a Goal can run on a schedule.
 
 ### Step 3: Add Nodes
 \`\`\`javascript
@@ -493,6 +507,10 @@ The building blocks of a recipe:
 - **branch:** Conditional routing based on data
 - **invoke:** Call another recipe (subroutines)
 - **output:** Emit a coloured message to the terminal (no LLM, instant) — config: \`message\` (supports \`{{stores.x}}\`), \`color\` (\`green\`|\`red\`|\`yellow\`, default \`green\`)
+- **tool:** Deterministic toolkit/MCP call (NO LLM) — config: \`tool\` (canonical id \`toolkit__<name>__<tool>\` or \`mcp__<server>__<tool>\`), \`inputs\` (a whole \`{{store}}\` ref passes the object/array verbatim), \`output_store\`, \`dry_run\` (skip a side-effecting call, record the intent)
+- **compute:** Deterministic JS transform (NO LLM) in a sandbox — config: inline \`script\` OR a \`custom_node\` hash, each defining \`processData(inputs, properties)\`; plus \`inputs\`, \`properties\`, \`output_store\`. \`Date\`/\`Math.random\` are unavailable (determinism)
+
+> **Execution mode is per step.** A recipe can be all-agent, all-deterministic, or hybrid. A recipe with zero \`agent\` steps runs without any LLM — mark it \`deterministic: true\` on \`create_recipe\` for the badge. Reference shape: \`tool (fetch) → compute (logic/math) → branch → tool (write) → tool (log)\`, schedulable by a Goal.
 
 ### Stores
 Variables that hold data throughout execution:

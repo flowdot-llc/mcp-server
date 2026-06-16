@@ -61,6 +61,18 @@ Set \`parallel: true\` to execute iterations concurrently. Use \`max_concurrent\
 \`\`\`
 Colors: \`green\` (default), \`red\`, \`yellow\`. Message supports \`{{stores.x}}\` interpolation.
 
+**tool** - Deterministic toolkit/MCP call (NO LLM). Inputs resolve structurally from stores.
+\`\`\`json
+{ "tool": "toolkit__kalshi__get_markets", "inputs": { "series_ticker": "KXBTCD", "status": "open" }, "output_store": "markets", "dry_run": false }
+\`\`\`
+\`tool\` is the canonical id: \`toolkit__<name>__<tool>\` or \`mcp__<server>__<tool>\`. An \`inputs\` value that is a single whole \`{{store}}\` reference passes the underlying object/array verbatim (not stringified); mixed strings still interpolate. Set \`dry_run: true\` to skip a side-effecting call and record the resolved intent instead.
+
+**compute** - Deterministic JavaScript transform (NO LLM) in a sandbox.
+\`\`\`json
+{ "custom_node": "e0ES6WzK9T", "inputs": { "markets": "{{stores.markets}}", "spot": "{{stores.spot}}" }, "properties": { "config": { "cashInOnly": true } }, "output_store": "decision" }
+\`\`\`
+Provide an inline \`script\` OR a \`custom_node\` hash; either must define \`function processData(inputs, properties)\`. \`inputs\`/\`properties\` resolve structurally from stores. The step stores \`processData\`'s return value. \`Date\` and \`Math.random\` are unavailable (determinism).
+
 **Interpolation Syntax:**
 - \`{{inputs.request}}\` - Access CLI task argument (user runs: \`flowdot alias "task text"\`)
 - \`{{store_key}}\` - Reference any store value by its key
@@ -79,7 +91,7 @@ Colors: \`green\` (default), \`red\`, \`yellow\`. Message supports \`{{stores.x}
       },
       type: {
         type: 'string',
-        enum: ['agent', 'loop', 'parallel', 'gate', 'branch', 'invoke', 'output'],
+        enum: ['agent', 'loop', 'parallel', 'gate', 'branch', 'invoke', 'output', 'tool', 'compute'],
         description: 'Step type',
       },
       description: {

@@ -10,7 +10,7 @@ import type { NodeType } from '../types.js';
 
 export const listAvailableNodesTool: Tool = {
   name: 'list_available_nodes',
-  description: 'List all available node types organized by category. Shows node types, descriptions, and capabilities.',
+  description: 'List all available node types organized by category: built-in nodes, custom nodes, and the tools of every installed toolkit (each usable as a `toolkit_{toolkitId}_{toolName}` node). Shows node types, descriptions, and capabilities.',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -97,6 +97,35 @@ export async function handleListAvailableNodes(
     lines.push('  - Use `create_custom_node` to create new ones');
     lines.push('  - Use `get_custom_node_template` to generate script boilerplate');
     lines.push('');
+
+    // Toolkit tool nodes: every tool of an INSTALLED toolkit is usable as a workflow node
+    // typed `toolkit_{toolkitId}_{toolName}`. This is how a workflow calls signed third-party
+    // APIs (Kalshi, Schwab, etc.) deterministically, with no agent/LLM in the loop.
+    try {
+      const installs = (await api.listInstalledToolkits()) as unknown as Array<Record<string, unknown>>;
+      const active = (installs || []).filter((i) => i && i.is_active);
+      if (active.length > 0) {
+        lines.push('---');
+        lines.push('');
+        lines.push('### toolkit (installed)');
+        lines.push('Every tool of an installed toolkit can be added as a workflow node. Add it with');
+        lines.push('`add_node({ node_type: "toolkit_{toolkitId}_{toolName}" })`. The tool\'s inputs become');
+        lines.push('input sockets; each required credential becomes a `_cred_<KEY>` input (resolved from your');
+        lines.push('installation at run time); the node outputs `result` (json). No agent/LLM is involved — a');
+        lines.push('workflow can fetch + write real APIs deterministically. Get exact tool names with');
+        lines.push('`list_toolkit_tools("<toolkitId>")`.');
+        for (const inst of active) {
+          const tid = String(inst.toolkit_id ?? '');
+          const title = String(inst.toolkit_title ?? inst.toolkit_name ?? tid);
+          const nested = inst.toolkit as Record<string, unknown> | undefined;
+          const count = (nested && nested.tools_count) ?? inst.tools_count ?? '?';
+          lines.push(`- **${title}** — node type: \`toolkit_${tid}_{toolName}\` (${count} tools; \`list_toolkit_tools("${tid}")\`)`);
+        }
+        lines.push('');
+      }
+    } catch {
+      // Non-fatal: toolkit enumeration is supplementary to the built-in catalog.
+    }
 
     return {
       content: [{ type: 'text', text: lines.join('\n') }],

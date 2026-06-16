@@ -10,7 +10,7 @@ import type { UpdateRecipeStepInput } from '../types.js';
 
 export const updateRecipeStepTool: Tool = {
   name: 'update_recipe_step',
-  description: "Update a step's name, description, config, or connections.",
+  description: "Update a step's name, description, config, or connections. For `tool`/`compute` steps the deterministic config keys (tool/inputs/dry_run, or custom_node/script/inputs/properties, plus output_store) merge into the existing step config.",
   inputSchema: {
     type: 'object',
     properties: {

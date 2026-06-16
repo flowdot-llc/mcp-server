@@ -49,6 +49,10 @@ export const createRecipeTool: Tool = {
         default: 'private',
         description: 'Visibility setting',
       },
+      deterministic: {
+        type: 'boolean',
+        description: 'Mark the recipe as deterministic — it has zero `agent` steps and runs without any LLM (only `tool`/`compute`/`branch`/`invoke`/`output` steps). Descriptive badge only.',
+      },
     },
     required: ['name'],
   },
@@ -62,6 +66,7 @@ export async function handleCreateRecipe(
     category?: string;
     tags?: string[];
     visibility?: 'private' | 'public' | 'unlisted';
+    deterministic?: boolean;
   }
 ): Promise<CallToolResult> {
   try {
@@ -72,6 +77,7 @@ export async function handleCreateRecipe(
       tags: args.tags,
       visibility: args.visibility || 'private',
     };
+    if (args.deterministic !== undefined) input.deterministic = args.deterministic;
 
     const result = await api.createRecipe(input);
 

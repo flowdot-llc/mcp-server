@@ -9,7 +9,7 @@ import type { FlowDotApiClient } from '../api-client.js';
 
 export const addNodeTool: Tool = {
   name: 'add_node',
-  description: 'Add a new node to a workflow. Supports both built-in nodes and custom nodes. For custom nodes, use the format "custom_node_{hash}" where {hash} is the custom node ID.',
+  description: 'Add a new node to a workflow. Supports built-in nodes, custom nodes, and toolkit-tool nodes. For custom nodes, use "custom_node_{hash}". For a tool from an INSTALLED toolkit, use "toolkit_{toolkitId}_{toolName}" (e.g. "toolkit_xS03HmGAag_get_markets") — the tool\'s inputs become input sockets, each required credential becomes a "_cred_<KEY>" input resolved from your installation, and the node outputs "result". This is how a workflow calls signed third-party APIs deterministically (no agent). Discover them with list_available_nodes and list_toolkit_tools.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -19,7 +19,7 @@ export const addNodeTool: Tool = {
       },
       node_type: {
         type: 'string',
-        description: 'The type of node to add. For built-in nodes: "LLMNode", "HTTPRequestNode", etc. For custom nodes: "custom_node_{hash}" (e.g., "custom_node_abc123xyz")',
+        description: 'The type of node to add. Built-in nodes: e.g. "text_input", "llm_query_generator", "conditional_branch" (confirm exact types via list_available_nodes). Custom nodes: "custom_node_{hash}" (e.g. "custom_node_abc123xyz"). Toolkit-tool nodes: "toolkit_{toolkitId}_{toolName}" for any tool of an installed toolkit (e.g. "toolkit_xS03HmGAag_get_markets"); inputs auto-expose as sockets, credentials as "_cred_<KEY>" inputs, output is "result".',
       },
       position: {
         type: 'object',
