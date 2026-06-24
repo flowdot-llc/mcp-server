@@ -16,6 +16,7 @@ import type {
   CreateToolkitToolInput,
   UpdateToolkitToolInput,
   InvokeToolkitToolInput} from '../types.js';
+import { collabSuffix, collabDetail } from '../collab-format.js';
 
 // ============================================
 // Discovery & Browsing Tools
@@ -75,7 +76,7 @@ export async function handleListAgentToolkits(
       const tags = toolkit.tags?.length ? `[${toolkit.tags.join(', ')}]` : '';
       const status = toolkit.visibility === 'public' ? 'Public' : 'Private';
       const verified = toolkit.is_verified ? '✓ Verified' : '';
-      return `- **${toolkit.title}** (${toolkit.name})
+      return `- **${toolkit.title}** (${toolkit.name})${collabSuffix(toolkit)}
   ID: ${toolkit.id}
   ${toolkit.description || 'No description'}
   Category: ${toolkit.category} | Status: ${status} ${verified}
@@ -230,7 +231,7 @@ export async function handleGetAgentToolkit(
 **Version:** ${toolkit.version}
 **Visibility:** ${toolkit.visibility}
 **Author:** ${toolkit.user_name || 'Unknown'}
-
+${collabDetail(toolkit)}
 **Description:**
 ${toolkit.description || 'No description'}
 

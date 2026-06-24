@@ -6,6 +6,7 @@
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { collabSuffix } from '../collab-format.js';
 
 export const getWorkflowDetailsTool: Tool = {
   name: 'get_workflow_details',
@@ -40,6 +41,7 @@ export async function handleGetWorkflowDetails(
       `**Disabled:** ${details.is_disabled ? 'Yes' : 'No'}`,
       `**Favorited:** ${details.is_favorited ? 'Yes' : 'No'}`,
       `**Tags:** ${details.tags?.join(', ') || 'None'}`,
+      ...(collabSuffix(details) ? [`**${collabSuffix(details).trim().replace(/^· /, '')}**`] : []),
       '',
       '### Stats',
       `- Favorites: ${details.favorite_count}`,

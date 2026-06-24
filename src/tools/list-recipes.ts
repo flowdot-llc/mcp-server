@@ -6,6 +6,7 @@
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { collabSuffix } from '../collab-format.js';
 
 export const listRecipesTool: Tool = {
   name: 'list_recipes',
@@ -76,7 +77,7 @@ export async function handleListRecipes(
         const visibility =
           r.visibility === 'public' ? ' (public)' : r.visibility === 'unlisted' ? ' (unlisted)' : '';
         const steps = r.step_count !== undefined ? ` [${r.step_count} steps]` : '';
-        return `- **${r.name}** (${r.hash})${visibility}${steps}${desc}`;
+        return `- **${r.name}** (${r.hash})${visibility}${steps}${desc}${collabSuffix(r)}`;
       })
       .join('\n');
 

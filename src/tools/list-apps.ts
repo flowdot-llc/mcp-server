@@ -8,6 +8,7 @@
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
 import type { AppListFilters } from '../types.js';
+import { collabSuffix } from '../collab-format.js';
 
 export const listAppsTool: Tool = {
   name: 'list_apps',
@@ -60,7 +61,7 @@ export async function handleListApps(
     const appsInfo = result.data.map((app) => {
       const tags = app.tags?.length ? `[${app.tags.join(', ')}]` : '';
       const status = app.is_public ? 'Public' : 'Private';
-      return `- **${app.name}** (${app.id})
+      return `- **${app.name}** (${app.id})${collabSuffix(app)}
   ${app.description || 'No description'}
   Category: ${app.category || 'Uncategorized'} | Status: ${status} | Mobile: ${app.mobile_compatible ? 'Yes' : 'No'}
   Executions: ${app.execution_count} | Upvotes: ${app.upvotes} | Clones: ${app.clone_count}

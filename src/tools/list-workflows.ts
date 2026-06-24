@@ -6,6 +6,7 @@
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { collabSuffix } from '../collab-format.js';
 
 export const listWorkflowsTool: Tool = {
   name: 'list_workflows',
@@ -53,7 +54,7 @@ export async function handleListWorkflows(
       .map((w) => {
         const desc = w.description ? ` - ${w.description}` : '';
         const visibility = w.is_public ? ' (public)' : '';
-        return `- **${w.name}** (${w.id})${visibility}${desc}`;
+        return `- **${w.name}** (${w.id})${visibility}${desc}${collabSuffix(w)}`;
       })
       .join('\n');
 

@@ -7,6 +7,7 @@
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { collabSuffix } from '../collab-format.js';
 
 export const getCustomNodeTool: Tool = {
   name: 'get_custom_node',
@@ -43,6 +44,7 @@ export async function handleGetCustomNode(
       `- **Author:** ${node.user_name || 'Unknown'}`,
       `- **Visibility:** ${node.visibility}`,
       `- **Can Edit:** ${node.can_edit ? 'Yes' : 'No'}`,
+      ...(collabSuffix(node) ? [`- **${collabSuffix(node).trim().replace(/^· /, '')}**`] : []),
       ``,
       `### Stats`,
       `- **Votes:** ${node.vote_count || 0} (Your vote: ${node.user_vote === 1 ? 'Up' : node.user_vote === -1 ? 'Down' : 'None'})`,

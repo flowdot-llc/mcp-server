@@ -6,6 +6,7 @@
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { collabDetail } from '../collab-format.js';
 
 export const getRecipeTool: Tool = {
   name: 'get_recipe',
@@ -75,7 +76,7 @@ export async function handleGetRecipe(
 **Visibility:** ${visibility}
 **Category:** ${recipe.category || 'None'}
 **Tags:** ${recipe.tags?.length ? recipe.tags.join(', ') : 'None'}
-
+${collabDetail(recipe)}
 **Description:** ${recipe.description || 'No description'}
 
 **README:**

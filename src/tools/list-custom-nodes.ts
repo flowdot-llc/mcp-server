@@ -7,6 +7,7 @@
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { collabSuffix } from '../collab-format.js';
 
 export const listCustomNodesTool: Tool = {
   name: 'list_custom_nodes',
@@ -63,6 +64,8 @@ export async function handleListCustomNodes(
       lines.push(`### ${node.name}`);
       lines.push(`- **ID:** ${node.id}`);
       lines.push(`- **Title:** ${node.title}`);
+      const nodeShared = collabSuffix(node).trim().replace(/^· /, '');
+      if (nodeShared) lines.push(`- **${nodeShared}**`);
       if (node.description) {
         lines.push(`- **Description:** ${node.description.substring(0, 100)}${node.description.length > 100 ? '...' : ''}`);
       }

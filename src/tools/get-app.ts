@@ -7,6 +7,7 @@
 
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
+import { collabDetail } from '../collab-format.js';
 
 export const getAppTool: Tool = {
   name: 'get_app',
@@ -109,7 +110,7 @@ ${JSON.stringify(app.config, null, 2)}
 **Tags:** ${tags}
 **Mobile Compatible:** ${app.mobile_compatible ? 'Yes' : 'No'}
 **Can Edit:** ${app.can_edit ? 'Yes' : 'No'}
-
+${collabDetail(app)}
 ## Description
 ${app.description || 'No description provided.'}
 
