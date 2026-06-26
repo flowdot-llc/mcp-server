@@ -92,6 +92,11 @@ Generate images, edit images, and analyze images (vision) — via workflow nodes
 - **Learn more:** \`learn://images\`
 - **Quick start:** Read \`learn://images\`, then use an \`image_manipulation\` node or a BYOK image toolkit
 
+### 13. **Property Audits (vet before you use)**
+A deterministic, full-scope audit of any shareable property — what it can DO and REACH — so you can inspect it BEFORE recommending, installing, or running it. Covers all six types: workflow, app, agent_recipe, agent_toolkit, custom_node, agent_character.
+- **Quick start:** \`audit_property({ type, hash })\` — returns capability tags (network / knowledge_base / llm / file / external_effect / toolkit / credentials), the literal outbound hosts, the credentials it requires, linked properties, and honest \`gaps[]\`, plus provenance/author. Read-only.
+- **Pair with \`search\`:** \`search\` to find a property → \`audit_property\` to inspect its scope → tell the user.
+
 ## Common Workflows
 
 ### Creating a Simple Workflow
@@ -113,6 +118,9 @@ Generate images, edit images, and analyze images (vision) — via workflow nodes
 ### Rolling Back a Recipe Edit
 Every recipe edit you make is automatically snapshotted (last 20 retained, coalesced within a 60-second window). Tools: \`list_recipe_versions\`, \`get_recipe_version\`, \`checkpoint_recipe\`, \`restore_recipe_version\`. Before any non-trivial recipe rewrite, drop a \`checkpoint_recipe(hash, label: "...")\` first. See \`learn://recipes\` → "Versioning & Undo" for the full guide.
 
+### Vetting a Property Before Using It
+Before installing a toolkit, running an app/workflow, or forking a recipe — especially someone else's — audit it: \`audit_property({ type, hash })\`. It tells you, deterministically, every outbound host it can call, the knowledge-base/file access it has, the LLM calls and credentials it requires, the properties it embeds, and anything that couldn't be statically proven (\`gaps[]\`). Use it to answer "is this safe / what does it actually do?" for the user.
+
 ## Where to Start
 
 - **New to FlowDot?** Read \`learn://workflows\` first
@@ -124,6 +132,7 @@ Every recipe edit you make is automatically snapshotted (last 20 retained, coale
 - **Setting up autonomous goals or scheduled tasks?** Read \`learn://goals\` first
 - **Setting up a voice-call character?** Read \`learn://characters\` first
 - **Generating, editing, or analyzing images?** Read \`learn://images\` first
+- **Vetting a property's capabilities/scope before using it?** Use \`audit_property\`
 
 ## Getting Help
 
@@ -1765,6 +1774,11 @@ Apps are **React frontend applications** that run in a sandboxed browser environ
 - Chat interfaces with workflow backends
 - Data exploration tools
 
+**Vetting someone else's app:** before cloning or running an app you didn't build, audit
+it — \`audit_property({ type: "app", hash })\`. It reports the linked workflows/toolkits it
+invokes, its \`window.kb\` access, library imports / outbound origins, LLM usage, and any
+dynamic code that couldn't be statically verified (\`gaps[]\`).
+
 ## Key Concepts
 
 ### Execution Environment
@@ -3049,6 +3063,12 @@ Two optional, author-only markdown fields (max 100,000 chars each; pass an empty
 - **\`install_guide\`** — a step-by-step setup guide rendered **next to the credential fields when a user installs the toolkit**. It supports fenced mermaid code blocks (rendered as diagrams) and markdown links (which open in a new tab) — the ideal place for *get-your-key-here* links so a non-technical user can grab each API key and paste it into the matching field. Set it with \`update_agent_toolkit({ toolkit_id, install_guide })\`.
 
 ## Installing & Using Toolkits
+
+### Audit Before Installing (recommended)
+Installing a toolkit means granting it your credentials. Before installing someone
+else's toolkit, audit it: \`audit_property({ type: "agent_toolkit", hash })\` — it lists
+every outbound host each tool calls, the credential keys/types it requires, and any
+gaps. Report that to the user so they consent with full knowledge.
 
 ### Install Toolkit
 \`\`\`javascript

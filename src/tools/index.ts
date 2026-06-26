@@ -57,6 +57,7 @@ import { setWorkflowReadmeTool, handleSetWorkflowReadme } from './set-workflow-r
 import { searchWorkflowsTool, handleSearchWorkflows } from './search-workflows.js';
 import { getPublicWorkflowsTool, handleGetPublicWorkflows } from './get-public-workflows.js';
 import { searchTool, handleSearch } from './search.js';
+import { auditPropertyTool, handleAuditProperty } from './audit-property.js';
 
 // ============================================
 // Workflow Building Tools (workflows:build)
@@ -367,6 +368,7 @@ export const tools = [
   setWorkflowReadmeTool,
   searchWorkflowsTool,
   searchTool,
+  auditPropertyTool,
   getPublicWorkflowsTool,
   // Workflow Building (4)
   createWorkflowTool,
@@ -699,6 +701,8 @@ export async function dispatchToolCall(
       
       case 'search':
         return handleSearch(api, args as { query: string; type?: 'workflow' | 'app' | 'custom_node'; page?: number });
+      case 'audit_property':
+        return handleAuditProperty(api, args as { type: string; hash: string });
 
       case 'get_public_workflows':
         return handleGetPublicWorkflows(api, args as { page?: number; sort_by?: string });
