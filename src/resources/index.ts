@@ -3682,11 +3682,72 @@ Use a custom node or LLM node that:
 - Verify file format is supported
 - Try simpler filename (no special chars)
 
+## Property KB Gating — namespaces, links & grants
+
+Knowledge is **isolated per property by default**. A doc or category created while a property
+(app / recipe / toolkit / workflow) is running belongs to **that property's namespace**, keyed
+by an unspoofable \`(owner_kind, owner_ref)\`. Consequences:
+
+- **Same name, different owners = different documents.** An app and a recipe that each create
+  "Bobs Cool File" end up with two separate docs. Same name twice from one property = update.
+- **A namespace is (running user × property).** Every doc a property reads or writes is the
+  **running user's own** data. Recipe R's docs for Carol are a completely separate set from
+  Recipe R's docs for Dave. No KB data is ever shared between users.
+- **The human sees everything.** You (via this MCP, the SPA, or your agent) read/write every
+  namespace you own. A **property**, by contrast, sees only its own namespace — including being
+  walled off from your general uploaded docs — unless you grant it access.
+
+### Links (design-time, author-owned)
+A **link** declares that a consumer property intends to reach another property's namespace,
+addressed by a stable \`alias\`. It carries **no user data** and travels with the definition on
+clone/fork. Only the consumer property's **owner** manages links.
+
+- \`list_property_kb_links({ consumer_kind, consumer_ref })\`
+- \`link_property_kb_source({ consumer_kind, consumer_ref, target_owner_kind, target_owner_ref?, alias, default_permission? })\`
+- \`unlink_property_kb_source({ link_id })\`
+
+Target kinds: \`app|recipe|toolkit|workflow\` (give \`target_owner_ref\`), or \`human\` (the
+runner's own general knowledge — omit the ref). In an app's code the alias is read via
+\`window.kb.from('alias').get(key)\` / \`.list()\` / \`.put(key, content)\`.
+
+### Grants (runtime, per-user consent)
+**A link is NOT access.** Before any data crosses, the **running user must consent** with a
+**grant** — always bound to the calling user, scoped to that user's own data. A property can
+never self-grant; only a human creates/revokes grants.
+
+- \`list_kb_grants()\`
+- \`grant_kb_access({ consumer_kind, consumer_ref, owner_kind, owner_ref?, permission?, category_scope? })\`
+- \`revoke_kb_access({ grant_id })\`
+
+**Where consent happens:** on **web/mobile** an ungranted cross-property read raises a consent
+**modal** in the app runner. **Headless surfaces (this MCP, the CLI, workflows, goals) have no
+modal — they fail closed unless a standing grant already exists.** \`grant_kb_access\` is how you
+establish that standing grant ahead of time (the headless equivalent of the web
+\`/knowledge/access\` page).
+
+### Worked example — an app fronting a recipe's KB
+1. The recipe runs (headless) and writes its output into **its own** namespace.
+2. The app's author declares a link with \`link_property_kb_source\` (consumer = the app, target =
+   the recipe, alias = \`data\`, \`read_write\`).
+3. The running user consents — on web via the modal, or headless via \`grant_kb_access\` (consumer
+   = the app, owner = the recipe, \`read_write\`).
+4. The app reads/writes the recipe's docs **in the user's own data** via \`window.kb.from('data')\`;
+   a write-back lands in the recipe's namespace so the next run sees it.
+
+### Security invariants
+- Owner-gated link management (you can only link properties you own).
+- Grants are always the **calling user's**; the producer + consumer must be **viewable** by that
+  user; cross-user access is impossible; everything is audited.
+- No external API-token escape — cross-property KB access is built-in and Hub-mediated.
+
+Full design: \`Docs/DevGuides/PROPERTY_GATING_LINKING.md\`.
+
 ## Related Resources
 
 - **Recipes:** \`learn://recipes\` - Use knowledge base in agent workflows
 - **Custom Nodes:** \`learn://custom-nodes\` - Build RAG-powered nodes
 - **Workflows:** \`learn://workflows\` - Integrate knowledge base lookups
+- **Apps:** \`learn://apps\` - \`window.kb\` + \`window.kb.from(alias)\` cross-property bridge
 `,
   },
 

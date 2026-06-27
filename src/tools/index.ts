@@ -190,6 +190,13 @@ import { reprocessDocumentToolDef, handleReprocessDocument } from './reprocess-d
 import { deleteKnowledgeDocumentToolDef, handleDeleteKnowledgeDocument } from './delete-knowledge-document.js';
 import { queryKnowledgeBaseToolDef, handleQueryKnowledgeBase } from './query-knowledge-base.js';
 import { getKnowledgeStorageToolDef, handleGetKnowledgeStorage } from './get-knowledge-storage.js';
+// Property KB Gating — links & grants (knowledge:read / knowledge:manage)
+import { listPropertyKbLinksTool, handleListPropertyKbLinks } from './list-property-kb-links.js';
+import { linkPropertyKbSourceTool, handleLinkPropertyKbSource } from './link-property-kb-source.js';
+import { unlinkPropertyKbSourceTool, handleUnlinkPropertyKbSource } from './unlink-property-kb-source.js';
+import { listKbGrantsTool, handleListKbGrants } from './list-kb-grants.js';
+import { grantKbAccessTool, handleGrantKbAccess } from './grant-kb-access.js';
+import { revokeKbAccessTool, handleRevokeKbAccess } from './revoke-kb-access.js';
 
 // ============================================
 // Agent Toolkit Tools (agent_toolkits:read / agent_toolkits:manage)
@@ -475,6 +482,13 @@ export const tools = [
   deleteKnowledgeDocumentToolDef,
   queryKnowledgeBaseToolDef,
   getKnowledgeStorageToolDef,
+  // Property KB Gating — links & grants (6)
+  listPropertyKbLinksTool,
+  linkPropertyKbSourceTool,
+  unlinkPropertyKbSourceTool,
+  listKbGrantsTool,
+  grantKbAccessTool,
+  revokeKbAccessTool,
   // Agent Toolkits (24)
   listAgentToolkitsTool,
   searchAgentToolkitsTool,
@@ -1197,6 +1211,27 @@ export async function dispatchToolCall(
 
       case 'get_knowledge_storage':
         return handleGetKnowledgeStorage(api);
+
+      // ============================================
+      // Property KB Gating — links & grants
+      // ============================================
+      case 'list_property_kb_links':
+        return handleListPropertyKbLinks(api, args as { consumer_kind: string; consumer_ref: string });
+
+      case 'link_property_kb_source':
+        return handleLinkPropertyKbSource(api, args as Record<string, unknown>);
+
+      case 'unlink_property_kb_source':
+        return handleUnlinkPropertyKbSource(api, args as { link_id: number });
+
+      case 'list_kb_grants':
+        return handleListKbGrants(api, args as Record<string, unknown>);
+
+      case 'grant_kb_access':
+        return handleGrantKbAccess(api, args as Record<string, unknown>);
+
+      case 'revoke_kb_access':
+        return handleRevokeKbAccess(api, args as { grant_id: number });
 
       // ============================================
       // Agent Toolkit Tools
