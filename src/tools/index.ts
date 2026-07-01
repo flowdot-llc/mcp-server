@@ -813,10 +813,10 @@ export async function dispatchToolCall(
         });
 
       case 'create_custom_node':
-        return handleCreateCustomNode(api, args as any);
+        return handleCreateCustomNode(api, args as Parameters<typeof handleCreateCustomNode>[1]);
 
       case 'update_custom_node':
-        return handleUpdateCustomNode(api, args as any);
+        return handleUpdateCustomNode(api, args as Parameters<typeof handleUpdateCustomNode>[1]);
 
       case 'delete_custom_node':
         return handleDeleteCustomNode(api, args as { node_id: string });
@@ -857,10 +857,10 @@ export async function dispatchToolCall(
         return handleGetApp(api, args as { app_id: string });
 
       case 'create_app':
-        return handleCreateApp(api, args as any);
+        return handleCreateApp(api, args as Parameters<typeof handleCreateApp>[1]);
 
       case 'update_app':
-        return handleUpdateApp(api, args as any);
+        return handleUpdateApp(api, args as Parameters<typeof handleUpdateApp>[1]);
 
       case 'delete_app':
         return handleDeleteApp(api, args as { app_id: string });
@@ -1368,10 +1368,10 @@ export async function dispatchToolCall(
         });
 
       case 'mcp__flowdot__create_toolkit_tool':
-        return handleCreateToolkitTool(api, args as any);
+        return handleCreateToolkitTool(api, args as Parameters<typeof handleCreateToolkitTool>[1]);
 
       case 'mcp__flowdot__update_toolkit_tool':
-        return handleUpdateToolkitTool(api, args as any);
+        return handleUpdateToolkitTool(api, args as Parameters<typeof handleUpdateToolkitTool>[1]);
 
       case 'mcp__flowdot__delete_toolkit_tool':
         return handleDeleteToolkitTool(api, args as {
@@ -1542,10 +1542,10 @@ export async function dispatchToolCall(
         return handleGetAgentCharacter(api, args as { id: string });
 
       case 'create_agent_character':
-        return handleCreateAgentCharacter(api, args as any);
+        return handleCreateAgentCharacter(api, args as Parameters<typeof handleCreateAgentCharacter>[1]);
 
       case 'update_agent_character':
-        return handleUpdateAgentCharacter(api, args as any);
+        return handleUpdateAgentCharacter(api, args as Parameters<typeof handleUpdateAgentCharacter>[1]);
 
       case 'delete_agent_character':
         return handleDeleteAgentCharacter(api, args as { id: string; confirm: boolean });

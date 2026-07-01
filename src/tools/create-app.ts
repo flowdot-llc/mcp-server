@@ -82,6 +82,15 @@ viewing user, using that user's own research providers + keys (no linking call n
   await research.search('query')        -> { results: [{ title, url, snippet, source }], provider }
   await research.fetch('https://...')   -> { url, title, content, codeBlocks, contentLength }
 
+## BUILT-IN LLM (no custom workflow)
+Set config.llmEnabled: true to let app code call an LLM directly — for summarize / classify /
+grade needs you do NOT have to build and link a workflow:
+  await window.llm.complete(prompt, { tier, system, temperature, maxTokens }) -> { text, model }
+  await window.llm.stream(prompt, opts, onToken)                              -> { text, model }
+App code passes a TIER only ('simple'|'capable'|'complex'); the viewer picks the concrete model
+via the host "LLM" picker, billed to the viewer's FlowDot credits (402/429 handled by the
+platform throttle). Use a linked workflow instead when you need tools, RAG, or multi-step.
+
 After creating an app, use link_app_workflow to connect workflows that the app can invoke.
 Use get_app_template to see example code and patterns.`,
   inputSchema: {
@@ -101,7 +110,7 @@ Use get_app_template to see example code and patterns.`,
       },
       config: {
         type: 'object',
-        description: 'Configuration object (optional). Supported keys: displayMode ("windowed"|"fullscreen"|"embedded"), and researchEnabled (boolean — enables the research.search()/research.fetch() web-search + URL-fetch bridge in app code).',
+        description: 'Configuration object (optional). Supported keys: displayMode ("windowed"|"fullscreen"|"embedded"), and researchEnabled (boolean — enables the research.search()/research.fetch() web-search + URL-fetch bridge in app code), and llmEnabled (boolean — enables the built-in window.llm.complete()/stream() LLM bridge, no custom workflow needed).',
       },
       category: {
         type: 'string',

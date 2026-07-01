@@ -9,6 +9,42 @@
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
 
+interface RunTotals {
+  tokens?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  duration_ms?: number;
+  tool_calls?: number;
+}
+
+interface ModelLineupEntry {
+  model?: string;
+}
+
+interface BenchmarkRun {
+  hash?: string;
+  label?: string;
+  title?: string;
+  final_status?: string;
+  totals?: RunTotals;
+  speculative_cost?: { totals?: { cost?: number } };
+  model_lineup?: Record<string, ModelLineupEntry>;
+  share_url?: string;
+}
+
+interface RecipeBenchmark {
+  title?: string;
+  hash?: string;
+  share_url?: string;
+  recipe?: { title?: string; name?: string };
+  runs?: BenchmarkRun[];
+  view_count?: number;
+  vote_count?: number;
+  created_at?: string;
+  user?: { name?: string };
+  description?: string;
+}
+
 export const getRecipeBenchmarkTool: Tool = {
   name: 'get_recipe_benchmark',
   description:
@@ -28,7 +64,7 @@ export async function handleGetRecipeBenchmark(
   args: { recipe_hash: string; benchmark_hash: string },
 ): Promise<CallToolResult> {
   try {
-    const benchmark = await api.getRecipeBenchmark(args.recipe_hash, args.benchmark_hash) as any;
+    const benchmark = await api.getRecipeBenchmark(args.recipe_hash, args.benchmark_hash) as RecipeBenchmark;
 
     const lines: string[] = [
       `## ${benchmark.title}`,
@@ -42,7 +78,7 @@ export async function handleGetRecipeBenchmark(
     if (benchmark.user) lines.push(`**Published by:** ${benchmark.user.name}`);
     if (benchmark.description) lines.push('', `**Description:** ${benchmark.description}`);
 
-    const runs = (benchmark.runs as any[]) || [];
+    const runs = benchmark.runs || [];
     if (runs.length > 0) {
       lines.push('', '### Runs in this benchmark', '');
       for (const r of runs) {
@@ -55,7 +91,7 @@ export async function handleGetRecipeBenchmark(
         lines.push(`- **Duration:** ${r.totals?.duration_ms ?? 0}ms · **Tool calls:** ${r.totals?.tool_calls ?? 0}`);
         lines.push(`- **Speculative cost:** ${costStr}`);
         if (r.model_lineup && Object.keys(r.model_lineup).length > 0) {
-          const models = Object.values(r.model_lineup as Record<string, any>)
+          const models = Object.values(r.model_lineup)
             .map((m) => m?.model)
             .filter(Boolean);
           lines.push(`- **Models:** ${[...new Set(models)].join(', ')}`);

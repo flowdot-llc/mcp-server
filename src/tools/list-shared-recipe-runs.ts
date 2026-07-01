@@ -39,7 +39,22 @@ export const listSharedRecipeRunsTool: Tool = {
   },
 };
 
-function formatRun(run: any): string {
+interface SharedRunListItem {
+  title?: string;
+  hash?: string;
+  final_status?: string;
+  is_active?: boolean;
+  share_url?: string;
+  totals?: { tokens?: number; duration_ms?: number; tool_calls?: number };
+  view_count?: number;
+  vote_count?: number;
+  created_at?: string;
+  user?: { name?: string };
+  description?: string;
+  model_lineup?: Record<string, { model?: string }>;
+}
+
+function formatRun(run: SharedRunListItem): string {
   const lines = [
     `### ${run.title || `Run ${run.hash}`} (${run.hash})`,
     `**Status:** ${run.final_status} ${run.is_active ? '· active' : '· inactive'}`,
@@ -51,7 +66,7 @@ function formatRun(run: any): string {
   if (run.user) lines.push(`**Published by:** ${run.user.name}`);
   if (run.description) lines.push(`**Description:** ${run.description}`);
   if (run.model_lineup && Object.keys(run.model_lineup).length > 0) {
-    const models = Object.values(run.model_lineup as Record<string, any>)
+    const models = Object.values(run.model_lineup)
       .map((m) => m?.model)
       .filter(Boolean);
     if (models.length > 0) {
@@ -72,7 +87,7 @@ export async function handleListSharedRecipeRuns(
       page: args.page,
     });
 
-    const runs = (result as any).data || [];
+    const runs = result.data || [];
     if (runs.length === 0) {
       return {
         content: [
@@ -84,9 +99,9 @@ export async function handleListSharedRecipeRuns(
       };
     }
 
-    const total = (result as any).total ?? runs.length;
-    const currentPage = (result as any).current_page ?? 1;
-    const lastPage = (result as any).last_page ?? 1;
+    const total = result.total ?? runs.length;
+    const currentPage = result.current_page ?? 1;
+    const lastPage = result.last_page ?? 1;
     const header = `## Published Runs (${total} total, page ${currentPage}/${lastPage})\n\n`;
     return {
       content: [{ type: 'text', text: header + runs.map(formatRun).join('\n\n---\n\n') }],

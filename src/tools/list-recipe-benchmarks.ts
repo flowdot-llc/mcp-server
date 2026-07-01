@@ -33,7 +33,7 @@ export async function handleListRecipeBenchmarks(
       page: args.page,
     });
 
-    const benches = (result as any).data || [];
+    const benches = result.data || [];
     if (benches.length === 0) {
       return {
         content: [
@@ -45,9 +45,9 @@ export async function handleListRecipeBenchmarks(
       };
     }
 
-    const total = (result as any).total ?? benches.length;
-    const currentPage = (result as any).current_page ?? 1;
-    const lastPage = (result as any).last_page ?? 1;
+    const total = result.total ?? benches.length;
+    const currentPage = result.current_page ?? 1;
+    const lastPage = result.last_page ?? 1;
     const lines: string[] = [`## Benchmarks (${total} total, page ${currentPage}/${lastPage})`, ''];
 
     for (const b of benches) {

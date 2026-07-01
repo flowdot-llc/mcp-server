@@ -7,6 +7,17 @@
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
 
+interface UpdatedNode {
+  id?: string;
+  type?: string;
+  title?: string;
+  position?: { x?: number; y?: number };
+}
+
+interface UpdateNodeResult extends UpdatedNode {
+  node?: UpdatedNode;
+}
+
 export const updateNodeTool: Tool = {
   name: 'update_node',
   description: 'Update a node\'s position or properties. Changes are immediately saved.',
@@ -53,7 +64,7 @@ export async function handleUpdateNode(
     if (args.position) updates.position = args.position;
     if (args.properties) updates.properties = args.properties;
 
-    const result = await api.updateNode(args.workflow_id, args.node_id, updates) as any;
+    const result = await api.updateNode(args.workflow_id, args.node_id, updates) as UpdateNodeResult;
 
     // API returns { node_id, node: {...} }
     const node = result?.node || result;

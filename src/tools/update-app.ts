@@ -26,10 +26,11 @@ Use this to:
 - Add/update mobile-specific code
 - Set display mode via config: { displayMode: "windowed" | "fullscreen" | "embedded" }
 - Enable web research via config: { researchEnabled: true } (adds research.search()/research.fetch())
+- Enable the built-in LLM via config: { llmEnabled: true } (adds window.llm.complete()/stream() — a direct LLM call with NO custom workflow; app code passes a tier, the viewer picks the model, billed to the viewer's credits)
 - Update category and tags
 
 NOTE: config is replaced wholesale — include every key you want to keep (e.g. send
-{ displayMode, researchEnabled } together), not just the one you are changing.`,
+{ displayMode, researchEnabled, llmEnabled } together), not just the one you are changing.`,
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -55,7 +56,7 @@ NOTE: config is replaced wholesale — include every key you want to keep (e.g. 
       },
       config: {
         type: 'object',
-        description: 'Updated configuration object (replaces config wholesale). Supported keys: displayMode ("windowed"|"fullscreen"|"embedded"), researchEnabled (boolean — enables the research.search()/research.fetch() web bridge).',
+        description: 'Updated configuration object (replaces config wholesale). Supported keys: displayMode ("windowed"|"fullscreen"|"embedded"), researchEnabled (boolean — enables the research.search()/research.fetch() web bridge), llmEnabled (boolean — enables the built-in window.llm.complete()/stream() bridge, no workflow needed).',
       },
       category: {
         type: 'string',

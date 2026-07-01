@@ -1789,6 +1789,7 @@ Apps run in a sandboxed iframe with:
 - **invokeWorkflow()** function to call linked workflows
 - **invokeTool()** function to call tools from linked toolkits (see "Toolkit Integration")
 - **research.search() / research.fetch()** for web search + URL fetch, available when the app has \`config.researchEnabled\` (see "Research Integration")
+- **window.llm.complete() / window.llm.stream()** — a built-in LLM call (summarize / classify / grade) with **no workflow required**, available when the app has \`config.llmEnabled\` (see "Built-in LLM")
 
 ### Multi-File Structure
 All apps are multi-file by default:
@@ -2320,6 +2321,75 @@ DuckDuckGo provider, so \`research.search()\` works out of the box.
 The research endpoints are rate-limited (~60 calls/min per user, like the toolkit endpoint).
 Don't fire many \`research.*\` calls at once on load — cap concurrency and back off using the
 same governor pattern shown for \`invokeTool()\` above.
+
+## Built-in LLM (\`window.llm\`) — no custom workflow needed
+
+For simple "summarize this / classify that / grade this against the user's data" needs, apps
+have a **built-in LLM bridge**. You do **NOT** have to build and link a workflow with an LLM
+node — call \`window.llm\` directly. It runs as the **viewing user**, billed to **their**
+FlowDot credits, using **their** chosen model. This is the lightweight sibling of the research
+and \`window.kb\` bridges.
+
+### Enabling it — one flag (exactly like research)
+
+Not a linked entity — there is no \`link_app_llm\`. Turn it on with a single config flag:
+
+\`\`\`javascript
+create_app({ name: "Summarizer", config: { llmEnabled: true } /* ...files... */ })
+
+// or flip it on for an existing app (config is replaced WHOLESALE — keep your other keys):
+update_app({ app_id: "app-abc123", config: { displayMode: "fullscreen", llmEnabled: true } })
+\`\`\`
+
+\`config.llmEnabled\` is **server-enforced** — a non-enabled app gets a 403 even on a direct
+call (the client flag is only a hint). When enabled, the app shows a "Connected LLM" row in
+its hover helper.
+
+### Calling window.llm.complete() / window.llm.stream()
+
+\`\`\`javascript
+// one-shot → resolves { text, model }
+const { text, model } = await window.llm.complete(prompt, {
+  tier: 'capable',        // 'simple' | 'capable' | 'complex'  (the ONLY model lever app code has)
+  system: 'You are a precise classifier. Output ONLY JSON.',
+  temperature: 0.2,
+  maxTokens: 1200,
+});
+
+// streaming → onToken(token) fires per token; resolves with the full { text, model }
+const { text } = await window.llm.stream(prompt, { tier: 'capable' }, (tok) => appendToken(tok));
+\`\`\`
+
+Both are async — wrap in try/catch with loading/error states.
+
+### CRITICAL — app code picks a TIER, the VIEWER picks the model
+
+App code may pass \`tier\` (plus \`system\` / \`temperature\` / \`maxTokens\`) **only**. The concrete
+provider/model is chosen **by the viewer** through the host **"LLM" picker** (the LLM control
+in the app's floating bar, and the AppDetail header), defaulting to the viewer's own
+tier→model mapping. An app **cannot** pin a specific (costly) model against the viewer's
+credits — that is by design. If the viewer has not selected a model and has no tier default,
+the call rejects (a 400 "no model") — catch it and prompt them to pick one via the LLM button.
+
+### Viewer-scoped + billing (same invariants as research / invoke-tool)
+
+- Runs as the **viewing user** — their credits and their model, never the author's.
+- Out of credits → rejects with an \`err.code\`-bearing **402 \`INSUFFICIENT_CREDITS\`** (the
+  platform's Top-Up modal fires automatically). Rate limit → **429** (~60 calls/min). Same
+  throttle UX the research and toolkit bridges use.
+
+### \`window.llm\` vs a workflow — which to reach for
+
+- **\`window.llm\`** — single-shot text in → text out: summaries, classification, extraction,
+  rewriting, grading something against the user's \`window.kb\` data. No tools, no multi-step,
+  no RAG. Lowest friction.
+- **A linked workflow (\`invokeWorkflow\`)** — when you need tool-calling, a multi-node
+  pipeline, retrieval (RAG), image/audio nodes, or structured multi-step orchestration. The
+  viewer can still pick each LLM node's model via the same host picker (applied per-node at run
+  time, without mutating the shared workflow).
+
+**Compose them with no workflow at all:** \`research.fetch(url)\` to read a page →
+\`window.llm.complete()\` to summarize or grade it against the user's \`window.kb\` data.
 
 ## Managing Apps
 

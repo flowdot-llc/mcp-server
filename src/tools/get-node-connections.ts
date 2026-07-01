@@ -7,6 +7,20 @@
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
 
+interface NodeConnection {
+  sourceNodeId?: string;
+  sourceSocketId?: string;
+  targetNodeId?: string;
+  targetSocketId?: string;
+  isFeedback?: boolean;
+}
+
+interface NodeConnectionsResult {
+  incoming?: NodeConnection[];
+  outgoing?: NodeConnection[];
+  total?: number;
+}
+
 export const getNodeConnectionsTool: Tool = {
   name: 'get_node_connections',
   description: 'Get all connections to and from a specific node in a workflow.',
@@ -32,7 +46,7 @@ export async function handleGetNodeConnections(
 ): Promise<CallToolResult> {
   try {
     // API returns { node_id, incoming: [...], outgoing: [...], total: N }
-    const result = await api.getNodeConnections(args.workflow_id, args.node_id) as any;
+    const result = await api.getNodeConnections(args.workflow_id, args.node_id) as unknown as NodeConnectionsResult;
 
     const incoming = Array.isArray(result?.incoming) ? result.incoming : [];
     const outgoing = Array.isArray(result?.outgoing) ? result.outgoing : [];

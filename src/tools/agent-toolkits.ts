@@ -15,7 +15,10 @@ import type {
   UpdateToolkitInput,
   CreateToolkitToolInput,
   UpdateToolkitToolInput,
-  InvokeToolkitToolInput} from '../types.js';
+  InvokeToolkitToolInput,
+  ToolkitComment,
+  ToolkitEndpointConfig,
+  ToolkitCredentialRequirementInput} from '../types.js';
 import { collabSuffix, collabDetail } from '../collab-format.js';
 
 // ============================================
@@ -295,18 +298,18 @@ export async function handleGetToolkitComments(
       };
     }
 
-    const formatComment = (comment: any, indent = 0): string => {
+    const formatComment = (comment: ToolkitComment, indent = 0): string => {
       const prefix = '  '.repeat(indent);
       let text = `${prefix}- **${comment.user_name}** (${comment.created_at})\n${prefix}  ${comment.content}\n${prefix}  Votes: ${comment.vote_count || 0}`;
 
       if (comment.replies && comment.replies.length > 0) {
-        text += '\n' + comment.replies.map((r: any) => formatComment(r, indent + 1)).join('\n');
+        text += '\n' + comment.replies.map((r) => formatComment(r, indent + 1)).join('\n');
       }
 
       return text;
     };
 
-    const commentsText = comments.map((c: any) => formatComment(c)).join('\n\n');
+    const commentsText = comments.map((c) => formatComment(c)).join('\n\n');
     const text = `## Toolkit Comments
 
 ${commentsText}`;
@@ -659,7 +662,7 @@ export async function handleCreateAgentToolkit(
       input.tags = args.tags.map(t => String(t));
     }
     if (args.credential_requirements && Array.isArray(args.credential_requirements)) {
-      input.credential_requirements = args.credential_requirements.map((cred: any) => ({
+      input.credential_requirements = args.credential_requirements.map((cred: ToolkitCredentialRequirementInput) => ({
         key_name: String(cred.key_name),
         label: String(cred.label),
         credential_type: cred.credential_type || 'api_key',
@@ -923,7 +926,7 @@ export async function handleUpdateAgentToolkit(
       input.tags = args.tags.map(t => String(t));
     }
     if (args.credential_requirements && Array.isArray(args.credential_requirements)) {
-      input.credential_requirements = args.credential_requirements.map((cred: any) => ({
+      input.credential_requirements = args.credential_requirements.map((cred: ToolkitCredentialRequirementInput) => ({
         id: cred.id ? Number(cred.id) : undefined,
         key_name: String(cred.key_name),
         label: String(cred.label),
@@ -1382,7 +1385,7 @@ export async function handleListInstalledToolkits(
       };
     }
 
-    const installationsInfo = installations.map((install: any) => {
+    const installationsInfo = installations.map((install) => {
       const status = install.is_active ? '✓ Active' : '○ Inactive';
       const creds = install.credentials_configured ? '✓ Configured' : '⚠️ Missing credentials';
       return `- **${install.toolkit_title}** ${status}
@@ -1776,7 +1779,7 @@ export async function handleListToolkitTools(
       };
     }
 
-    const toolsInfo = tools.map((tool: any) => {
+    const toolsInfo = tools.map((tool) => {
       const enabled = tool.is_enabled ? '✓' : '○';
       const creds = tool.credential_keys && tool.credential_keys.length > 0
         ? `Requires: ${tool.credential_keys.join(', ')}`
@@ -2047,7 +2050,7 @@ export async function handleCreateToolkitTool(
     };
 
     if (args.output_schema) input.output_schema = args.output_schema as Record<string, unknown>;
-    if (args.endpoint_config) input.endpoint_config = args.endpoint_config as any;
+    if (args.endpoint_config) input.endpoint_config = args.endpoint_config as ToolkitEndpointConfig;
     if (args.workflow_hash) input.workflow_hash = String(args.workflow_hash);
     if (args.credential_keys && Array.isArray(args.credential_keys)) {
       input.credential_keys = args.credential_keys.map(k => String(k));
@@ -2162,7 +2165,7 @@ export async function handleUpdateToolkitTool(
     if (args.tool_type) input.tool_type = args.tool_type as 'http' | 'workflow';
     if (args.input_schema) input.input_schema = args.input_schema as Record<string, unknown>;
     if (args.output_schema) input.output_schema = args.output_schema as Record<string, unknown>;
-    if (args.endpoint_config) input.endpoint_config = args.endpoint_config as any;
+    if (args.endpoint_config) input.endpoint_config = args.endpoint_config as ToolkitEndpointConfig;
     if (args.workflow_hash) input.workflow_hash = String(args.workflow_hash);
     if (args.credential_keys && Array.isArray(args.credential_keys)) {
       input.credential_keys = args.credential_keys.map(k => String(k));

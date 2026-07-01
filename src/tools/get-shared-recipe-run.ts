@@ -8,6 +8,44 @@
 import type { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { FlowDotApiClient } from '../api-client.js';
 
+interface RunStep {
+  stepId?: string;
+  stepName?: string;
+  stepType?: string;
+  status?: string;
+  model?: string;
+  provider?: string;
+  modelTier?: string;
+  inputTokensUsed?: number;
+  outputTokensUsed?: number;
+  durationMs?: number;
+  toolCallCount?: number;
+  error?: string;
+}
+
+interface SharedRecipeRun {
+  title?: string;
+  hash?: string;
+  final_status?: string;
+  share_url?: string;
+  recipe?: { title?: string; name?: string; hash?: string };
+  totals?: {
+    tokens?: number;
+    input_tokens?: number;
+    output_tokens?: number;
+    duration_ms?: number;
+    tool_calls?: number;
+  };
+  view_count?: number;
+  vote_count?: number;
+  created_at?: string;
+  user?: { name?: string };
+  description?: string;
+  speculative_cost?: { totals?: { cost?: number }; any_unmatched?: boolean };
+  step_results?: RunStep[];
+  output_stores?: Record<string, unknown>;
+}
+
 export const getSharedRecipeRunTool: Tool = {
   name: 'get_shared_recipe_run',
   description:
@@ -27,7 +65,7 @@ export async function handleGetSharedRecipeRun(
   args: { recipe_hash: string; run_hash: string },
 ): Promise<CallToolResult> {
   try {
-    const run = await api.getSharedRecipeRun(args.recipe_hash, args.run_hash) as any;
+    const run = await api.getSharedRecipeRun(args.recipe_hash, args.run_hash) as SharedRecipeRun;
 
     const lines: string[] = [
       `## ${run.title || `Run ${run.hash}`}`,
