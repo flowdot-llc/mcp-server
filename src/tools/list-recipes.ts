@@ -13,10 +13,9 @@ export const listRecipesTool: Tool = {
   description: `List agent recipes available to the user. Returns recipe IDs, names, descriptions, and step counts.
 
 **What are Recipes?**
-Recipes are reusable agent orchestration workflows. Design them with MCP tools, execute them via the FlowDot CLI.
+Recipes are reusable agent orchestration workflows — long-running agentic processes. Design them with MCP tools; EXECUTION happens on the surfaces that host the recipe runtime: the **FlowDot CLI** (\`npx flowdot recipes run <aliasOrHash> --input '{"key":"value"}'\`) or the **FlowDot native app** (the Recipes page, or the File Explorer coding chat's \`run_recipe\` tool). Mobile execution may come later.
 
-**CRITICAL**: MCP tools can only DESIGN recipes. To RUN a recipe, use the CLI:
-\`npx flowdot recipes run <aliasOrHash> --input '{"key":"value"}'\`
+**IMPORTANT**: These MCP tools DESIGN and INSPECT recipes; they do not run them. If your current surface offers a \`run_recipe\` tool (the native app's coding chat does), use THAT to execute — otherwise direct the user to the CLI command above or the native Recipes page.
 
 **Building a Recipe (workflow):**
 1. create_recipe → Creates recipe, returns hash

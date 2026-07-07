@@ -265,7 +265,9 @@ import { createRecipeTool, handleCreateRecipe } from './create-recipe.js';
 import { updateRecipeTool, handleUpdateRecipe } from './update-recipe.js';
 import { deleteRecipeTool, handleDeleteRecipe } from './delete-recipe.js';
 import { forkRecipeTool, handleForkRecipe } from './fork-recipe.js';
-// REMOVED: execute_recipe and get_recipe_execution - MCP CANNOT run recipes, only CLI can
+// REMOVED: execute_recipe and get_recipe_execution — the MCP server has no recipe
+// runtime. Recipes execute on runtime-hosting surfaces: the FlowDot CLI or the
+// native app (Recipes page / coding-chat run_recipe); mobile may follow.
 import { listRecipeStepsTool, handleListRecipeSteps } from './list-recipe-steps.js';
 import { addRecipeStepTool, handleAddRecipeStep } from './add-recipe-step.js';
 import { updateRecipeStepTool, handleUpdateRecipeStep } from './update-recipe-step.js';
@@ -524,7 +526,8 @@ export const tools = [
   updateRecipeTool,
   deleteRecipeTool,
   forkRecipeTool,
-  // REMOVED: executeRecipeTool, getRecipeExecutionTool - MCP CANNOT run recipes
+  // REMOVED: executeRecipeTool, getRecipeExecutionTool — no recipe runtime here
+  // (execution = CLI or native app; see the comment at the imports)
   listRecipeStepsTool,
   addRecipeStepTool,
   updateRecipeStepTool,
@@ -1419,8 +1422,8 @@ export async function dispatchToolCall(
       case 'fork_recipe':
         return handleForkRecipe(api, args as { hash: string; name?: string });
 
-      // REMOVED: execute_recipe and get_recipe_execution cases
-      // MCP CANNOT run recipes - only the CLI can enter recipe modes
+      // REMOVED: execute_recipe and get_recipe_execution cases — the MCP server
+      // has no recipe runtime (execution = FlowDot CLI or native app)
 
       case 'list_recipe_steps':
         return handleListRecipeSteps(api, args as { hash: string });

@@ -14,15 +14,15 @@ export const createRecipeTool: Tool = {
 
 **After Creating:**
 1. Save the returned hash - you need it for all subsequent operations
-2. Add input stores (is_input: true) - **name primary input \`request\`** for CLI task arg
+2. Add input stores (is_input: true) - **name primary input \`request\`** (every run surface passes the task as \`inputs.request\`: CLI \`--input\`, the native app's Run Focus, and the coding chat's \`run_recipe\`)
 3. Add output stores (is_output: true) - what recipe produces
 4. Add steps and connect them via "next"
    - For agent steps: use \`user_prompt\` (NOT \`prompt\`) in config
-   - Use \`{{inputs.request}}\` to access CLI task argument
+   - Use \`{{inputs.request}}\` to access the run's task argument
 5. Set entry_step_id with update_recipe
 6. Link with alias for CLI access
 
-**IMPORTANT**: Recipe won't run until entry_step_id is set!`,
+**IMPORTANT**: Recipe won't run until entry_step_id is set! Recipes execute in the FlowDot CLI or the native app (not via MCP tools).`,
   inputSchema: {
     type: 'object',
     properties: {

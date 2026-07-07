@@ -113,7 +113,7 @@ A deterministic, full-scope audit of any shareable property — what it can DO a
 4. \`update_recipe_step\` - Connect steps via "next"
 5. \`update_recipe\` - Set entry_step_id
 6. \`link_recipe\` - Create CLI alias
-7. Run via CLI: \`npx flowdot recipes run <alias>\`
+7. Run it on a recipe-runtime surface: the CLI (\`npx flowdot recipes run <alias>\`) or the FlowDot native app (Recipes page, or the coding chat's \`run_recipe\` tool)
 
 ### Rolling Back a Recipe Edit
 Every recipe edit you make is automatically snapshotted (last 20 retained, coalesced within a 60-second window). Tools: \`list_recipe_versions\`, \`get_recipe_version\`, \`checkpoint_recipe\`, \`restore_recipe_version\`. Before any non-trivial recipe rewrite, drop a \`checkpoint_recipe(hash, label: "...")\` first. See \`learn://recipes\` → "Versioning & Undo" for the full guide.
@@ -498,10 +498,11 @@ Watch each node fire in real time. Lets you see exactly which node fails and wha
 
 Recipes are **agent orchestration workflows** that combine AI agents, conditional logic, loops, approvals, and parallel execution to handle complex tasks. Unlike visual workflows, recipes are designed for programmatic agent-driven automation.
 
-**CRITICAL:** MCP tools can only **DESIGN** recipes. To **RUN** a recipe, use the FlowDot CLI:
-\`\`\`bash
-npx flowdot recipes run <alias> --input '{"key":"value"}'
-\`\`\`
+**IMPORTANT:** These MCP tools **DESIGN and INSPECT** recipes. **RUNNING** a recipe happens on the surfaces that host the recipe runtime — recipes are long-running orchestrated processes (minutes to hours), so execution lives where runs can be supervised, gated, and audited:
+
+- **FlowDot CLI:** \`npx flowdot recipes run <alias> --input '{"key":"value"}'\`
+- **FlowDot native app:** the Recipes page (live canvas/scrum views, gates, past runs), or the File Explorer coding chat's \`run_recipe\` tool — if YOUR current surface advertises \`run_recipe\`, use it directly instead of the CLI.
+- Mobile execution may come later.
 
 **TIP — every edit is reversible.** Every \`update_recipe\`, \`add_recipe_step\`, \`update_recipe_step\`, \`delete_recipe_step\`, \`add_recipe_store\`, \`update_recipe_store\`, and \`delete_recipe_store\` you make creates an automatic version snapshot. If the user dislikes your changes, call \`list_recipe_versions\` then \`restore_recipe_version\` to roll back. Before any non-trivial rewrite, drop a \`checkpoint_recipe\` first so the user has a precise labeled rollback point. See **Versioning & Undo** at the bottom of this guide.
 
@@ -853,14 +854,16 @@ link_recipe({
 - NO underscores: \`my_recipe\` ✗ (causes 422 error)
 - Lowercase, alphanumeric + hyphens only
 
-### Step 7: Run via CLI
+### Step 7: Run it (CLI or native app)
 \`\`\`bash
-# Run with alias
+# CLI — with alias
 npx flowdot recipes run code-reviewer --input '{"request":"Review src/app.js"}'
 
-# Or with hash
+# CLI — or with hash
 npx flowdot recipes run abc123xyz --input '{"request":"Review src/app.js"}'
 \`\`\`
+Or in the FlowDot native app: open the recipe's page and Run, or — from the File
+Explorer coding chat — use the \`run_recipe\` tool if it is advertised there.
 
 ## Complete Example
 

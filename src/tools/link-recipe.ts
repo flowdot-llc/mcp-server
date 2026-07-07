@@ -22,7 +22,7 @@ export const linkRecipeTool: Tool = {
 npx flowdot recipes run <alias> --input '{"input_key":"value"}'
 \`\`\`
 
-**Note:** MCP tools can only DESIGN recipes. CLI is required to EXECUTE them.`,
+**Note:** MCP tools DESIGN and INSPECT recipes; execution happens in the FlowDot CLI (command above) or the FlowDot native app (Recipes page, or the coding chat's \`run_recipe\` tool where available). Mobile execution may come later.`,
   inputSchema: {
     type: 'object',
     properties: {
