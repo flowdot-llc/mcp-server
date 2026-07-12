@@ -31,6 +31,9 @@ const SWAPS = [
     depName: '@flowdot.ai/guardian-agent',
     fileRef: 'file:../guardian-agent-ts',
   },
+  // NOTE: @flowdot.ai/documents is intentionally NOT here. The document engine is
+  // esbuild-inlined into dist/vendor/documents.js at build time (scripts/inline-engine.mjs)
+  // — it is a devDependency, never a published runtime dependency. See PUBLISHING_GUIDE.md.
 ];
 
 function run(cmd, opts = {}) {

@@ -342,6 +342,19 @@ import { listGoalMilestonesTool, handleListGoalMilestones } from './list-goal-mi
 import { addGoalMilestoneTool, handleAddGoalMilestone } from './add-goal-milestone.js';
 import { completeGoalMilestoneTool, handleCompleteGoalMilestone } from './complete-goal-milestone.js';
 import { deleteGoalMilestoneTool, handleDeleteGoalMilestone } from './delete-goal-milestone.js';
+import {
+  readDocumentTool,
+  handleReadDocument,
+  getDocumentInfoTool,
+  handleGetDocumentInfo,
+  createDocumentTool,
+  handleCreateDocument,
+  editDocumentTool,
+  handleEditDocument,
+  convertDocumentTool,
+  handleConvertDocument,
+} from './documents.js';
+import type { CreateSpec, DocOp } from '@flowdot.ai/documents';
 
 // All available tools.
 // Exported so the manifest emitter (scripts/emit-manifest.ts) can serialize
@@ -349,6 +362,12 @@ import { deleteGoalMilestoneTool, handleDeleteGoalMilestone } from './delete-goa
 // remote MCP connector. This array is the single source of truth for tool
 // schemas across the stdio server and the remote (OAuth) connector.
 export const tools = [
+  // Documents (5) — local file read/inspect/create/edit/convert via @flowdot.ai/documents
+  readDocumentTool,
+  getDocumentInfoTool,
+  createDocumentTool,
+  editDocumentTool,
+  convertDocumentTool,
   // Core (4)
   listWorkflowsTool,
   executeWorkflowTool,
@@ -1730,6 +1749,22 @@ export async function dispatchToolCall(
 
       case 'delete_goal_milestone':
         return handleDeleteGoalMilestone(api, args as { goal_hash: string; milestone_id: number });
+
+      // Documents (local filesystem, via @flowdot.ai/documents)
+      case 'read_document':
+        return handleReadDocument(args as { file_path: string });
+
+      case 'get_document_info':
+        return handleGetDocumentInfo(args as { file_path: string });
+
+      case 'create_document':
+        return handleCreateDocument(args as { file_path: string } & CreateSpec);
+
+      case 'edit_document':
+        return handleEditDocument(args as { file_path: string; ops: DocOp[] });
+
+      case 'convert_document':
+        return handleConvertDocument(args as { input_path: string; output_path: string });
 
       default:
         return {

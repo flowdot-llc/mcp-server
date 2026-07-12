@@ -97,6 +97,13 @@ A deterministic, full-scope audit of any shareable property — what it can DO a
 - **Quick start:** \`audit_property({ type, hash })\` — returns capability tags (network / knowledge_base / llm / file / external_effect / toolkit / credentials), the literal outbound hosts, the credentials it requires, linked properties, and honest \`gaps[]\`, plus provenance/author. Read-only.
 - **Pair with \`search\`:** \`search\` to find a property → \`audit_property\` to inspect its scope → tell the user.
 
+### 14. **Documents (real docx / pdf / pptx / xlsx / md / txt / csv)**
+Read, create, edit, convert, and review REAL office documents on the local filesystem — full fidelity, backed by FlowDot's own document engine (\`@flowdot.ai/documents\`). Not RAG chunks: actual files you can open in Word/Excel/PowerPoint/Acrobat.
+- **Learn more:** \`learn://documents\`
+- **Quick start:** \`read_document({ file_path })\`, \`create_document({ file_path, content|slides|sheets|resume })\`, \`edit_document({ file_path, ops })\`
+- **Styled résumé (PDF):** pass \`resume\` to a \`.pdf\` path for a polished two-column résumé (dark navy sidebar + optional photo).
+- **LOCAL_ONLY:** these tools touch local files, so they run on the local MCP server / the FlowDot native app + CLI (including inside recipes there) — not the remote OAuth connector.
+
 ## Common Workflows
 
 ### Creating a Simple Workflow
@@ -132,6 +139,7 @@ Before installing a toolkit, running an app/workflow, or forking a recipe — es
 - **Setting up autonomous goals or scheduled tasks?** Read \`learn://goals\` first
 - **Setting up a voice-call character?** Read \`learn://characters\` first
 - **Generating, editing, or analyzing images?** Read \`learn://images\` first
+- **Reading, creating, or editing real documents (docx/pdf/pptx/xlsx/…)?** Read \`learn://documents\` first
 - **Vetting a property's capabilities/scope before using it?** Use \`audit_property\`
 
 ## Getting Help
@@ -139,6 +147,120 @@ Before installing a toolkit, running an app/workflow, or forking a recipe — es
 - Each \`learn://\` resource has detailed examples
 - Tool descriptions include usage examples
 - Visit https://flowdot.ai for web interface
+`,
+  },
+
+  'learn://documents': {
+    name: 'Documents Complete Guide',
+    description: 'Read, create, edit, convert, and review real office documents (pdf/docx/pptx/xlsx/md/txt/csv) on the local filesystem via FlowDot\'s document engine',
+    mimeType: 'text/markdown',
+    content: `# FlowDot Documents - Complete Guide
+
+## What This Is
+
+A tool family for working with **real office documents** — not RAG chunks, not the knowledge base — actual \`.docx\`, \`.pdf\`, \`.pptx\`, \`.xlsx\`, \`.md\`, \`.txt\`, and \`.csv\` files on the local filesystem, with fidelity. Backed by FlowDot's own pure-TypeScript engine (\`@flowdot.ai/documents\`, composing the ts-docx / ts-pptx / ts-xlsx-edit / ts-pdf-edit libraries). Files you create/edit open cleanly in Word, PowerPoint, Excel, and Acrobat.
+
+**This is different from the Knowledge Base (\`learn://knowledge-base\`):**
+- **Knowledge Base** = upload text/docs → chunked + embedded for RAG semantic search. You query it, you don't get a file back.
+- **Documents** = create/read/edit actual files on disk by path. You get a real \`.docx\`/\`.pdf\` you can open, attach to an email, or hand to a person.
+
+Use the KB to *remember and retrieve* knowledge; use Documents to *produce and edit deliverables* (a resume, a report, a filled spreadsheet, a deck).
+
+## LOCAL_ONLY — where these tools run
+
+The document tools touch the **local filesystem**, so they are marked \`LOCAL_ONLY\`: they run on the local (stdio) MCP server, the **FlowDot native app** (the \`/files\` document editor, the coding chat, the /agent screen), and the **FlowDot CLI** — including inside **recipes** executed on those surfaces. They are NOT available through the remote OAuth connector (there is no local disk there). Agent-initiated edits are guardian-gated (\`tool:doc.read\` / \`tool:doc.write\` / \`tool:doc.create\`); a human user's own edits in the editor are never gated.
+
+## The Tool Family
+
+| Tool | What it does |
+|---|---|
+| \`read_document({ file_path })\` | Full text extraction + format + a structural summary. |
+| \`get_document_info({ file_path })\` | Structured outline: format, per-format counts (slides/pages/sheets/paragraphs), a change token, and stable node ids. |
+| \`create_document({ file_path, title?, content?, slides?, sheets?, resume? })\` | Author a NEW document; the **file extension picks the format**. \`resume\` (PDF only) → a styled two-column résumé. |
+| \`edit_document({ file_path, ops })\` | Apply structured edits in place and save (atomic, with a \`.bak\` backup). |
+| \`convert_document({ input_path, output_path })\` | Convert where a faithful path exists (see below). |
+| \`review_document({ file_path })\` | A read-only outline + text bundle for critiquing/red-teaming a document. |
+
+## Creating documents
+
+The **output file extension** selects the format. \`create_document\` fields are used per format:
+- **docx / pdf / md / txt / csv** — \`title\` (first heading) + \`content\` (body). In \`content\`, lines beginning \`# \` / \`## \` / \`### \` become headings and \`- \` / \`* \` become bullets (docx/pdf/md).
+- **pptx** — \`slides: [{ title, content }]\` — each becomes a Title-and-Content slide.
+- **xlsx** — \`sheets: [{ name, data: [[row], [row], …] }]\` — a grid of cell values per sheet.
+- **pdf résumé (styled)** — \`resume: { header, sidebar, experience, flagshipProjects, publications, photo }\` — a polished two-column résumé: a full-height dark navy sidebar (summary / skills / certifications / education + an optional photo at the top) and a main column of experience, then flagship projects and publications. Bad input (missing name, invalid palette hex, a non-RGB / CMYK / progressive photo, or sidebar content that overflows one page) is refused with a **typed error**, never a silently-wrong document.
+
+\`\`\`javascript
+// A Word doc
+create_document({ file_path: "C:/out/report.docx", title: "Q3 Report",
+  content: "# Overview\\nStrong quarter.\\n- Revenue up\\n- Costs down" })
+
+// A spreadsheet (formulas allowed as "=…" strings)
+create_document({ file_path: "C:/out/budget.xlsx",
+  sheets: [{ name: "Data", data: [["Item","Qty","Total"],["Widgets",3,"=B2*10"]] }] })
+
+// A deck
+create_document({ file_path: "C:/out/deck.pptx", title: "Kickoff",
+  slides: [{ title: "Agenda", content: "Scope, timeline, owners" }] })
+
+// A styled two-column résumé PDF (dark sidebar + photo)
+create_document({ file_path: "C:/out/resume.pdf", resume: {
+  header: { name: "Elliot Mousseau", role: "Senior Engineer",
+    contactLines: ["+1 555-0100 · a@b.com", "site.com · City"] },
+  photo: { path: "C:/assets/headshot.jpg" },   // baseline-RGB JPEG or PNG
+  sidebar: { summary: "…", skills: ["TypeScript","AWS"],
+    certifications: [{ title: "AWS SA", issuer: "Amazon" }],
+    education: [{ degree: "B.S. CS", school: "…", dates: "2019" }] },
+  experience: [{ title: "Senior SWE", dates: "2024 - Present",
+    company: "Acme", location: "Remote", bullets: ["Built X.", "Shipped Y."] }],
+  flagshipProjects: [{ name: "Project", where: "Acme", description: "…" }],
+  publications: [{ title: "Talk", description: "…", url: "https://…" }] } })
+\`\`\`
+
+## Editing documents — the \`ops\` vocabulary
+
+\`edit_document\` takes an array of ops. Each op returns an honest per-op result (\`count\` applied, \`skipped\`, \`note\`, \`error\`) — never a silent wrong result.
+
+- \`{ op: "replace_text", search, replace, all? }\` — all formats. **Run-aware** in docx/pptx (a phrase split across styled runs is still replaced). In xlsx it edits plain-string cells and **skips formula cells** (reported as \`skipped\`) so it never corrupts a formula. In pdf it edits in place and reports non-editable spans (Type3/OCR) as \`skipped\` rather than guessing.
+- \`{ op: "set_cell", sheet?, ref, value }\` — xlsx. \`value\` is a number/string/boolean/\`"=formula"\`.
+- \`{ op: "append_text", text }\` — md/txt/csv, and appends a paragraph to docx.
+- \`{ op: "set_text", text }\` — replace whole content (md/txt/csv).
+
+\`\`\`javascript
+edit_document({ file_path: "C:/out/report.docx",
+  ops: [{ op: "replace_text", search: "Strong quarter", replace: "Record quarter", all: true }] })
+\`\`\`
+
+## Converting
+
+\`convert_document\` supports: **any → txt/md/csv** (text extraction), **md/txt/csv → docx/pdf** (authoring), and a same-format copy. Faithful **binary→binary** conversion (e.g. docx→pdf) needs a layout engine and is **refused** rather than done lossily — never a silent bad result.
+
+## Honest model (what it will and won't do)
+
+- **Formulas are stored, not evaluated** (openpyxl model): editing a formula sets \`fullCalcOnLoad\` so Excel recalculates on open — never a stale cached value.
+- **Fidelity by preservation:** open→save with no edits is loss-free; an edit touches only what it must.
+- **Typed refusals, never guesses:** \`.xls\` read is not wired yet (needs a BIFF reader dependency); \`rtf\`/\`odt\` are deferred; \`.doc\` is excluded. Each refuses with a clear reason.
+- **Backups:** overwriting a file writes a \`.bak\` first.
+
+## Using documents INSIDE a recipe
+
+The document tool names are available in the recipe runtime (native app + CLI). Reference them in an agent step's \`tools\` array and lecture the prompt with concrete calls:
+
+\`\`\`javascript
+add_recipe_step({ hash, name: "draft-and-check", type: "agent", config: {
+  tools: ["read_document", "create_document", "edit_document", "mcp__flowdot__execute_workflow"],
+  user_prompt: "Write a resume for {{stores.current_lead.role}} grounded ONLY in {{stores.context}}. " +
+    "Save it: create_document(file_path '{{inputs.output_dir}}/{{stores.current_lead.slug}}/resume.docx', content=<markdown>). " +
+    "Then read_document it and run the ATS scanner workflow; edit_document to fix gaps; return the file path as JSON.",
+  output_store: { key: "results", mode: "append" }
+}})
+\`\`\`
+
+A worked example is the **Resume & Cover Letter Generator** recipe: it resolves the user's KB categories by name, reads their job leads, and for each lead generates a tailored resume + cover letter as real \`.docx\` files in per-company folders, red-teaming each through the ATS workflow.
+
+## Related Resources
+- **Knowledge Base (RAG):** \`learn://knowledge-base\`
+- **Recipes (use docs in an agent pipeline):** \`learn://recipes\`
+- **Images & Vision:** \`learn://images\`
 `,
   },
 

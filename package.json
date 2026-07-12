@@ -10,7 +10,7 @@
   },
   "scripts": {
     "clean": "rimraf dist coverage",
-    "build": "tsc",
+    "build": "tsc && node scripts/inline-engine.mjs",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "lint": "eslint .",
@@ -48,9 +48,16 @@
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/acorn": "^4.0.6",
     "acorn": "^8.15.0",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "pdf-lib": "^1.17.1",
+    "ts-docx": "^0.1.0",
+    "ts-pdf-edit": "^0.1.0",
+    "ts-pptx": "^0.1.0",
+    "ts-xlsx-edit": "^0.1.0"
   },
   "devDependencies": {
+    "@flowdot.ai/documents": "file:../flowdot-documents",
+    "esbuild": "^0.27.4",
     "@eslint/js": "^9.15.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",

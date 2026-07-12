@@ -82,6 +82,13 @@ const LOCAL_ONLY = {
   get_app_template: 'local static templates — no API call',
   get_custom_node_template: 'local static templates — no API call',
   stream_execution: 'SSE stream — not dispatchable as a unary tool (use get_execution_status)',
+  // Document tools operate on the user's LOCAL filesystem via @flowdot.ai/documents;
+  // they have no Hub REST route and cannot run through the remote/OAuth connector.
+  read_document: 'local filesystem document read via @flowdot.ai/documents — no Hub route',
+  get_document_info: 'local filesystem document inspect via @flowdot.ai/documents — no Hub route',
+  create_document: 'local filesystem document authoring via @flowdot.ai/documents — no Hub route',
+  edit_document: 'local filesystem document edit via @flowdot.ai/documents — no Hub route',
+  convert_document: 'local filesystem document conversion via @flowdot.ai/documents — no Hub route',
 };
 
 /**

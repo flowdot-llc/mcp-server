@@ -5,7 +5,21 @@
  */
 
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
+
+// Un-minified proprietary-engine tell-tales. The document engine glue is
+// esbuild-INLINED + MINIFIED into dist/vendor/documents.js; if any of these
+// appear in a shipped .js, minification regressed and the closed-source engine
+// would ship human-readable. (Bare literal values like coordinates are
+// irreducible and NOT sentineled — only identifiers/comments/source paths.)
+const PROPRIETARY_SENTINELS = [
+  'resume-layout',
+  'SIDEBAR_PANEL_X',
+  'P1_MAIN_RIGHT',
+  'flowdot-documents/dist/authoring',
+  'decoded verbatim',
+];
 
 const FORBIDDEN_PATTERNS = [
   { pattern: /\.ts$/, reason: 'TypeScript source', except: /\.d\.ts$/ },
@@ -67,6 +81,23 @@ function main() {
   }
 
   const missing = REQUIRED_FILES.filter((req) => !files.some((f) => f === req || f.endsWith(`/${req}`)));
+
+  // Content sentinel: shipped .js must not contain un-minified proprietary-engine
+  // source (identifiers / comments / source-path leaks).
+  for (const file of files.filter((f) => f.endsWith('.js'))) {
+    let text;
+    try {
+      text = readFileSync(file, 'utf-8');
+    } catch {
+      continue;
+    }
+    for (const sentinel of PROPRIETARY_SENTINELS) {
+      if (text.includes(sentinel)) {
+        violations.push({ file, reason: `un-minified proprietary engine source ("${sentinel}") — set minify:true` });
+        break;
+      }
+    }
+  }
 
   if (violations.length > 0 || missing.length > 0) {
     console.error('\n[verify-pack] FAILED — tarball does not meet publish standards\n');
