@@ -1,50 +1,71 @@
 /**
- * inline-engine.mjs — runs AFTER `tsc`. Bundles `@flowdot.ai/documents` (and its
- * ts-* / pdf-lib deps) into a single self-contained `dist/vendor/documents.js`,
- * then rewrites the one runtime import specifier (`@flowdot.ai/documents`) in the
- * compiled dist to that vendored file.
+ * inline-engine.mjs — runs AFTER `tsc`. Bundles the private FlowDot workspace
+ * libraries into self-contained files under `dist/vendor/`, then rewrites their
+ * runtime import specifiers in the compiled dist to the vendored files.
  *
- * Effect: the FlowDot document engine ships COMPILED INSIDE this package's dist —
- * it is never a published npm dependency and never a separate public package
- * (the CLI already inlines it the same way). `@flowdot.ai/documents` stays a
- * devDependency (types + bundling input for dev/build/tests); it is NOT a runtime
- * dependency of the published tarball. Modular dist is preserved so
- * scripts/emit-manifest.mjs (which imports dist/tools/index.js) still works.
+ * Two engines are inlined:
+ *   1. `@flowdot.ai/documents` → `dist/vendor/documents.js` (ts-* / pdf-lib stay EXTERNAL).
+ *   2. `@flowdot.ai/browser-driver` → `dist/vendor/browser-driver.js`
+ *      (`playwright` / `playwright-core` stay EXTERNAL — they are optional runtime
+ *      deps, loaded lazily; bundling native browser drivers is impossible).
+ *
+ * Effect: both engines ship COMPILED INSIDE this package's dist — never published
+ * npm dependencies, never separate public packages. They stay devDependencies
+ * (types + bundling input for dev/build/tests); NOT runtime deps of the tarball.
+ * Modular dist is preserved so scripts/emit-manifest.mjs still works.
  */
 import { build } from "esbuild";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// The engine's package.json exposes only an `import` condition, so resolve it
-// with the ESM resolver (createRequire's `require`-condition resolve fails).
-const engineEntry = fileURLToPath(import.meta.resolve("@flowdot.ai/documents"));
-const OUT = "dist/vendor/documents.js";
+/** Bundle one workspace engine into dist/vendor and return its out path. */
+async function bundleEngine(specifier, outFile, externalPkgs) {
+  const entry = fileURLToPath(import.meta.resolve(specifier));
+  const external = externalPkgs.flatMap((e) => [e, `${e}/*`]);
+  await build({
+    entryPoints: [entry],
+    outfile: outFile,
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    target: "node20",
+    legalComments: "none",
+    minify: true,
+    external,
+    logLevel: "warning",
+  });
+  return outFile;
+}
 
-// Inline ONLY the proprietary flowdot-documents glue. The public companion libs
-// (ts-*, pdf-lib — and their transitive deps incl. pdfjs-dist + its worker) stay
-// EXTERNAL and are declared as normal npm dependencies of this package. This is
-// what keeps read/inspect working: ts-pdf-edit resolves pdfjs-dist + its
-// pdf.worker.mjs from real node_modules (bundling pdfjs breaks its worker with
-// "Setting up fake worker failed"). It also keeps the vendored bundle tiny.
-const EXTERNAL = ["ts-pptx", "ts-pdf-edit", "ts-docx", "ts-xlsx-edit", "pdf-lib"];
-const external = EXTERNAL.flatMap((e) => [e, `${e}/*`]);
+const DOCUMENTS_OUT = await bundleEngine(
+  "@flowdot.ai/documents",
+  "dist/vendor/documents.js",
+  // Public companion libs (+ their pdfjs worker) resolve from real node_modules.
+  ["ts-pptx", "ts-pdf-edit", "ts-docx", "ts-xlsx-edit", "pdf-lib"],
+);
 
-await build({
-  entryPoints: [engineEntry],
-  outfile: OUT,
-  bundle: true,
-  platform: "node",
-  format: "esm",
-  target: "node20",
-  legalComments: "none",
-  // minify: keep the proprietary engine glue (résumé layout constants, fidelity
-  // spec, source-path comments) OUT of the readable published tarball — mirrors
-  // the CLI's `minify: true`. verify-pack additionally sentinels for leaks.
-  minify: true,
-  external,
-  logLevel: "warning",
-});
+const BROWSER_OUT = await bundleEngine(
+  "@flowdot.ai/browser-driver",
+  "dist/vendor/browser-driver.js",
+  // Playwright is an optional runtime dep, lazily loaded via a dynamic import.
+  ["playwright", "playwright-core"],
+);
+
+const CLI_QA_OUT = await bundleEngine(
+  "@flowdot.ai/cli-qa-engine",
+  "dist/vendor/cli-qa-engine.js",
+  // `ws` stays a real runtime dep; node-pty is INJECTED from the launch CWD and is
+  // never imported by the engine (TERMINAL_EYES.md Part E).
+  ["ws"],
+);
+
+// Map each runtime import specifier → its vendored bundle.
+const REWRITES = [
+  { specifier: "@flowdot.ai/documents", out: DOCUMENTS_OUT },
+  { specifier: "@flowdot.ai/browser-driver", out: BROWSER_OUT },
+  { specifier: "@flowdot.ai/cli-qa-engine", out: CLI_QA_OUT },
+];
 
 async function walkJs(dir) {
   const out = [];
@@ -59,16 +80,24 @@ async function walkJs(dir) {
 let rewritten = 0;
 for (const file of await walkJs("dist")) {
   if (file.replace(/\\/g, "/").includes("dist/vendor/")) continue;
-  const src = await readFile(file, "utf8");
-  if (!src.includes("@flowdot.ai/documents")) continue;
-  let rel = relative(dirname(file), OUT).replace(/\\/g, "/");
-  if (!rel.startsWith(".")) rel = `./${rel}`;
-  // Only rewrite real import/export `from '@flowdot.ai/documents'` clauses — never
-  // the string occurrences inside the learn-resource markdown content.
-  const next = src.replace(/(\bfrom\s*)(['"])@flowdot\.ai\/documents\2/g, `$1"${rel}"`);
-  if (next !== src) {
-    await writeFile(file, next);
+  let src = await readFile(file, "utf8");
+  let changed = false;
+  for (const { specifier, out } of REWRITES) {
+    if (!src.includes(specifier)) continue;
+    let rel = relative(dirname(file), out).replace(/\\/g, "/");
+    if (!rel.startsWith(".")) rel = `./${rel}`;
+    // Only rewrite real `from '<specifier>'` import/export clauses — never string
+    // occurrences inside learn-resource markdown content.
+    const re = new RegExp(`(\\bfrom\\s*)(['"])${specifier.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}\\2`, "g");
+    const next = src.replace(re, `$1"${rel}"`);
+    if (next !== src) {
+      src = next;
+      changed = true;
+    }
+  }
+  if (changed) {
+    await writeFile(file, src);
     rewritten++;
   }
 }
-console.log(`inline-engine: bundled engine → ${OUT}; rewrote ${rewritten} dist import(s).`);
+console.log(`inline-engine: bundled engines → dist/vendor/; rewrote ${rewritten} dist file(s).`);

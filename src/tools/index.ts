@@ -13,6 +13,7 @@ import {
 import type { FlowDotApiClient } from '../api-client.js';
 import { runUnderSupervisor, type Supervisor } from '../supervisor.js';
 import { capabilitiesFor } from '../tool-capabilities.js';
+import { activeInteractiveCliTools, dispatchInteractiveCli, isInteractiveCliToolName, CLI_QA_ENABLED } from '../interactive-cli.js';
 
 // ============================================
 // Core Tools (Existing)
@@ -355,6 +356,22 @@ import {
   handleConvertDocument,
 } from './documents.js';
 import type { CreateSpec, DocOp } from '@flowdot.ai/documents';
+// Browser + Electron-QA driving — PURELY LOCAL (no api client, no Hub route).
+import {
+  browserTools,
+  handleBrowserLaunch,
+  handleBrowserNavigate,
+  handleBrowserDescribe,
+  handleBrowserFind,
+  handleBrowserAct,
+  handleBrowserSequence,
+  handleBrowserReadForm,
+  handleBrowserFillForm,
+  handleBrowserScreenshot,
+  handleBrowserWaitFor,
+  handleBrowserClose,
+  handleBrowserListSessions,
+} from './browser.js';
 
 // All available tools.
 // Exported so the manifest emitter (scripts/emit-manifest.ts) can serialize
@@ -605,6 +622,8 @@ export const tools = [
   addGoalMilestoneTool,
   completeGoalMilestoneTool,
   deleteGoalMilestoneTool,
+  // Browser + Electron-QA driving (12) — local Playwright, no Hub route.
+  ...browserTools,
 ];
 
 /**
@@ -615,9 +634,11 @@ export function registerTools(
   api: FlowDotApiClient,
   supervisor?: Supervisor | null,
 ): void {
-  // Handle tools/list request
+  // Handle tools/list request. The static `tools` export stays PURE (manifest
+  // consumer); the opt-in interactive-CLI tools (FLOWDOT_CLI_QA=1) are added HERE and
+  // in tool-categories so ListTools AND progressive disclosure see the same set.
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools };
+    return { tools: [...tools, ...activeInteractiveCliTools()] };
   });
 
   // Handle tools/call request — wrapped under supervisor when one is provided.
@@ -647,6 +668,11 @@ export async function dispatchToolCall(
   request: { params: { name: string; arguments?: unknown } },
 ): Promise<CallToolResult> {
   const { name, arguments: args } = request.params;
+
+  // Opt-in interactive-CLI QA tools (local PTY engine; FLOWDOT_CLI_QA=1).
+  if (CLI_QA_ENABLED && isInteractiveCliToolName(name)) {
+    return dispatchInteractiveCli(name, args);
+  }
 
   switch (name) {
       // ============================================
@@ -1765,6 +1791,32 @@ export async function dispatchToolCall(
 
       case 'convert_document':
         return handleConvertDocument(args as { input_path: string; output_path: string });
+
+      // Browser + Electron-QA driving (local Playwright, no Hub route)
+      case 'browser_launch':
+        return handleBrowserLaunch(args as Record<string, unknown>);
+      case 'browser_navigate':
+        return handleBrowserNavigate(args as Record<string, unknown>);
+      case 'browser_describe':
+        return handleBrowserDescribe(args as Record<string, unknown>);
+      case 'browser_find':
+        return handleBrowserFind(args as Record<string, unknown>);
+      case 'browser_act':
+        return handleBrowserAct(args as Record<string, unknown>);
+      case 'browser_sequence':
+        return handleBrowserSequence(args as Record<string, unknown>);
+      case 'browser_read_form':
+        return handleBrowserReadForm(args as Record<string, unknown>);
+      case 'browser_fill_form':
+        return handleBrowserFillForm(args as Record<string, unknown>);
+      case 'browser_screenshot':
+        return handleBrowserScreenshot(args as Record<string, unknown>);
+      case 'browser_wait_for':
+        return handleBrowserWaitFor(args as Record<string, unknown>);
+      case 'browser_close':
+        return handleBrowserClose(args as Record<string, unknown>);
+      case 'browser_list_sessions':
+        return handleBrowserListSessions();
 
       default:
         return {

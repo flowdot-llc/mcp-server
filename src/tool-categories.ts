@@ -12,6 +12,7 @@
  */
 
 import { tools as ALL_TOOLS } from './tools/index.js';
+import { activeInteractiveCliTools } from './interactive-cli.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 export type ToolCategory =
@@ -24,7 +25,8 @@ export type ToolCategory =
   | 'goals'
   | 'characters'
   | 'email'
-  | 'comms';
+  | 'comms'
+  | 'interactive-cli';
 
 export const TOOL_CATEGORIES: ToolCategory[] = [
   'workflows',
@@ -37,6 +39,7 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
   'characters',
   'email',
   'comms',
+  'interactive-cli',
 ];
 
 const MCP_FLOWDOT_PREFIX = 'mcp__flowdot__';
@@ -51,6 +54,9 @@ export function categoryForTool(rawName: string): ToolCategory {
   const n = rawName.startsWith(MCP_FLOWDOT_PREFIX)
     ? rawName.slice(MCP_FLOWDOT_PREFIX.length)
     : rawName;
+  // interactive_cli__* FIRST — else it falls into the default-visible `workflows`
+  // bucket and the opt-in prompt-budget goal is defeated (TERMINAL_EYES.md Part E).
+  if (n.startsWith('interactive_cli')) return 'interactive-cli';
   // app before toolkit so link_app_toolkit lands in apps (it's an app op).
   if (n.includes('app')) return 'apps';
   if (n.includes('toolkit')) return 'toolkits';
@@ -75,7 +81,7 @@ export function categoryForTool(rawName: string): ToolCategory {
 /** Return the (deduped) tools belonging to the given categories. */
 export function toolsForCategories(
   categories: readonly string[],
-  all: Tool[] = ALL_TOOLS,
+  all: Tool[] = [...ALL_TOOLS, ...activeInteractiveCliTools()],
 ): Tool[] {
   const want = new Set(categories);
   const seen = new Set<string>();
@@ -105,6 +111,7 @@ const TOPIC_TO_CATEGORY: Record<string, ToolCategory | null> = {
   characters: 'characters',
   email: 'email',
   comms: 'comms',
+  'interactive-cli': 'interactive-cli',
 };
 
 export const LEARN_TOPICS = Object.keys(TOPIC_TO_CATEGORY);

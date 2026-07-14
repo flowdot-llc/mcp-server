@@ -44,6 +44,36 @@ const EXACT_OVERRIDES: Readonly<Record<string, readonly CapabilityClass[]>> = {
   search: ['read', 'network-egress', 'credential'],
   send_notification: ['write', 'network-egress', 'credential'],
   query_knowledge_base: ['read', 'network-egress', 'credential'],
+
+  // Interactive-CLI QA (opt-in; local PTY engine, no Hub credential). Spawn/type are
+  // execute-shaped; reads/waits/status are read-shaped. No prefix matches these.
+  interactive_cli__start_session: ['execute'],
+  interactive_cli__run_test_sequence: ['execute'],
+  interactive_cli__send_input: ['execute'],
+  interactive_cli__close_session: ['execute'],
+  interactive_cli__read_output: ['read'],
+  interactive_cli__get_screen_snapshot: ['read'],
+  interactive_cli__get_status: ['read'],
+  interactive_cli__list_sessions: ['read'],
+  interactive_cli__wait_for_pattern: ['read'],
+  interactive_cli__wait_for_idle: ['read'],
+  interactive_cli__wait_for_exit: ['read'],
+
+  // Browser + Electron-QA driving — LOCAL Playwright (no Hub credential). Spawns a
+  // browser/Electron process and reaches the network; reads are read-shaped,
+  // interaction/navigation are execute-shaped.
+  browser_launch: ['execute', 'network-egress'],
+  browser_navigate: ['network-egress'],
+  browser_describe: ['read'],
+  browser_find: ['read'],
+  browser_act: ['execute'],
+  browser_sequence: ['execute'],
+  browser_read_form: ['read'],
+  browser_fill_form: ['execute'],
+  browser_screenshot: ['read'],
+  browser_wait_for: ['read'],
+  browser_close: ['execute'],
+  browser_list_sessions: ['read'],
 };
 
 /**

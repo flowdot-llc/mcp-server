@@ -104,6 +104,12 @@ Read, create, edit, convert, and review REAL office documents on the local files
 - **Styled résumé (PDF):** pass \`resume\` to a \`.pdf\` path for a polished two-column résumé (dark navy sidebar + optional photo).
 - **LOCAL_ONLY:** these tools touch local files, so they run on the local MCP server / the FlowDot native app + CLI (including inside recipes there) — not the remote OAuth connector.
 
+### 15. **Browser & Electron QA (drive a real web browser / QA a desktop app)**
+Drive a REAL web browser (browse, read pages, fill forms, apply to jobs, screenshot) or QA an Electron app, via Playwright. Observe with \`browser_describe\` / \`browser_read_form\` (deterministic DOM summary), then act.
+- **Learn more:** \`learn://browser-driving\` — READ THIS before using any \`browser_*\` tool.
+- **Quick start:** \`browser_launch({ url })\` → \`browser_describe({ session_id })\` → \`browser_act({ session_id, action, target })\` → \`browser_close({ session_id })\`.
+- **LOCAL_ONLY + optional:** local Playwright, no Hub route; prefers your system Chrome/Edge (no download). Hub-mode guarded — the internal FlowDot node server is unreachable.
+
 ## Common Workflows
 
 ### Creating a Simple Workflow
@@ -140,6 +146,7 @@ Before installing a toolkit, running an app/workflow, or forking a recipe — es
 - **Setting up a voice-call character?** Read \`learn://characters\` first
 - **Generating, editing, or analyzing images?** Read \`learn://images\` first
 - **Reading, creating, or editing real documents (docx/pdf/pptx/xlsx/…)?** Read \`learn://documents\` first
+- **Driving a web browser, filling forms / applying to jobs, or QA-ing an app?** Read \`learn://browser-driving\` first
 - **Vetting a property's capabilities/scope before using it?** Use \`audit_property\`
 
 ## Getting Help
@@ -261,6 +268,64 @@ A worked example is the **Resume & Cover Letter Generator** recipe: it resolves 
 - **Knowledge Base (RAG):** \`learn://knowledge-base\`
 - **Recipes (use docs in an agent pipeline):** \`learn://recipes\`
 - **Images & Vision:** \`learn://images\`
+`,
+  },
+
+  'learn://browser-driving': {
+    name: 'Browser & Electron-QA Driving Guide',
+    description: 'Drive a real web browser (browse, fill forms, apply to jobs) or QA an Electron app via Playwright — local, session-based, hub-mode guarded',
+    mimeType: 'text/markdown',
+    content: `# FlowDot Browser & Electron-QA Driving — Guide
+
+## What This Is
+
+A \`browser_*\` tool family that drives a **real web browser** (Chromium) or **QAs an Electron app**, via Playwright, using FlowDot's shared \`@flowdot.ai/browser-driver\` engine. You observe a page (DOM summary / form schema), then act (click, type, fill forms, upload files, screenshot). It's how you browse the web, fill out and submit forms, attempt job applications, or exercise a desktop app under test.
+
+**LOCAL + OPTIONAL.** Unlike the rest of this server (Hub HTTP calls), these tools are purely local — no Hub route (\`LOCAL_ONLY\`). Playwright is an **optional dependency**: prefers your **system Chrome/Edge** (no download). If Playwright isn't installed, a browser tool returns an actionable install hint instead of crashing the server.
+
+## The Loop: observe → act
+
+1. \`browser_launch({ url })\` → returns a \`session_id\`. (Or \`browser_launch({ app_path })\` to QA an Electron app.)
+2. \`browser_describe({ session_id })\` → the page's title, url, interactive elements (with selectors), text, forms, modals, errors. **This is your eyes — read it before acting.**
+3. \`browser_act({ session_id, action, target?, value? })\` → one action: \`click | double_click | right_click | type | clear | press_key | scroll | hover | wait | upload_file | select_option | navigate\`. \`target\` is element text / CSS selector / "x,y"; \`value\` is the text/key/url/file-path.
+4. Repeat describe→act. Use \`browser_sequence({ session_id, actions:[...] })\` to batch known steps.
+5. \`browser_close({ session_id })\` when done.
+
+## Forms & job applications
+
+- \`browser_read_form({ session_id })\` → a schema of the main form: each field's \`label\`, \`ref\`, \`type\` (text | textarea | native-select | react-select | autocomplete | file | radio | checkbox | …), \`required\`, current \`value\`, and dropdown \`options\`. **Read this first so you pass EXACT option labels.**
+- \`browser_fill_form({ session_id, fields:[{ field, value, option? }] })\` → fills each field with the correct interaction for its type (Greenhouse/Workable react-select, autocomplete, file upload on hidden inputs, radio, checkbox).
+
+## Honest limits (do not overstate — report, don't fake)
+
+- **Captcha / bot-detection is NOT solved.** On a captcha, report it and stop.
+- **iframes:** page reads run on the TOP document only — a job board embedded in an \`<iframe>\` is not visible. Say so.
+- **Multi-step SPA wizards / formless pages** (some Workable flows) aren't a single \`<form>\`; drive them step-by-step with \`browser_act\`.
+- **Autocomplete with no matching suggestion is LEFT BLANK and reported \`success:false\`** — it never fills a wrong value silently.
+- **Screenshots** are captured to disk / base64 for the record; the deterministic DOM summary (\`browser_describe\`) is the real observation channel.
+
+## Hub-mode safety
+
+Web navigation is guarded: the agent can **never** be steered at the internal FlowDot node server (\`:5000\`) or Hub (\`:8000\`) — on any loopback alias, docker service name, or redirect. Those navigations are hard-denied. (Other local ports, e.g. a user's own app on \`:3000\`, remain reachable for local QA.)
+
+## Electron QA
+
+\`browser_launch({ app_path })\` drives an Electron app's **top window** for QA. Note: a native app's in-app \`<webview>\` guest (sandboxed) is a separate web-contents and is not enumerable from the host window — web-page driving is browser mode only.
+
+## Quick reference
+
+| Tool | Purpose |
+|---|---|
+| \`browser_launch\` | Open a URL (browser) or an Electron app (QA) → session_id |
+| \`browser_navigate\` | Go to a new URL in a session |
+| \`browser_describe\` | Read the page (elements, text, forms, errors) |
+| \`browser_find\` | Rank candidate elements for a description |
+| \`browser_act\` | One UI action |
+| \`browser_sequence\` | Batch several actions |
+| \`browser_read_form\` / \`browser_fill_form\` | Form schema / batch fill |
+| \`browser_screenshot\` | PNG to disk / base64 |
+| \`browser_wait_for\` | Wait for a selector/text |
+| \`browser_close\` / \`browser_list_sessions\` | Close / list sessions |
 `,
   },
 

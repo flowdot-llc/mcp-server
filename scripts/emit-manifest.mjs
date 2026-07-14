@@ -89,6 +89,20 @@ const LOCAL_ONLY = {
   create_document: 'local filesystem document authoring via @flowdot.ai/documents — no Hub route',
   edit_document: 'local filesystem document edit via @flowdot.ai/documents — no Hub route',
   convert_document: 'local filesystem document conversion via @flowdot.ai/documents — no Hub route',
+  // Browser + Electron-QA driving — local Playwright via @flowdot.ai/browser-driver;
+  // no Hub route, not dispatchable through the remote/OAuth connector.
+  browser_launch: 'local Playwright browser/Electron launch — no Hub route',
+  browser_navigate: 'local Playwright navigation — no Hub route',
+  browser_describe: 'local Playwright DOM summary — no Hub route',
+  browser_find: 'local Playwright element search — no Hub route',
+  browser_act: 'local Playwright UI action — no Hub route',
+  browser_sequence: 'local Playwright batched actions — no Hub route',
+  browser_read_form: 'local Playwright form schema — no Hub route',
+  browser_fill_form: 'local Playwright form fill — no Hub route',
+  browser_screenshot: 'local Playwright screenshot — no Hub route',
+  browser_wait_for: 'local Playwright wait — no Hub route',
+  browser_close: 'local Playwright session close — no Hub route',
+  browser_list_sessions: 'local Playwright session list — no Hub route',
 };
 
 /**

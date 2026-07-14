@@ -53,10 +53,17 @@
     "ts-docx": "^0.1.0",
     "ts-pdf-edit": "^0.1.0",
     "ts-pptx": "^0.1.0",
-    "ts-xlsx-edit": "^0.1.0"
+    "ts-xlsx-edit": "^0.1.0",
+    "ws": "^8.19.0"
+  },
+  "optionalDependencies": {
+    "playwright-core": "^1.40.0"
   },
   "devDependencies": {
+    "@flowdot.ai/browser-driver": "file:../flowdot-browser-driver",
+    "@flowdot.ai/cli-qa-engine": "file:../flowdot-cli-qa-engine",
     "@flowdot.ai/documents": "file:../flowdot-documents",
+    "@types/ws": "^8.18.1",
     "esbuild": "^0.27.4",
     "@eslint/js": "^9.15.0",
     "@types/js-yaml": "^4.0.9",
