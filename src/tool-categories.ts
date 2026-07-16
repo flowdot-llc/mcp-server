@@ -14,6 +14,12 @@
 import { tools as ALL_TOOLS } from './tools/index.js';
 import { activeInteractiveCliTools } from './interactive-cli.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import {
+  renderLearn,
+  getTopic,
+  learnTopicsForSurface,
+  type Surface,
+} from '@flowdot.ai/platform-learn';
 
 export type ToolCategory =
   | 'workflows'
@@ -95,29 +101,16 @@ export function toolsForCategories(
   return out;
 }
 
-// ---- learn_about topic → category -----------------------------------------
+// ---- learn_about topic → category (derived from @flowdot.ai/platform-learn) --
+// The taxonomy + guidance are the single shared source now; the category a topic
+// unlocks is `topic.category` there. `LEARN_TOPICS` is the set applicable to the
+// local stdio MCP surface (the remote Hub connector filters separately).
 
-const TOPIC_TO_CATEGORY: Record<string, ToolCategory | null> = {
-  overview: null, // teaches, unlocks nothing
-  workflows: 'workflows',
-  apps: 'apps',
-  recipes: 'recipes',
-  'custom-nodes': 'custom-nodes',
-  toolkits: 'toolkits',
-  knowledge: 'knowledge',
-  'knowledge-base': 'knowledge',
-  images: 'knowledge',
-  goals: 'goals',
-  characters: 'characters',
-  email: 'email',
-  comms: 'comms',
-  'interactive-cli': 'interactive-cli',
-};
-
-export const LEARN_TOPICS = Object.keys(TOPIC_TO_CATEGORY);
+export const LEARN_TOPICS = learnTopicsForSurface('mcp');
 
 export function mapTopicToCategory(topic: string): ToolCategory | null {
-  return TOPIC_TO_CATEGORY[topic] ?? null;
+  const cat = getTopic(topic)?.category ?? null;
+  return (cat as ToolCategory | null) ?? null;
 }
 
 // ---- Discovery tools (always on) ------------------------------------------
@@ -200,12 +193,15 @@ export const DISCOVERY_TOOLS: Tool[] = [LEARN_ABOUT_TOOL, LIST_MY_RESOURCES_TOOL
  * the category to unlock for subsequent turns. Self-describing (built from the
  * live tool list) so it never drifts from the real toolset.
  */
-export function learnAbout(topic: string): {
+export function learnAbout(
+  topic: string,
+  surface: Surface = 'mcp',
+): {
   text: string;
   categoryToLoad: ToolCategory | null;
 } {
-  const category = mapTopicToCategory(topic);
-  if (!category) {
+  const t = getTopic(topic);
+  if (!t) {
     return {
       text:
         'FlowDot areas you can load with learn_about: ' +
@@ -214,15 +210,16 @@ export function learnAbout(topic: string): {
       categoryToLoad: null,
     };
   }
-  const catTools = toolsForCategories([category]);
-  const list = catTools.map(formatToolWithParams).join('\n\n');
-  return {
-    text:
-      `Loaded the "${topic}" tools. Call the one you need NOW by emitting its action ` +
-      `directly — do not just describe it. Each tool below shows its exact name and ` +
-      `parameters:\n\n${list}`,
-    categoryToLoad: category,
-  };
+  const category = (t.category as ToolCategory | null) ?? null;
+  // Build this surface's actual tool signatures for the topic's category (if any),
+  // then compose them with the shared concise prose. Topics without an MCP
+  // category (browser/files/…) render prose only — their tools are LOCAL_ONLY and
+  // always present in the MCP tool list.
+  const toolsText = category
+    ? toolsForCategories([category]).map(formatToolWithParams).join('\n\n')
+    : '';
+  const rendered = renderLearn(topic, { surface, toolsText });
+  return { text: rendered.text, categoryToLoad: category };
 }
 
 /**

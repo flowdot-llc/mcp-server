@@ -8,9 +8,13 @@
  *
  *   FlowDot-Hub/resources/mcp/tool-catalog.json    [{ name, description, inputSchema }]
  *   FlowDot-Hub/resources/mcp/learn-resources.json [{ uri, name, description, mimeType, content }]
+ *   FlowDot-Hub/resources/agent-learning/<id>.md   web /agent learn_about prose (one file per web topic)
  *
  * The Hub never re-derives tool schemas; it consumes these files, so the
  * remote connector can never drift from the stdio server's tool definitions.
+ * The agent-learning/*.md are served by GET /hub/agent/learn/{topic} to the
+ * web /agent (Node toolHandlers.js), so its learn_about content is the SAME
+ * authored prose as every other surface — no hand-maintained web copies.
  *
  * Usage:
  *   node scripts/emit-manifest.mjs            # build dist first, then write the JSON files
@@ -26,14 +30,26 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkgRoot = resolve(__dirname, '..');
 
-const hubMcpDir =
+const hubRoot =
   process.env.FLOWDOT_HUB_DIR
-    ? resolve(process.env.FLOWDOT_HUB_DIR, 'resources/mcp')
-    : resolve(pkgRoot, '../FlowDot-Hub/resources/mcp');
+    ? resolve(process.env.FLOWDOT_HUB_DIR)
+    : resolve(pkgRoot, '../FlowDot-Hub');
+
+const hubMcpDir = resolve(hubRoot, 'resources/mcp');
+const hubAgentLearningDir = resolve(hubRoot, 'resources/agent-learning');
 
 const TOOL_CATALOG_PATH = resolve(hubMcpDir, 'tool-catalog.json');
 const LEARN_RESOURCES_PATH = resolve(hubMcpDir, 'learn-resources.json');
 const TOOL_ROUTES_PATH = resolve(hubMcpDir, 'tool-routes.json');
+
+/**
+ * The web /agent (Node toolHandlers.js `validTopics`) only unlocks its 7 Hub tool
+ * categories, so it must NOT advertise a topic whose tools it can't dispatch. These
+ * are exactly the shared web-surface topics that carry a category (+ overview). Each
+ * emits resources/agent-learning/<id>.md from the shared prose. Keep in lockstep with
+ * toolHandlers.js `validTopics` — the drift check compares these files too.
+ */
+const WEB_LEARN_TOPICS = ['overview', 'workflows', 'apps', 'recipes', 'custom-nodes', 'toolkits', 'knowledge'];
 
 async function loadSources() {
   const distTools = resolve(pkgRoot, 'dist/tools/index.js');
@@ -46,9 +62,15 @@ async function loadSources() {
     process.exit(2);
   }
   const { tools, dispatchToolCall } = await import(pathToFileURL(distTools).href);
-  const { LEARN_RESOURCES } = await import(pathToFileURL(distResources).href);
+  // Sync the REMOTE resource set to the Hub OAuth connector — it is Hub-only, so
+  // it must NOT carry local-only guides (browser/documents) whose tools it can't run.
+  const { LEARN_RESOURCES_REMOTE } = await import(pathToFileURL(distResources).href);
   const { FlowDotApiClient } = await import(pathToFileURL(distApi).href);
-  return { tools, dispatchToolCall, LEARN_RESOURCES, FlowDotApiClient };
+  // The shared taxonomy (vendored into dist by inline-engine.mjs) — used to emit
+  // the web /agent's agent-learning/*.md from the same authored prose.
+  const distLearn = resolve(pkgRoot, 'dist/vendor/platform-learn.js');
+  const { getTopic } = await import(pathToFileURL(distLearn).href);
+  return { tools, dispatchToolCall, LEARN_RESOURCES: LEARN_RESOURCES_REMOTE, FlowDotApiClient, getTopic };
 }
 
 const SENTINEL_PREFIX = '__FDARG__';
@@ -236,14 +258,36 @@ function serialize(value) {
   return JSON.stringify(value, null, 2) + '\n';
 }
 
+/**
+ * The web /agent learn docs: one `<id>.md` per WEB_LEARN_TOPIC, content = the
+ * shared authored prose. Returns [{ path, content, id }]. Fails loudly if a topic
+ * id is unknown or not actually a web-surface topic (guards against drift between
+ * this list and the shared taxonomy's `surfaces`).
+ */
+function buildWebLearnDocs(getTopic) {
+  return WEB_LEARN_TOPICS.map((id) => {
+    const topic = getTopic(id);
+    if (!topic) {
+      console.error(`ERROR: WEB_LEARN_TOPICS has unknown topic "${id}".`);
+      process.exit(4);
+    }
+    if (!topic.surfaces.includes('web')) {
+      console.error(`ERROR: WEB_LEARN_TOPICS topic "${id}" is not a web-surface topic.`);
+      process.exit(4);
+    }
+    return { id, path: resolve(hubAgentLearningDir, `${id}.md`), content: topic.prose.trim() + '\n' };
+  });
+}
+
 async function main() {
   const check = process.argv.includes('--check');
-  const { tools, dispatchToolCall, LEARN_RESOURCES, FlowDotApiClient } = await loadSources();
+  const { tools, dispatchToolCall, LEARN_RESOURCES, FlowDotApiClient, getTopic } = await loadSources();
 
   const catalog = serialize(buildToolCatalog(tools));
   const learn = serialize(buildLearnResources(LEARN_RESOURCES));
   const { routes, skipped } = await buildToolRoutes(tools, dispatchToolCall, FlowDotApiClient);
   const routesJson = serialize(routes);
+  const webDocs = buildWebLearnDocs(getTopic);
 
   if (check) {
     // Standalone (non-monorepo) context: the Hub isn't a sibling, so there's
@@ -253,11 +297,13 @@ async function main() {
       return;
     }
     let drifted = false;
-    for (const [path, expected, label] of [
+    const checks = [
       [TOOL_CATALOG_PATH, catalog, 'tool-catalog.json'],
       [LEARN_RESOURCES_PATH, learn, 'learn-resources.json'],
       [TOOL_ROUTES_PATH, routesJson, 'tool-routes.json'],
-    ]) {
+      ...webDocs.map((d) => [d.path, d.content, `agent-learning/${d.id}.md`]),
+    ];
+    for (const [path, expected, label] of checks) {
       const actual = existsSync(path) ? readFileSync(path, 'utf8') : null;
       if (actual !== expected) {
         drifted = true;
@@ -276,9 +322,13 @@ async function main() {
   writeFileSync(LEARN_RESOURCES_PATH, learn);
   writeFileSync(TOOL_ROUTES_PATH, routesJson);
 
+  mkdirSync(hubAgentLearningDir, { recursive: true });
+  for (const d of webDocs) writeFileSync(d.path, d.content);
+
   console.error(`Wrote ${JSON.parse(catalog).length} tools  -> ${TOOL_CATALOG_PATH}`);
   console.error(`Wrote ${JSON.parse(learn).length} guides -> ${LEARN_RESOURCES_PATH}`);
   console.error(`Wrote ${routes.length} routes -> ${TOOL_ROUTES_PATH}`);
+  console.error(`Wrote ${webDocs.length} web learn docs -> ${hubAgentLearningDir}`);
   if (skipped.length) {
     console.error(`\n${skipped.length} tool(s) without a clean single REST binding:`);
     for (const s of skipped) console.error(`  - ${s.name}: ${s.reason}`);

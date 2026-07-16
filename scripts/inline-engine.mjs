@@ -60,11 +60,20 @@ const CLI_QA_OUT = await bundleEngine(
   ["ws"],
 );
 
+const LEARN_OUT = await bundleEngine(
+  // The shared tool-learning source (taxonomy + concise prose). Pure data + light
+  // logic, no external deps → vendored whole so the published tarball carries it.
+  "@flowdot.ai/platform-learn",
+  "dist/vendor/platform-learn.js",
+  [],
+);
+
 // Map each runtime import specifier → its vendored bundle.
 const REWRITES = [
   { specifier: "@flowdot.ai/documents", out: DOCUMENTS_OUT },
   { specifier: "@flowdot.ai/browser-driver", out: BROWSER_OUT },
   { specifier: "@flowdot.ai/cli-qa-engine", out: CLI_QA_OUT },
+  { specifier: "@flowdot.ai/platform-learn", out: LEARN_OUT },
 ];
 
 async function walkJs(dir) {
