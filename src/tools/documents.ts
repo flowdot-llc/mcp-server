@@ -55,7 +55,12 @@ export const getDocumentInfoTool: Tool = {
   name: 'get_document_info',
   description:
     "Get a document's structured outline: format, per-format summary (counts of slides/pages/sheets/paragraphs), " +
-    'a change token, and the first outline nodes (stable ids to use with edits).',
+    'a change token, and the first outline nodes (stable ids to use with edits). ' +
+    'For a PDF this also surfaces, under each page node, its AcroForm fields ' +
+    '(kind:"form-field", label=field name, text="<type>=<value>", with page + box) so you can ' +
+    'fill them with edit_document `fill_form`, and positioned text spans (kind:"span", with page + box, ' +
+    'origin bottom-left in PDF points) so you can place text on a FLAT form with edit_document `overlay_text`. ' +
+    'summary.formFields is the field count when the PDF has a form.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -65,17 +70,32 @@ export const getDocumentInfoTool: Tool = {
   },
 };
 
+/** Map an engine OutlineNode → the tool's JSON, preserving PDF discovery data
+ * (page + box + nested form-field/span children) that a caller needs to fill forms. */
+function mapOutlineNode(n: {
+  id: string;
+  kind: string;
+  label?: string;
+  text?: string;
+  page?: number;
+  box?: { x: number; y: number; w: number; h: number };
+  children?: unknown[];
+}): Record<string, unknown> {
+  const out: Record<string, unknown> = { id: n.id, kind: n.kind, label: n.label, text: n.text?.slice(0, 80) };
+  if (n.page !== undefined) out.page = n.page;
+  if (n.box) out.box = n.box;
+  if (Array.isArray(n.children) && n.children.length > 0) {
+    out.children = n.children.map((c) => mapOutlineNode(c as Parameters<typeof mapOutlineNode>[0]));
+  }
+  return out;
+}
+
 export async function handleGetDocumentInfo(args: { file_path: string }): Promise<CallToolResult> {
   try {
     const doc = await FlowDocument.open(args.file_path);
     const outline = await doc.inspect();
     await doc.close();
-    const nodes = outline.nodes.slice(0, 50).map((n) => ({
-      id: n.id,
-      kind: n.kind,
-      label: n.label,
-      text: n.text?.slice(0, 80),
-    }));
+    const nodes = outline.nodes.slice(0, 50).map(mapOutlineNode);
     return ok(JSON.stringify({ format: outline.format, rev: outline.rev, summary: outline.summary, nodes }, null, 2));
   } catch (error) {
     return fail(error);
@@ -219,7 +239,16 @@ export const editDocumentTool: Tool = {
     'Apply structured edits to a document in place and save it. Ops: ' +
     'replace_text {search, replace, all?} (all formats; run-aware for docx/pptx); ' +
     'set_cell {sheet?, ref, value} (xlsx); set_text {text} and append_text {text} (md/txt/csv; ' +
-    'append_text also appends paragraphs to docx). Returns per-op results with counts, skipped, and notes.',
+    'append_text also appends paragraphs to docx). ' +
+    'PDF form filling: fill_form {fields:{name:value…}, flatten?} fills AcroForm fields ' +
+    '(text=string, checkbox=boolean, radio/dropdown=string) — get the field names from ' +
+    'get_document_info; a PDF with no form is refused. For a FLAT form (no AcroForm fields), ' +
+    'overlay_text {page,x,y,text,size?,color?,font?,fontPath?} draws text at a coordinate ' +
+    '(origin BOTTOM-LEFT, PDF points; use the page box + spans from get_document_info to place it). ' +
+    'PDF signatures: overlay_text with font:"signature" types a name in a bundled cursive font ' +
+    '(font also accepts standard names like "times-italic"; fontPath embeds a custom TTF), and ' +
+    'overlay_image {page,x,y,width,height,imagePath|imageBase64,format?,opacity?} stamps a ' +
+    'drawn/scanned signature image (PNG/JPG). Returns per-op results with counts, skipped, and notes.',
   inputSchema: {
     type: 'object',
     properties: {
