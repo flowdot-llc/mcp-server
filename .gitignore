@@ -27,3 +27,6 @@ npm-debug.log*
 
 # TypeScript cache
 *.tsbuildinfo
+
+# FlowDot local runtime state / secrets
+.flowdot/
