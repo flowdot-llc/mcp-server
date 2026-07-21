@@ -115,6 +115,8 @@ import { unpublishAppTool, handleUnpublishApp } from './unpublish-app.js';
 import { cloneAppTool, handleCloneApp } from './clone-app.js';
 import { linkAppWorkflowTool, handleLinkAppWorkflow } from './link-app-workflow.js';
 import { unlinkAppWorkflowTool, handleUnlinkAppWorkflow } from './unlink-app-workflow.js';
+import { linkAppRecipeTool, handleLinkAppRecipe } from './link-app-recipe.js';
+import { unlinkAppRecipeTool, handleUnlinkAppRecipe } from './unlink-app-recipe.js';
 import { linkAppToolkitTool, handleLinkAppToolkit } from './link-app-toolkit.js';
 import { unlinkAppToolkitTool, handleUnlinkAppToolkit } from './unlink-app-toolkit.js';
 import { getAppTemplateTool, handleGetAppTemplate } from './get-app-template.js';
@@ -456,6 +458,8 @@ export const tools = [
   cloneAppTool,
   linkAppWorkflowTool,
   unlinkAppWorkflowTool,
+  linkAppRecipeTool,
+  unlinkAppRecipeTool,
   linkAppToolkitTool,
   unlinkAppToolkitTool,
   getAppTemplateTool,
@@ -927,6 +931,12 @@ export async function dispatchToolCall(
 
       case 'unlink_app_workflow':
         return handleUnlinkAppWorkflow(api, args as { app_id: string; workflow_hash: string });
+
+      case 'link_app_recipe':
+        return handleLinkAppRecipe(api, args as { app_id: string; recipe_hash: string; alias?: string });
+
+      case 'unlink_app_recipe':
+        return handleUnlinkAppRecipe(api, args as { app_id: string; recipe_hash: string });
 
       case 'link_app_toolkit':
         return handleLinkAppToolkit(api, args as { app_id: string; toolkit_hash: string; alias?: string });
