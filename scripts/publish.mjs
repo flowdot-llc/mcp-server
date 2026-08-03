@@ -23,17 +23,19 @@ const LOCK_PATH = path.resolve('package-lock.json');
 const SWAPS = [
   {
     pkgField: 'dependencies',
-    depName: '@flowdot.ai/api',
-    fileRef: 'file:../flowdot-api',
-  },
-  {
-    pkgField: 'dependencies',
     depName: '@flowdot.ai/guardian-agent',
     fileRef: 'file:../guardian-agent-ts',
   },
-  // NOTE: @flowdot.ai/documents is intentionally NOT here. The document engine is
-  // esbuild-inlined into dist/vendor/documents.js at build time (scripts/inline-engine.mjs)
-  // — it is a devDependency, never a published runtime dependency. See PUBLISHING_GUIDE.md.
+  // NOTE: @flowdot.ai/documents, /browser-driver, /cli-qa-engine, /platform-learn and
+  // /api are intentionally NOT here. All five are esbuild-inlined into dist/vendor/ at
+  // build time (scripts/inline-engine.mjs) — they are devDependencies, never published
+  // runtime dependencies. See PUBLISHING_GUIDE.md.
+  //
+  // @flowdot.ai/api was in this list until 2026-08-03. Swapping it to a published
+  // range is what put `"@flowdot.ai/api": "^1.2.9"` in the shipped tarball and forced
+  // a readable, proprietary package onto npm. Do not add it back. `api` is
+  // `private: true`; npm would refuse to publish it, and a swap here would only
+  // produce a manifest pointing at a package that no longer exists.
 ];
 
 function run(cmd, opts = {}) {

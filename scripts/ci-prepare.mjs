@@ -26,14 +26,14 @@ const LOCK_PATH = path.resolve('package-lock.json');
 const SWAPS = [
   {
     field: 'dependencies',
-    depName: '@flowdot.ai/api',
-    fileRef: 'file:../flowdot-api',
-  },
-  {
-    field: 'dependencies',
     depName: '@flowdot.ai/guardian-agent',
     fileRef: 'file:../guardian-agent-ts',
   },
+  // @flowdot.ai/api is deliberately absent — it is `private: true` and inlined into
+  // dist/vendor/api.js (see scripts/inline-engine.mjs), so there is no published
+  // version to swap to. Note this means CI must have the flowdot-api sibling checked
+  // out to BUILD, exactly like documents / browser-driver / cli-qa-engine /
+  // platform-learn already require.
 ];
 
 function run(cmd) {

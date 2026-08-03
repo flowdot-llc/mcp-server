@@ -3,11 +3,14 @@
  * libraries into self-contained files under `dist/vendor/`, then rewrites their
  * runtime import specifiers in the compiled dist to the vendored files.
  *
- * Two engines are inlined:
+ * The engines inlined here:
  *   1. `@flowdot.ai/documents` → `dist/vendor/documents.js` (ts-* / pdf-lib stay EXTERNAL).
  *   2. `@flowdot.ai/browser-driver` → `dist/vendor/browser-driver.js`
  *      (`playwright` / `playwright-core` stay EXTERNAL — they are optional runtime
  *      deps, loaded lazily; bundling native browser drivers is impossible).
+ *   3. `@flowdot.ai/cli-qa-engine` → `dist/vendor/cli-qa-engine.js`.
+ *   4. `@flowdot.ai/platform-learn` → `dist/vendor/platform-learn.js`.
+ *   5. `@flowdot.ai/api` → `dist/vendor/api.js`.
  *
  * Effect: both engines ship COMPILED INSIDE this package's dist — never published
  * npm dependencies, never separate public packages. They stay devDependencies
@@ -68,12 +71,25 @@ const LEARN_OUT = await bundleEngine(
   [],
 );
 
+const API_OUT = await bundleEngine(
+  // The Hub REST client + every wire type. It WAS published as @flowdot.ai/api
+  // and shipped readable `tsc` output — 1,354 legible lines plus a .d.ts
+  // exposing 228 method signatures and 224 types, i.e. the whole private Hub
+  // contract, downloadable by anyone. It is proprietary and has no external
+  // consumers, so it is now `private: true` and vendored here like the rest.
+  // Zero runtime deps of its own (it uses global `fetch`), so nothing is external.
+  "@flowdot.ai/api",
+  "dist/vendor/api.js",
+  [],
+);
+
 // Map each runtime import specifier → its vendored bundle.
 const REWRITES = [
   { specifier: "@flowdot.ai/documents", out: DOCUMENTS_OUT },
   { specifier: "@flowdot.ai/browser-driver", out: BROWSER_OUT },
   { specifier: "@flowdot.ai/cli-qa-engine", out: CLI_QA_OUT },
   { specifier: "@flowdot.ai/platform-learn", out: LEARN_OUT },
+  { specifier: "@flowdot.ai/api", out: API_OUT },
 ];
 
 async function walkJs(dir) {
