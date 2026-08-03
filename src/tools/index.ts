@@ -327,24 +327,10 @@ import { listNotificationsTool, handleListNotifications } from './list-notificat
 import { listCommsChannelsTool, handleListCommsChannels } from './list-comms-channels.js';
 
 // ============================================
-// Goals Tools (goals:manage)
+// Goals were REMOVED from the platform (half-baked feature, retired 2026-08-02).
+// The Hub deleted every /api/mcp/v1 goal route, so advertising these tools left
+// every MCP client with 16 tools that 404 on call. Do not re-add without routes.
 // ============================================
-import { listGoalsTool, handleListGoals } from './list-goals.js';
-import { createGoalTool, handleCreateGoal } from './create-goal.js';
-import { getGoalTool, handleGetGoal } from './get-goal.js';
-import { updateGoalTool, handleUpdateGoal } from './update-goal.js';
-import { deleteGoalTool, handleDeleteGoal } from './delete-goal.js';
-import { pauseGoalTool, handlePauseGoal } from './pause-goal.js';
-import { resumeGoalTool, handleResumeGoal } from './resume-goal.js';
-import { completeGoalTool, handleCompleteGoal } from './complete-goal.js';
-import { abandonGoalTool, handleAbandonGoal } from './abandon-goal.js';
-import { listGoalTasksTool, handleListGoalTasks } from './list-goal-tasks.js';
-import { addGoalTaskTool, handleAddGoalTask } from './add-goal-task.js';
-import { deleteGoalTaskTool, handleDeleteGoalTask } from './delete-goal-task.js';
-import { listGoalMilestonesTool, handleListGoalMilestones } from './list-goal-milestones.js';
-import { addGoalMilestoneTool, handleAddGoalMilestone } from './add-goal-milestone.js';
-import { completeGoalMilestoneTool, handleCompleteGoalMilestone } from './complete-goal-milestone.js';
-import { deleteGoalMilestoneTool, handleDeleteGoalMilestone } from './delete-goal-milestone.js';
 import {
   readDocumentTool,
   handleReadDocument,
@@ -609,23 +595,6 @@ export const tools = [
   sendNotificationTool,
   listNotificationsTool,
   listCommsChannelsTool,
-  // Goals (16)
-  listGoalsTool,
-  createGoalTool,
-  getGoalTool,
-  updateGoalTool,
-  deleteGoalTool,
-  pauseGoalTool,
-  resumeGoalTool,
-  completeGoalTool,
-  abandonGoalTool,
-  listGoalTasksTool,
-  addGoalTaskTool,
-  deleteGoalTaskTool,
-  listGoalMilestonesTool,
-  addGoalMilestoneTool,
-  completeGoalMilestoneTool,
-  deleteGoalMilestoneTool,
   // Browser + Electron-QA driving (12) — local Playwright, no Hub route.
   ...browserTools,
 ];
@@ -1712,79 +1681,6 @@ export async function dispatchToolCall(
 
       case 'list_comms_channels':
         return handleListCommsChannels(api);
-
-      // ============================================
-      // Goals Tools
-      // ============================================
-      case 'list_goals':
-        return handleListGoals(api, args as { status?: string });
-
-      case 'create_goal':
-        return handleCreateGoal(api, args as {
-          name: string;
-          description?: string;
-          priority?: 'high' | 'medium' | 'low';
-          allowed_actions?: string[];
-        });
-
-      case 'get_goal':
-        return handleGetGoal(api, args as { hash: string });
-
-      case 'update_goal':
-        return handleUpdateGoal(api, args as {
-          hash: string;
-          name?: string;
-          description?: string;
-          priority?: 'high' | 'medium' | 'low';
-          allowed_actions?: string[];
-        });
-
-      case 'delete_goal':
-        return handleDeleteGoal(api, args as { hash: string });
-
-      case 'pause_goal':
-        return handlePauseGoal(api, args as { hash: string });
-
-      case 'resume_goal':
-        return handleResumeGoal(api, args as { hash: string });
-
-      case 'complete_goal':
-        return handleCompleteGoal(api, args as { hash: string });
-
-      case 'abandon_goal':
-        return handleAbandonGoal(api, args as { hash: string });
-
-      case 'list_goal_tasks':
-        return handleListGoalTasks(api, args as { goal_hash: string; status?: string });
-
-      case 'add_goal_task':
-        return handleAddGoalTask(api, args as {
-          goal_hash: string;
-          title: string;
-          description?: string;
-          task_type?: string;
-          scheduled_for?: string;
-        });
-
-      case 'delete_goal_task':
-        return handleDeleteGoalTask(api, args as { goal_hash: string; task_id: number });
-
-      case 'list_goal_milestones':
-        return handleListGoalMilestones(api, args as { goal_hash: string });
-
-      case 'add_goal_milestone':
-        return handleAddGoalMilestone(api, args as {
-          goal_hash: string;
-          title: string;
-          description?: string;
-          target_date?: string;
-        });
-
-      case 'complete_goal_milestone':
-        return handleCompleteGoalMilestone(api, args as { goal_hash: string; milestone_id: number });
-
-      case 'delete_goal_milestone':
-        return handleDeleteGoalMilestone(api, args as { goal_hash: string; milestone_id: number });
 
       // Documents (local filesystem, via @flowdot.ai/documents)
       case 'read_document':

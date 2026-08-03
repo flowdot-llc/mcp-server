@@ -25,7 +25,6 @@ describe('categoryForTool', () => {
     expect(categoryForTool('query_knowledge_base')).toBe('knowledge');
     expect(categoryForTool('upload_image')).toBe('knowledge');
     expect(categoryForTool('grant_kb_access')).toBe('knowledge');
-    expect(categoryForTool('create_goal')).toBe('goals');
     expect(categoryForTool('create_agent_character')).toBe('characters');
     expect(categoryForTool('email_send')).toBe('email');
     expect(categoryForTool('send_notification')).toBe('comms');

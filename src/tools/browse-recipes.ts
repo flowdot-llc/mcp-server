@@ -62,9 +62,11 @@ export async function handleBrowseRecipes(
       page: args.page || 1,
     };
 
-    const response = await api.listPublicRecipes(filters);
-
-    const recipes = response.data || [];
+    // `listPublicRecipes` resolves to the recipes themselves — the API client's
+    // `request()` has already stripped the Hub's `{ success, data }` envelope.
+    // Reading `.data` off that array yielded `undefined`, so every call reported
+    // an empty library no matter how many public recipes existed.
+    const recipes = await api.listPublicRecipes(filters);
 
     if (recipes.length === 0) {
       return {
@@ -77,31 +79,44 @@ export async function handleBrowseRecipes(
       };
     }
 
-    // Format as a readable list
+    // Format as a readable list. Field names follow what
+    // `McpApiController::listPublicAgentRecipes` actually serialises: the author
+    // is nested under `author.display_name` and votes are split
+    // `upvotes`/`downvotes`. The previous `user_name` / `vote_count` reads were
+    // never populated, so author and score silently never rendered.
     const recipeList = recipes
       .filter((r) => r && typeof r === 'object')
       .map((r) => {
-        const desc = r.description ? ` - ${r.description}` : '';
-        const steps = r.step_count !== undefined ? ` [${r.step_count} steps]` : '';
-        const author = r.user_name ? ` by ${r.user_name}` : '';
-        const stats = [];
-        if (r.fork_count !== undefined && r.fork_count > 0) stats.push(`${r.fork_count} forks`);
-        if (r.vote_count !== undefined && r.vote_count > 0) stats.push(`+${r.vote_count}`);
+        const rec = r as typeof r & {
+          author?: { display_name?: string };
+          upvotes?: number;
+          downvotes?: number;
+        };
+        const desc = rec.description ? ` - ${rec.description}` : '';
+        const steps = rec.step_count !== undefined ? ` [${rec.step_count} steps]` : '';
+        const authorName = rec.author?.display_name;
+        const author = authorName ? ` by ${authorName}` : '';
+        const stats: string[] = [];
+        if (rec.fork_count) stats.push(`${rec.fork_count} forks`);
+        const score = (rec.upvotes ?? 0) - (rec.downvotes ?? 0);
+        if (score > 0) stats.push(`+${score}`);
         const statsStr = stats.length > 0 ? ` (${stats.join(', ')})` : '';
-        return `- **${r.name}** (${r.hash})${author}${steps}${statsStr}${desc}`;
+        return `- **${rec.name}** (${rec.hash})${author}${steps}${statsStr}${desc}`;
       })
       .join('\n');
 
-    let paginationInfo = '';
-    if (response.current_page !== undefined) {
-      paginationInfo = `\n\nPage ${response.current_page} of ${response.last_page} (${response.total} total recipes)`;
-    }
+    // The Hub's `pagination` block is a sibling of `data` and is dropped by the
+    // client's envelope unwrap, so state the page that was actually fetched
+    // rather than inventing a total.
+    const page = filters.page ?? 1;
+    const pageInfo = `\n\nPage ${page} — ${recipes.length} recipe(s) returned.`
+      + `\nLink one for execution with link_recipe(hash, alias).`;
 
     return {
       content: [
         {
           type: 'text',
-          text: `Public Recipes:\n\n${recipeList}${paginationInfo}`,
+          text: `Public Recipes:\n\n${recipeList}${pageInfo}`,
         },
       ],
     };

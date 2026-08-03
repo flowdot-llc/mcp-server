@@ -28,7 +28,6 @@ export type ToolCategory =
   | 'custom-nodes'
   | 'toolkits'
   | 'knowledge'
-  | 'goals'
   | 'characters'
   | 'email'
   | 'comms'
@@ -41,7 +40,6 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
   'custom-nodes',
   'toolkits',
   'knowledge',
-  'goals',
   'characters',
   'email',
   'comms',
@@ -69,7 +67,6 @@ export function categoryForTool(rawName: string): ToolCategory {
   if (n.includes('recipe')) return 'recipes';
   if (n.includes('custom_node')) return 'custom-nodes';
   if (n.includes('character')) return 'characters';
-  if (n.includes('goal') || n.includes('milestone')) return 'goals';
   if (n.includes('email')) return 'email';
   if (n.includes('notification') || n.includes('channel')) return 'comms';
   if (
