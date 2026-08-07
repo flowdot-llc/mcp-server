@@ -22,11 +22,14 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+/** Collected esbuild metafiles — feed THIRD-PARTY-NOTICES.md (see below). */
+const metafiles = [];
+
 /** Bundle one workspace engine into dist/vendor and return its out path. */
 async function bundleEngine(specifier, outFile, externalPkgs) {
   const entry = fileURLToPath(import.meta.resolve(specifier));
   const external = externalPkgs.flatMap((e) => [e, `${e}/*`]);
-  await build({
+  const result = await build({
     entryPoints: [entry],
     outfile: outFile,
     bundle: true,
@@ -37,7 +40,14 @@ async function bundleEngine(specifier, outFile, externalPkgs) {
     minify: true,
     external,
     logLevel: "warning",
+    // REQUIRED, not diagnostic. `legalComments: "none"` above strips the copyright
+    // header out of every third-party package compiled into these vendor bundles, and
+    // MIT / ISC / BSD / Apache all require those notices to accompany a binary
+    // distribution. scripts/generate-notices.mjs rebuilds THIRD-PARTY-NOTICES.md from
+    // these metafiles. Drop this and the tarball silently ships unattributed code.
+    metafile: true,
   });
+  metafiles.push(result.metafile);
   return outFile;
 }
 
@@ -126,3 +136,13 @@ for (const file of await walkJs("dist")) {
   }
 }
 console.log(`inline-engine: bundled engines → dist/vendor/; rewrote ${rewritten} dist file(s).`);
+
+// Attribution for everything compiled INTO the vendor bundles. Note this covers only
+// the vendored engines: the rest of `dist/**` is plain `tsc` output whose runtime
+// dependencies are installed from npm normally, so those packages arrive with their
+// own LICENSE files intact and need no restatement here.
+const { generateNotices } = await import("./generate-notices.mjs");
+generateNotices(metafiles, {
+  outFile: "THIRD-PARTY-NOTICES.md",
+  productName: "@flowdot.ai/mcp-server",
+});

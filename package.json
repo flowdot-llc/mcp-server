@@ -83,6 +83,7 @@
     "dist",
     "bin",
     "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
     "README.md"
   ],
   "engines": {
