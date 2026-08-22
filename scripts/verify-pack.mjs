@@ -9,16 +9,33 @@ import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
 // Un-minified proprietary-engine tell-tales. The document engine glue is
-// esbuild-INLINED + MINIFIED into dist/vendor/documents.js; if any of these
-// appear in a shipped .js, minification regressed and the closed-source engine
-// would ship human-readable. (Bare literal values like coordinates are
-// irreducible and NOT sentineled — only identifiers/comments/source paths.)
+// esbuild-INLINED + MINIFIED into the shipped bundle; if any of these appear in
+// a shipped .js, minification regressed and the closed-source engine would ship
+// human-readable.
+//
+// These are DECLARATION / COMMENT / SOURCE-PATH forms on purpose. Two bare
+// identifier strings ('SIDEBAR_PANEL_X', 'P1_MAIN_RIGHT') were removed on
+// 2026-08-22: the résumé geometry moved into an exported `DEFAULT_LAYOUT`
+// object, so those names are now OBJECT PROPERTY KEYS, and esbuild never
+// mangles property names (that needs `mangleProps`, which is unsafe here).
+// They are also the parameter vocabulary of the published `create_document`
+// `layout` override — an MCP client passes them BY NAME — so mangling them
+// would silently break a shipped tool parameter. Surviving property names are
+// irreducible in exactly the way bare literal coordinates already were, and are
+// therefore not evidence of a minification regression. A genuine regression
+// still shows up as a `const NAME =` declaration or a source comment/path,
+// which is what these patterns match. Full rationale: PUBLISHING_GUIDE.md
+// §"The un-minified-engine sentinel".
 const PROPRIETARY_SENTINELS = [
-  'resume-layout',
-  'SIDEBAR_PANEL_X',
-  'P1_MAIN_RIGHT',
-  'flowdot-documents/dist/authoring',
-  'decoded verbatim',
+  // A source comment or module path survived → not minified.
+  /\/\/[^\n]*resume-layout/,
+  /flowdot-documents\/(dist|src)\/authoring/,
+  /decoded verbatim/,
+  // Declaration forms: minification always renames a module-scope binding, so
+  // seeing the real name on the left of a declaration means it did not run.
+  /\b(?:const|let|var)\s+SIDEBAR_PANEL_X\b/,
+  /\b(?:const|let|var)\s+P1_MAIN_RIGHT\b/,
+  /\bfunction\s+layoutResume\b/,
 ];
 
 const FORBIDDEN_PATTERNS = [
@@ -92,8 +109,9 @@ function main() {
       continue;
     }
     for (const sentinel of PROPRIETARY_SENTINELS) {
-      if (text.includes(sentinel)) {
-        violations.push({ file, reason: `un-minified proprietary engine source ("${sentinel}") — set minify:true` });
+      const hit = typeof sentinel === 'string' ? text.includes(sentinel) : sentinel.test(text);
+      if (hit) {
+        violations.push({ file, reason: `un-minified proprietary engine source (${sentinel}) — set minify:true` });
         break;
       }
     }
