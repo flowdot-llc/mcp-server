@@ -111,6 +111,9 @@ const LOCAL_ONLY = {
   create_document: 'local filesystem document authoring via @flowdot.ai/documents — no Hub route',
   edit_document: 'local filesystem document edit via @flowdot.ai/documents — no Hub route',
   convert_document: 'local filesystem document conversion via @flowdot.ai/documents — no Hub route',
+  merge_documents: 'local filesystem PDF merge via @flowdot.ai/documents — no Hub route',
+  inspect_document: 'local filesystem PDF inspection via @flowdot.ai/documents — no Hub route',
+  document_template: 'local template store under the user home — no Hub route',
   // Browser + Electron-QA driving — local Playwright via @flowdot.ai/browser-driver;
   // no Hub route, not dispatchable through the remote/OAuth connector.
   browser_launch: 'local Playwright browser/Electron launch — no Hub route',

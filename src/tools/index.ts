@@ -342,6 +342,12 @@ import {
   handleEditDocument,
   convertDocumentTool,
   handleConvertDocument,
+  mergeDocumentsTool,
+  handleMergeDocuments,
+  inspectDocumentTool,
+  handleInspectDocument,
+  documentTemplateTool,
+  handleDocumentTemplate,
 } from './documents.js';
 import type { CreateSpec, DocOp } from '@flowdot.ai/documents';
 // Browser + Electron-QA driving — PURELY LOCAL (no api client, no Hub route).
@@ -367,12 +373,16 @@ import {
 // remote MCP connector. This array is the single source of truth for tool
 // schemas across the stdio server and the remote (OAuth) connector.
 export const tools = [
-  // Documents (5) — local file read/inspect/create/edit/convert via @flowdot.ai/documents
+  // Documents (8) — local file read/inspect/create/edit/convert/merge/template
+  // via @flowdot.ai/documents
   readDocumentTool,
   getDocumentInfoTool,
   createDocumentTool,
   editDocumentTool,
   convertDocumentTool,
+  mergeDocumentsTool,
+  inspectDocumentTool,
+  documentTemplateTool,
   // Core (4)
   listWorkflowsTool,
   executeWorkflowTool,
@@ -1689,6 +1699,12 @@ export async function dispatchToolCall(
       case 'get_document_info':
         return handleGetDocumentInfo(args as { file_path: string });
 
+      case 'merge_documents':
+        return handleMergeDocuments(args as { input_paths: string[]; output_path: string });
+      case 'inspect_document':
+        return handleInspectDocument(args as { file_path: string });
+      case 'document_template':
+        return handleDocumentTemplate(args as Parameters<typeof handleDocumentTemplate>[0]);
       case 'create_document':
         return handleCreateDocument(args as { file_path: string } & CreateSpec);
 
