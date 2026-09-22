@@ -11,6 +11,7 @@ import { registerTools } from './tools/index.js';
 import { registerResources } from './resources/index.js';
 import { learnIndex } from '@flowdot.ai/platform-learn';
 import { createSupervisor, type Supervisor } from './supervisor.js';
+import { createDecisionDisclosure } from './decision-disclosure.js';
 
 const MCP_TOKEN_PREFIX = 'fd_mcp_';
 
@@ -91,7 +92,8 @@ export async function createServer(): Promise<CreatedServer> {
     },
     {
       capabilities: {
-        tools: {},
+        // listChanged: decision tools appear after learn://decisions is read (JEV A10).
+        tools: { listChanged: true },
         resources: {},
       },
       instructions: `# FlowDot MCP — Start Here
@@ -138,11 +140,14 @@ If the user asks about a FlowDot feature area you haven't touched in this sessio
     console.error('Supervisor disabled (FLOWDOT_SUPERVISOR=off).');
   }
 
-  // Register tools — pass supervisor so every tool call gets audited + halt-checked.
-  registerTools(server, apiClient, supervisor);
+  // One disclosure state per server instance = per stdio connection.
+  const disclosure = createDecisionDisclosure();
 
-  // Register learning resources
-  registerResources(server);
+  // Register tools — pass supervisor so every tool call gets audited + halt-checked.
+  registerTools(server, apiClient, supervisor, disclosure);
+
+  // Register learning resources (reading learn://decisions unlocks the decision tools).
+  registerResources(server, disclosure);
 
   console.error('FlowDot MCP Server initialized.');
   console.error('');

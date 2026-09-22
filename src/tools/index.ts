@@ -14,6 +14,14 @@ import type { FlowDotApiClient } from '../api-client.js';
 import { runUnderSupervisor, type Supervisor } from '../supervisor.js';
 import { capabilitiesFor } from '../tool-capabilities.js';
 import { activeInteractiveCliTools, dispatchInteractiveCli, isInteractiveCliToolName, CLI_QA_ENABLED } from '../interactive-cli.js';
+import { isDecisionTool, DECISION_LOCKED_MESSAGE, type DecisionDisclosure } from '../decision-disclosure.js';
+import {
+  decisionTools,
+  handleExecuteDecision,
+  handleGetDecision,
+  handleCancelDecision,
+  handleListDecisionModels,
+} from './decisions.js';
 
 // ============================================
 // Core Tools (Existing)
@@ -605,6 +613,8 @@ export const tools = [
   sendNotificationTool,
   listNotificationsTool,
   listCommsChannelsTool,
+  // Typed decisions (4) — Jev; on-demand via learn://decisions (JEV §9 / A10).
+  ...decisionTools,
   // Browser + Electron-QA driving (12) — local Playwright, no Hub route.
   ...browserTools,
 ];
@@ -616,28 +626,35 @@ export function registerTools(
   server: Server,
   api: FlowDotApiClient,
   supervisor?: Supervisor | null,
+  disclosure?: DecisionDisclosure,
 ): void {
   // Handle tools/list request. The static `tools` export stays PURE (manifest
   // consumer); the opt-in interactive-CLI tools (FLOWDOT_CLI_QA=1) are added HERE and
   // in tool-categories so ListTools AND progressive disclosure see the same set.
+  // Decision tools are listed only after this connection unlocks them (A10).
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: [...tools, ...activeInteractiveCliTools()] };
+    const listed = [...tools, ...activeInteractiveCliTools()];
+    return { tools: disclosure && !disclosure.unlocked ? listed.filter((t) => !isDecisionTool(t.name)) : listed };
   });
 
   // Handle tools/call request — wrapped under supervisor when one is provided.
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     const { name, arguments: args } = request.params;
+    // A hidden decision tool called by name is refused before any Hub request (A10).
+    if (disclosure && !disclosure.unlocked && isDecisionTool(name)) {
+      return { content: [{ type: 'text', text: DECISION_LOCKED_MESSAGE }], isError: true };
+    }
     if (supervisor) {
       return runUnderSupervisor(
         supervisor,
         name,
-        () => dispatchToolCall(api, request),
+        () => dispatchToolCall(api, request, { signal: extra?.signal }),
         args,
         undefined,            // model: out of scope here
         capabilitiesFor(name), // SPEC §13.1
       );
     }
-    return dispatchToolCall(api, request);
+    return dispatchToolCall(api, request, { signal: extra?.signal });
   });
 }
 
@@ -649,6 +666,7 @@ export function registerTools(
 export async function dispatchToolCall(
   api: FlowDotApiClient,
   request: { params: { name: string; arguments?: unknown } },
+  extra?: { signal?: AbortSignal },
 ): Promise<CallToolResult> {
   const { name, arguments: args } = request.params;
 
@@ -1691,6 +1709,21 @@ export async function dispatchToolCall(
 
       case 'list_comms_channels':
         return handleListCommsChannels(api);
+
+      // ============================================
+      // Typed Decisions (JEV §2/§9) — the per-call signal reaches the shared client.
+      // ============================================
+      case 'execute_decision':
+        return handleExecuteDecision(api, args, extra?.signal);
+
+      case 'get_decision':
+        return handleGetDecision(api, args, extra?.signal);
+
+      case 'cancel_decision':
+        return handleCancelDecision(api, args, extra?.signal);
+
+      case 'list_decision_models':
+        return handleListDecisionModels(api, args, extra?.signal);
 
       // Documents (local filesystem, via @flowdot.ai/documents)
       case 'read_document':

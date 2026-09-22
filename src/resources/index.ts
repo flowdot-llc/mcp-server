@@ -19,6 +19,7 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { learnResourcesForSurface, learnIndex } from '@flowdot.ai/platform-learn';
+import { isDecisionLearnUri, type DecisionDisclosure } from '../decision-disclosure.js';
 
 /** Local stdio MCP server resource set (includes LOCAL_ONLY browser/documents). */
 export const LEARN_RESOURCES = learnResourcesForSurface('mcp');
@@ -32,7 +33,7 @@ export const LEARN_INDEX = learnIndex('mcp');
 /**
  * Register learning resources with the (local stdio) MCP server.
  */
-export function registerResources(server: Server): void {
+export function registerResources(server: Server, disclosure?: DecisionDisclosure): void {
   // Handle list resources request
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     return {
@@ -52,6 +53,12 @@ export function registerResources(server: Server): void {
 
     if (!resource) {
       throw new Error(`Resource not found: ${uri}`);
+    }
+
+    // Reading the decisions guide enables the decision tools on THIS connection (A10).
+    if (disclosure && !disclosure.unlocked && isDecisionLearnUri(uri)) {
+      disclosure.unlocked = true;
+      await server.sendToolListChanged();
     }
 
     return {

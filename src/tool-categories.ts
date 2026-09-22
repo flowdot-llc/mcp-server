@@ -14,6 +14,7 @@
 import { tools as ALL_TOOLS } from './tools/index.js';
 import { activeInteractiveCliTools } from './interactive-cli.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { DECISION_TOOL_NAMES } from './tools/decisions.js';
 import {
   renderLearn,
   getTopic,
@@ -31,7 +32,8 @@ export type ToolCategory =
   | 'characters'
   | 'email'
   | 'comms'
-  | 'interactive-cli';
+  | 'interactive-cli'
+  | 'decisions';
 
 export const TOOL_CATEGORIES: ToolCategory[] = [
   'workflows',
@@ -44,6 +46,7 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
   'email',
   'comms',
   'interactive-cli',
+  'decisions',
 ];
 
 const MCP_FLOWDOT_PREFIX = 'mcp__flowdot__';
@@ -61,6 +64,9 @@ export function categoryForTool(rawName: string): ToolCategory {
   // interactive_cli__* FIRST — else it falls into the default-visible `workflows`
   // bucket and the opt-in prompt-budget goal is defeated (TERMINAL_EYES.md Part E).
   if (n.startsWith('interactive_cli')) return 'interactive-cli';
+  // Typed decisions spend credits: their own opt-in category, never the default-visible
+  // `workflows` bucket (JEV §9 / A10). Exact names, checked before the substring rules.
+  if (DECISION_TOOL_NAMES.includes(n)) return 'decisions';
   // app before toolkit so link_app_toolkit lands in apps (it's an app op).
   if (n.includes('app')) return 'apps';
   if (n.includes('toolkit')) return 'toolkits';

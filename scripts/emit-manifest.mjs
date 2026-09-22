@@ -93,6 +93,14 @@ const ROUTE_OVERRIDES = {
   // api-client.ts:2079 — async listRecipeSteps(hash). Pinned: the handler makes
   // a second context call, so the recorder flags it; this is the primary route.
   list_recipe_steps: { method: 'GET', path: '/agent-recipes/{hash}/steps' },
+  // Typed decisions (Docs/DevGuides/JEV.md §2, Amendment A10). Explicit because the shared
+  // client's execute-and-wait preflights GET /decision-models first, so a recorder would capture
+  // the wrong request. The Hub remote connector dispatches these four through its dedicated
+  // decision handler (raw argument bytes), never the generic route sub-request.
+  execute_decision: { method: 'POST', path: '/decisions' },
+  get_decision: { method: 'GET', path: '/decisions/{call_id}' },
+  cancel_decision: { method: 'POST', path: '/decisions/{call_id}/cancel' },
+  list_decision_models: { method: 'GET', path: '/decision-models' },
 };
 
 /**
