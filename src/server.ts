@@ -7,6 +7,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { FlowDotApiClient } from './api-client.js';
+import { formatLimitRefusalForAgent } from './limit-refusal-text.js';
 import { registerTools } from './tools/index.js';
 import { registerResources } from './resources/index.js';
 import { learnIndex } from '@flowdot.ai/platform-learn';
@@ -61,6 +62,8 @@ export async function createServer(): Promise<CreatedServer> {
   // Create API client
   const internalSecret = process.env.INTERNAL_API_SECRET;
   const apiClient = new FlowDotApiClient(hubUrl, apiToken, internalSecret);
+  // Refusals reach a model, so they carry the Hub's upgrade offer as text to relay.
+  apiClient.setLimitRefusalFormatter(formatLimitRefusalForAgent);
 
   // Test connection
   console.error(`FlowDot MCP Server connecting to ${hubUrl}...`);
