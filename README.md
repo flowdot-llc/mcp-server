@@ -22,15 +22,21 @@ With this server, an AI client can:
 
 ## Quick Start
 
-### 1. Get an MCP Token
+### 1. Get a free MCP Token
 
-1. Go to [flowdot.ai](https://flowdot.ai)
-2. Navigate to **Settings** > **MCP Tokens**
-3. Click **Create New Token**
-4. Select the scopes you need (see [Token Scopes](#token-scopes) below)
-5. Copy the token (starts with `fd_mcp_`)
+[Create a free FlowDot account](https://flowdot.ai/register?next=%2Fdashboard%3Fsettings%3Dmcp_tokens). You land on the **MCP Tokens** tab: click **Select all** (or pick scopes, see [Token Scopes](#token-scopes)), then **Create Token**. The token starts with `fd_mcp_`, and the page shows the ready-to-paste setup below with your token filled in.
 
-### 2. Configure Claude Desktop
+The free plan includes 5 workflow runs a day and 10 toolkit calls a day. The Creator plan is $19 a month (500 runs a month, 200 toolkit calls a day). Details: [flowdot.ai/mcp](https://flowdot.ai/mcp).
+
+### 2. Connect your client
+
+**Claude Code** (one command):
+
+```bash
+claude mcp add flowdot -e FLOWDOT_API_TOKEN=fd_mcp_your_token_here -- npx -y @flowdot.ai/mcp-server
+```
+
+**Claude Desktop, Cursor and other clients:** add the block below to the client's config file.
 
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -40,7 +46,7 @@ With this server, an AI client can:
   "mcpServers": {
     "flowdot": {
       "command": "npx",
-      "args": ["@flowdot.ai/mcp-server"],
+      "args": ["-y", "@flowdot.ai/mcp-server"],
       "env": {
         "FLOWDOT_API_TOKEN": "fd_mcp_your_token_here"
       }
@@ -49,9 +55,9 @@ With this server, an AI client can:
 }
 ```
 
-### 3. Restart Claude Desktop
+### 3. Restart the client
 
-After adding the configuration, restart Claude Desktop to load the MCP server.
+Restart Claude Desktop, Cursor or your MCP client so it loads the server. Claude Code picks it up on the next session.
 
 ## Installation Options
 
