@@ -65,6 +65,7 @@
     "@flowdot.ai/browser-driver": "file:../flowdot-browser-driver",
     "@flowdot.ai/cli-qa-engine": "file:../flowdot-cli-qa-engine",
     "@flowdot.ai/documents": "file:../flowdot-documents",
+    "@flowdot.ai/agent-comms": "file:../flowdot-agent-comms",
     "@flowdot.ai/platform-learn": "file:../flowdot-platform-learn",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",

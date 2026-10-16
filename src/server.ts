@@ -8,6 +8,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { FlowDotApiClient } from './api-client.js';
 import { formatLimitRefusalForAgent } from './limit-refusal-text.js';
+import { setupAgentComms } from './agent-comms.js';
 import { registerTools } from './tools/index.js';
 import { registerResources } from './resources/index.js';
 import { learnIndex } from '@flowdot.ai/platform-learn';
@@ -146,8 +147,12 @@ If the user asks about a FlowDot feature area you haven't touched in this sessio
   // One disclosure state per server instance = per stdio connection.
   const disclosure = createDecisionDisclosure();
 
+  // Agent messages: this server takes part for its Claude Code session (registers
+  // after `initialize`; never for FlowDot's own hosts). AGENT_MESSAGES.md A1/A18.
+  const agentComms = setupAgentComms(server, apiClient, supervisor);
+
   // Register tools — pass supervisor so every tool call gets audited + halt-checked.
-  registerTools(server, apiClient, supervisor, disclosure);
+  registerTools(server, apiClient, supervisor, disclosure, agentComms);
 
   // Register learning resources (reading learn://decisions unlocks the decision tools).
   registerResources(server, disclosure);

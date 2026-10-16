@@ -15,6 +15,7 @@ import { runUnderSupervisor, type Supervisor } from '../supervisor.js';
 import { capabilitiesFor } from '../tool-capabilities.js';
 import { activeInteractiveCliTools, dispatchInteractiveCli, isInteractiveCliToolName, CLI_QA_ENABLED } from '../interactive-cli.js';
 import { isDecisionTool, DECISION_LOCKED_MESSAGE, type DecisionDisclosure } from '../decision-disclosure.js';
+import type { AgentCommsController } from '../agent-comms.js';
 import {
   decisionTools,
   handleExecuteDecision,
@@ -627,13 +628,15 @@ export function registerTools(
   api: FlowDotApiClient,
   supervisor?: Supervisor | null,
   disclosure?: DecisionDisclosure,
+  agentComms?: AgentCommsController,
 ): void {
   // Handle tools/list request. The static `tools` export stays PURE (manifest
   // consumer); the opt-in interactive-CLI tools (FLOWDOT_CLI_QA=1) are added HERE and
   // in tool-categories so ListTools AND progressive disclosure see the same set.
   // Decision tools are listed only after this connection unlocks them (A10).
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const listed = [...tools, ...activeInteractiveCliTools()];
+    // Agent messages (AGENT_MESSAGES.md A18): listed only by the session's primary server.
+    const listed = [...tools, ...activeInteractiveCliTools(), ...(agentComms?.listTools() ?? [])];
     return { tools: disclosure && !disclosure.unlocked ? listed.filter((t) => !isDecisionTool(t.name)) : listed };
   });
 
@@ -643,6 +646,11 @@ export function registerTools(
     // A hidden decision tool called by name is refused before any Hub request (A10).
     if (disclosure && !disclosure.unlocked && isDecisionTool(name)) {
       return { content: [{ type: 'text', text: DECISION_LOCKED_MESSAGE }], isError: true };
+    }
+    // Agent messages gate themselves (no-op dispatch under the supervisor; message
+    // text audited as length + hash only), so they bypass the generic wrapper.
+    if (agentComms?.handles(name)) {
+      return agentComms.call(name, args, extra?.signal);
     }
     if (supervisor) {
       return runUnderSupervisor(

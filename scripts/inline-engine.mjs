@@ -93,8 +93,17 @@ const API_OUT = await bundleEngine(
   [],
 );
 
+const AGENT_COMMS_OUT = await bundleEngine(
+  // Agent messages (Docs/DevGuides/AGENT_MESSAGES.md): the local peer/message
+  // store. Node builtins only, so nothing is external.
+  "@flowdot.ai/agent-comms",
+  "dist/vendor/agent-comms.js",
+  [],
+);
+
 // Map each runtime import specifier → its vendored bundle.
 const REWRITES = [
+  { specifier: "@flowdot.ai/agent-comms", out: AGENT_COMMS_OUT },
   { specifier: "@flowdot.ai/documents", out: DOCUMENTS_OUT },
   { specifier: "@flowdot.ai/browser-driver", out: BROWSER_OUT },
   { specifier: "@flowdot.ai/cli-qa-engine", out: CLI_QA_OUT },
