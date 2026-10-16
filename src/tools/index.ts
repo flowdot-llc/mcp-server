@@ -193,7 +193,7 @@ import { updateKnowledgeDocumentContentToolDef, handleUpdateKnowledgeDocumentCon
 import { patchKnowledgeDocumentSectionToolDef, handlePatchKnowledgeDocumentSection } from './patch-knowledge-document-section.js';
 import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-text-document.js';
 import { uploadImageToolDef, handleUploadImage } from './upload-image.js';
-import { listImagesToolDef, handleListImages } from './list-images.js';
+import { listFilesToolDef, handleListFiles } from './list-files.js';
 import { deleteImageToolDef, handleDeleteImage } from './delete-image.js';
 import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
 import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
@@ -520,7 +520,7 @@ export const tools = [
   patchKnowledgeDocumentSectionToolDef,
   uploadTextDocumentToolDef,
   uploadImageToolDef,
-  listImagesToolDef,
+  listFilesToolDef,
   deleteImageToolDef,
   uploadDocumentFromUrlToolDef,
   moveDocumentToCategoryToolDef,
@@ -1229,8 +1229,8 @@ export async function dispatchToolCall(
           label?: string;
         });
 
-      case 'list_images':
-        return handleListImages(api, args as { per_page?: number });
+      case 'list_files':
+        return handleListFiles(api, args as { per_page?: number });
 
       case 'delete_image':
         return handleDeleteImage(api, args as { id: number });

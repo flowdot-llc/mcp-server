@@ -16,7 +16,7 @@ export const deleteImageToolDef: Tool = {
     properties: {
       id: {
         type: 'number',
-        description: 'The image id (from upload_image or list_images).',
+        description: 'The image id (from upload_image or list_files).',
       },
     },
     required: ['id'],
