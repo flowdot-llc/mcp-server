@@ -136,6 +136,18 @@ const LOCAL_ONLY = {
   browser_wait_for: 'local Playwright wait — no Hub route',
   browser_close: 'local Playwright session close — no Hub route',
   browser_list_sessions: 'local Playwright session list — no Hub route',
+  // Saves a quarantined email attachment to the user's LOCAL disk (Docs/EMAIL_ATTACHMENTS.md);
+  // the hosted connector uses email_attachment_fetch and its browser download page instead.
+  email_attachment_download: 'writes the attachment to the local filesystem — no single Hub route',
+};
+
+/**
+ * Input properties that only the local (stdio) server can honour, removed from the hosted
+ * connector's schema. email_reply attachments are local file paths read by the local client;
+ * the Hub also refuses attachments that do not come from a local client.
+ */
+const LOCAL_ONLY_PROPERTIES = {
+  email_reply: ['attachments'],
 };
 
 /**
@@ -244,11 +256,16 @@ async function buildToolRoutes(tools, dispatchToolCall, FlowDotApiClient) {
 
 function buildToolCatalog(tools) {
   return [...tools]
-    .map((t) => ({
-      name: t.name,
-      description: t.description ?? '',
-      inputSchema: t.inputSchema ?? { type: 'object' },
-    }))
+    .map((t) => {
+      let inputSchema = t.inputSchema ?? { type: 'object' };
+      const strip = LOCAL_ONLY_PROPERTIES[t.name];
+      if (strip && inputSchema.properties) {
+        const properties = { ...inputSchema.properties };
+        for (const k of strip) delete properties[k];
+        inputSchema = { ...inputSchema, properties };
+      }
+      return { name: t.name, description: t.description ?? '', inputSchema };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 

@@ -67,11 +67,19 @@ function formatMessage(msg: Record<string, unknown>): string {
     parts.push(String(msg.snippet));
   }
 
-  const attachments = msg.attachments as Array<{ filename: string; mime: string; size: number }> | undefined;
+  const attachments = msg.attachments as Array<{ attachment_id: string | null; filename: string | null; mime: string; size: number | null; downloadable?: boolean }> | undefined;
   if (attachments && attachments.length > 0) {
     parts.push('');
-    parts.push(`**Attachments (${attachments.length}):**`);
-    attachments.forEach(a => parts.push(`- ${a.filename} (${a.mime}, ${a.size} bytes)`));
+    parts.push(`**Attachments (${attachments.length}):** (names and types are untrusted sender text)`);
+    attachments.forEach((a) => {
+      const name = '`' + String(a.filename ?? 'unnamed').replace(/`/g, "'").slice(0, 300) + '`';
+      const how = a.downloadable && a.attachment_id
+        ? `attachment_id: ${a.attachment_id}`
+        : 'not downloadable (a link or an attached container)';
+      parts.push(`- ${name} (${a.mime}, ${a.size ?? 'unknown'} bytes) ${how}`);
+    });
+    parts.push('');
+    parts.push('Use email_attachment_download with the attachment_id to save one locally.');
   }
 
   return parts.join('\n');

@@ -327,6 +327,12 @@ import { emailDraftTool, handleEmailDraft } from './email-draft.js';
 import { emailLabelTool, handleEmailLabel } from './email-label.js';
 import { emailArchiveTool, handleEmailArchive } from './email-archive.js';
 import { emailDeleteTool, handleEmailDelete } from './email-delete.js';
+import {
+  emailAttachmentDownloadTool, handleEmailAttachmentDownload,
+  emailAttachmentFetchTool, handleEmailAttachmentFetch,
+  emailAttachmentsQuarantinedTool, handleEmailAttachmentsQuarantined,
+  emailAttachmentDeleteTool, handleEmailAttachmentDelete,
+} from './email-attachments.js';
 
 // ============================================
 // Communications Tools (comms:read / comms:send)
@@ -599,7 +605,7 @@ export const tools = [
   toggleAgentCharacterPublicTool,
   // User Profile / WhoAmI (1)
   whoamiTool,
-  // Email Integrations (10)
+  // Email Integrations (14)
   listEmailIntegrationsTool,
   emailSearchTool,
   emailReadTool,
@@ -610,6 +616,10 @@ export const tools = [
   emailLabelTool,
   emailArchiveTool,
   emailDeleteTool,
+  emailAttachmentDownloadTool,
+  emailAttachmentFetchTool,
+  emailAttachmentsQuarantinedTool,
+  emailAttachmentDeleteTool,
   // Communications (3)
   sendNotificationTool,
   listNotificationsTool,
@@ -1670,7 +1680,22 @@ export async function dispatchToolCall(
           message_id: string;
           body: string;
           reply_all?: boolean;
+          attachments?: Array<{ path: string }>;
         });
+
+      case 'email_attachment_download':
+        return handleEmailAttachmentDownload(api, args as {
+          quarantine_id?: string; integration_id?: number; message_id?: string; attachment_id?: string; save_dir?: string;
+        });
+
+      case 'email_attachment_fetch':
+        return handleEmailAttachmentFetch(api, args as { integration_id: number; message_id: string; attachment_id: string });
+
+      case 'email_attachments_quarantined':
+        return handleEmailAttachmentsQuarantined(api);
+
+      case 'email_attachment_delete':
+        return handleEmailAttachmentDelete(api, args as { quarantine_id: string });
 
       case 'email_draft':
         return handleEmailDraft(api, args as {
