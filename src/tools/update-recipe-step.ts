@@ -10,7 +10,7 @@ import type { UpdateRecipeStepInput } from '../types.js';
 
 export const updateRecipeStepTool: Tool = {
   name: 'update_recipe_step',
-  description: "Update a step's name, description, config, or connections. For `tool`/`compute` steps the deterministic config keys (tool/inputs/dry_run, or custom_node/script/inputs/properties, plus output_store) merge into the existing step config.",
+  description: "Update a step's name, description, config, or connections. For `tool`/`compute` steps the deterministic config keys (tool/inputs/dry_run, or custom_node/script/inputs/properties, plus output_store) merge into the existing step config. For an `agent` step, `config.model_override: {provider, model}` sets the model this step runs on (null clears it); see add_recipe_step for the provider values. `config.max_output_tokens` sets this step's output-token limit per model round (default 4096; null clears it). `config.thinking` (true/false, null clears) sets whether the model may think first, on routes that support it (Ollama). `config.context_window` (tokens, null clears) sets the model's context window on routes that support it (Ollama).",
   inputSchema: {
     type: 'object',
     properties: {
