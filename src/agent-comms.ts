@@ -49,6 +49,7 @@ class GateRefusal extends Error {
 }
 
 const PANIC_TTL_MS = 5_000;
+const START_WAIT_MS = 10_000;
 
 export interface AgentCommsTestSeams {
   snapshotAsync?: () => Promise<ProcSnapshot | null>;
@@ -63,17 +64,37 @@ export function setupAgentComms(
 ): AgentCommsController {
   let session: ClaudeSession | null = null;
   let closed = false;
-  let panicCache: { at: number; state: PanicState } = { at: 0, state: 'unknown' };
+  let panicCache: { at: number; state: PanicState; detail?: string; noAccount?: boolean } = { at: 0, state: 'unknown', detail: 'not checked yet' };
 
   const refreshPanic = async (): Promise<void> => {
     if (Date.now() - panicCache.at < PANIC_TTL_MS) return;
+    const before = `${panicCache.state}|${panicCache.detail ?? ''}`;
     try {
       const s = await api.panicStatus();
-      panicCache = { at: Date.now(), state: s.panicked ? 'engaged' : 'clear' };
-    } catch {
-      panicCache = { at: Date.now(), state: 'unknown' };
+      if (typeof s?.panicked !== 'boolean') {
+        panicCache = { at: Date.now(), state: 'unknown', detail: 'the Hub answered /panic/status without a "panicked" field' };
+      } else {
+        panicCache = { at: Date.now(), state: s.panicked ? 'engaged' : 'clear' };
+      }
+    } catch (err) {
+      const message = (err instanceof Error ? err.message : String(err)).slice(0, 200);
+      // Every Hub 401 for an MCP token starts "Unauthorized" (ValidateMcpToken):
+      // the token belongs to no account, so this server has no panic state.
+      const noAccount = /^Unauthorized\b/.test(message);
+      panicCache = {
+        at: Date.now(),
+        state: 'unknown',
+        detail: `${noAccount ? "the Hub rejected this server's token" : 'the Hub panic check failed'}: ${message}`,
+        ...(noAccount ? { noAccount: true } : {}),
+      };
     }
+    const after = `${panicCache.state}|${panicCache.detail ?? ''}`;
+    if (after !== before && panicCache.state !== 'clear') console.error(`Agent messages: panic check: ${panicCache.state} (${panicCache.detail}).`);
   };
+  const panicInfo = (): { detail?: string; noAccount?: boolean } => ({
+    ...(panicCache.detail && panicCache.state !== 'clear' ? { detail: panicCache.detail } : {}),
+    ...(panicCache.noAccount ? { noAccount: true } : {}),
+  });
   const panicState = (): PanicState => {
     if (supervisor?.estop.isPressed()) return 'engaged';
     return panicCache.state;
@@ -109,6 +130,7 @@ export function setupAgentComms(
         snapshot: () => snap,
         ...(seams.selfPid ? { selfPid: seams.selfPid } : {}),
         panicState,
+        panicInfo,
         hasSupervisor: () => supervisor !== null,
         onPrimaryChange: () => {
           void server.sendToolListChanged().catch(() => undefined);
@@ -120,10 +142,13 @@ export function setupAgentComms(
     }
   };
 
+  // A tool call can arrive right after `initialized`, before start() has
+  // registered the session; comms calls wait for it (up to START_WAIT_MS).
+  let started: Promise<void> | null = null;
   const prev = server.oninitialized;
   server.oninitialized = () => {
     prev?.();
-    void start();
+    started = start();
   };
 
   const close = (): void => {
@@ -143,6 +168,9 @@ export function setupAgentComms(
     handles: (name) => isAgentCommsTool(name),
     async call(name, args, signal): Promise<CallToolResult> {
       if (!isAgentCommsTool(name)) return { content: [{ type: 'text', text: `Unknown tool: ${name}` }], isError: true };
+      if (!session && started) {
+        await Promise.race([started, new Promise<void>((r) => setTimeout(r, START_WAIT_MS))]);
+      }
       if (!session) {
         return {
           content: [{ type: 'text', text: 'Agent messages are unavailable here: this server is not running under a Claude Code session, or agent messages are turned off.' }],

@@ -30,11 +30,11 @@ const snapshot = async (): Promise<ProcSnapshot> =>
 
 const fakeApi = { panicStatus: vi.fn(async () => ({ panicked: false, panicked_at: null })) } as unknown as FlowDotApiClient;
 
-async function connect(clientName: string) {
+async function connect(clientName: string, api: FlowDotApiClient = fakeApi) {
   const server = new Server({ name: 'flowdot', version: '0' }, { capabilities: { tools: { listChanged: true }, resources: {} } });
-  const comms = setupAgentComms(server, fakeApi, null, { snapshotAsync: snapshot });
+  const comms = setupAgentComms(server, api, null, { snapshotAsync: snapshot });
   controllers.push(comms);
-  registerTools(server, fakeApi, null, undefined, comms);
+  registerTools(server, api, null, undefined, comms);
   const [c, s] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: clientName, version: '1' });
   const changed = vi.fn();
@@ -110,5 +110,67 @@ describe('MCP agent messages', () => {
     expect(res.isError).toBe(true);
     const agentsDir = path.join(store, 'agents');
     expect(fs.existsSync(agentsDir) ? fs.readdirSync(agentsDir).length : 0).toBe(0);
+  });
+
+  // Panic check (bug 2026-10-16: every send refused "panic state is unknown (offline)").
+  const throwingApi = (message: string) =>
+    ({ panicStatus: vi.fn(async () => { throw new Error(message); }) }) as unknown as FlowDotApiClient;
+  const sendText = async (client: Client, to: string) => {
+    const res = await client.callTool({ name: 'agent_message_send', arguments: { to, text: 'hi' } });
+    return { isError: res.isError, text: (res.content as Array<{ text: string }>)[0]!.text };
+  };
+  const registerPeer = () => {
+    const peer = AgentCommsHandle.register({ kind: 'cli-job', name: 'astra', cwd: proj }, { config: DEFAULT_CONFIG, autoHeartbeat: false })!;
+    peers.push(peer);
+    return peer;
+  };
+  /** Stand in for a second FlowDot server of the same Claude session (a live pid: this test's parent). */
+  const writeOtherLease = (lease: Record<string, unknown>) => {
+    const agents = path.join(store, 'agents');
+    const hosts = fs.readdirSync(agents).find((f) => f.endsWith('.hosts'))!;
+    fs.writeFileSync(path.join(agents, hosts, `${process.ppid}.json`), JSON.stringify({ v: 1, pid: process.ppid, heartbeatAt: Date.now(), ...lease }));
+  };
+
+  it('a Hub that cannot be reached refuses the send with the real reason, not "offline"', async () => {
+    const { client, changed } = await connect('claude-code', throwingApi('fetch failed'));
+    await until(() => changed.mock.calls.length > 0);
+    const out = await sendText(client, registerPeer().id);
+    expect(out.isError).toBe(true);
+    expect(out.text).toMatch(/panic state could not be checked \(the Hub panic check failed: fetch failed\)/);
+    expect(out.text).not.toMatch(/offline/);
+  });
+
+  it('when the only server’s token is rejected, the send is refused and says so', async () => {
+    const { client, changed } = await connect('claude-code', throwingApi('Unauthorized - Token not found'));
+    await until(() => changed.mock.calls.length > 0);
+    const out = await sendText(client, registerPeer().id);
+    expect(out.text).toMatch(/no FlowDot server in this Claude session has a working token \(the Hub rejected this server's token: Unauthorized - Token not found\)/);
+  });
+
+  it('another server of the session with a rejected token does not block a clear account', async () => {
+    const { client, changed } = await connect('claude-code');
+    await until(() => changed.mock.calls.length > 0);
+    const peer = registerPeer();
+    writeOtherLease({ panic: 'unknown', noAccount: true, panicDetail: "the Hub rejected this server's token: Unauthorized - Token not found" });
+    const out = await sendText(client, peer.id);
+    // Past the panic gate: the next refusal is the missing supervisor (B12).
+    expect(out.text).toMatch(/without the permission supervisor/);
+  });
+
+  it('another server of the session whose check failed for any other reason still blocks, with its reason', async () => {
+    const { client, changed } = await connect('claude-code');
+    await until(() => changed.mock.calls.length > 0);
+    const peer = registerPeer();
+    writeOtherLease({ panic: 'unknown', panicDetail: 'the Hub panic check failed: API error: 503' });
+    const out = await sendText(client, peer.id);
+    expect(out.text).toMatch(/could not be checked \(the Hub panic check failed: API error: 503\)/);
+    writeOtherLease({ panic: 'engaged' });
+    expect((await sendText(client, peer.id)).text).toMatch(/panic is engaged/);
+  });
+
+  it('a comms call made right after initialize waits for registration instead of failing', async () => {
+    const { client } = await connect('claude-code');
+    const res = await client.callTool({ name: 'agent_peers', arguments: {} });
+    expect(res.isError).toBeFalsy();
   });
 });
