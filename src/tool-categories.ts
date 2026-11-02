@@ -158,7 +158,9 @@ export const LEARN_ABOUT_TOOL: Tool = {
     'create/edit/manage tools (e.g. learn_about("apps") makes create_app, update_app, ' +
     'edit_app_code, etc. available). ALWAYS call this FIRST before trying to create or ' +
     'modify anything in an area — the action tools do not appear until you do. After it ' +
-    'returns, call the unlocked tools directly.',
+    'returns, call the unlocked tools directly. The user\'s own calendar and email are areas ' +
+    'too: for any question about their calendar, schedule or events, call ' +
+    'learn_about("calendar") first; for their email, learn_about("email").',
   inputSchema: {
     type: 'object',
     properties: {
