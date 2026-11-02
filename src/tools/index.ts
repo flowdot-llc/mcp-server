@@ -317,6 +317,24 @@ import { whoamiTool, handleWhoami } from './whoami.js';
 // ============================================
 // Email Integration Tools (email:read / email:call)
 // ============================================
+import {
+  listCalendarIntegrationsTool,
+  calendarListCalendarsTool,
+  calendarListEventsTool,
+  calendarGetEventTool,
+  calendarAvailabilityTool,
+  calendarCreateEventTool,
+  calendarUpdateEventTool,
+  calendarDeleteEventTool,
+  handleListCalendarIntegrations,
+  handleCalendarListCalendars,
+  handleCalendarListEvents,
+  handleCalendarGetEvent,
+  handleCalendarAvailability,
+  handleCalendarCreateEvent,
+  handleCalendarUpdateEvent,
+  handleCalendarDeleteEvent,
+} from './calendar.js';
 import { listEmailIntegrationsTool, handleListEmailIntegrations } from './list-email-integrations.js';
 import { emailSearchTool, handleEmailSearch } from './email-search.js';
 import { emailReadTool, handleEmailRead } from './email-read.js';
@@ -620,6 +638,15 @@ export const tools = [
   emailAttachmentFetchTool,
   emailAttachmentsQuarantinedTool,
   emailAttachmentDeleteTool,
+  // Calendar Integrations (9)
+  listCalendarIntegrationsTool,
+  calendarListCalendarsTool,
+  calendarListEventsTool,
+  calendarGetEventTool,
+  calendarAvailabilityTool,
+  calendarCreateEventTool,
+  calendarUpdateEventTool,
+  calendarDeleteEventTool,
   // Communications (3)
   sendNotificationTool,
   listNotificationsTool,
@@ -1641,6 +1668,31 @@ export async function dispatchToolCall(
       // ============================================
       // Email Integration Tools
       // ============================================
+      case 'list_calendar_integrations':
+        return handleListCalendarIntegrations(api);
+
+      case 'calendar_list_calendars':
+        return handleCalendarListCalendars(api, args as Parameters<typeof handleCalendarListCalendars>[1]);
+
+      case 'calendar_list_events':
+        return handleCalendarListEvents(api, args as Parameters<typeof handleCalendarListEvents>[1]);
+
+      case 'calendar_get_event':
+        return handleCalendarGetEvent(api, args as Parameters<typeof handleCalendarGetEvent>[1]);
+
+      case 'calendar_availability':
+        return handleCalendarAvailability(api, args as Parameters<typeof handleCalendarAvailability>[1]);
+
+      case 'calendar_create_event':
+        return handleCalendarCreateEvent(api, args as Parameters<typeof handleCalendarCreateEvent>[1]);
+
+      case 'calendar_update_event':
+        return handleCalendarUpdateEvent(api, args as Parameters<typeof handleCalendarUpdateEvent>[1]);
+
+      case 'calendar_delete_event':
+        return handleCalendarDeleteEvent(api, args as Parameters<typeof handleCalendarDeleteEvent>[1]);
+
+
       case 'list_email_integrations':
         return handleListEmailIntegrations(api);
 

@@ -40,6 +40,16 @@ const EXACT_OVERRIDES: Readonly<Record<string, readonly CapabilityClass[]>> = {
   email_search: ['read', 'network-egress', 'credential'],
   email_read: ['read', 'network-egress', 'credential'],
 
+  // Calendar — external API + per-account credentials
+  list_calendar_integrations: ['read', 'network-egress', 'credential'],
+  calendar_list_calendars: ['read', 'network-egress', 'credential'],
+  calendar_list_events: ['read', 'network-egress', 'credential'],
+  calendar_get_event: ['read', 'network-egress', 'credential'],
+  calendar_availability: ['read', 'network-egress', 'credential'],
+  calendar_create_event: ['write', 'network-egress', 'credential'],
+  calendar_update_event: ['write', 'network-egress', 'credential'],
+  calendar_delete_event: ['delete', 'network-egress', 'credential'],
+
   // Search aggregate / KB / notifications
   search: ['read', 'network-egress', 'credential'],
   send_notification: ['write', 'network-egress', 'credential'],
