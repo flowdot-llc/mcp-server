@@ -53,6 +53,29 @@ describe('calendar tools', () => {
     expect(text(result)).toContain('google');
   });
 
+  it('shows each connection scope_tier, and unknown when the Hub sends none', async () => {
+    const api = { listCalendarIntegrations: vi.fn(async () => [
+      { id: 3, integration_name: 'Work', integration_type: 'google_calendar', last_used_at: null, scope_tier: 'read' },
+      { id: 4, integration_name: 'Home', integration_type: 'outlook_calendar', last_used_at: null, scope_tier: 'write' },
+      { id: 5, integration_name: 'Old', integration_type: 'google_calendar', last_used_at: null, scope_tier: null },
+    ]) };
+    const lines = text(await calendar.handleListCalendarIntegrations(api as never)).split('\n');
+    expect(lines.find((l) => l.includes('ID: 3'))).toContain('scope_tier read');
+    expect(lines.find((l) => l.includes('ID: 4'))).toContain('scope_tier write');
+    expect(lines.find((l) => l.includes('ID: 5'))).toContain('scope_tier unknown');
+  });
+
+  it('tells the agent to pick a write connection when one is read-only', () => {
+    const byName = Object.fromEntries(calendar.calendarTools.map((t) => [t.name, t.description ?? '']));
+    expect(byName.list_calendar_integrations).toContain('Each row has scope_tier: read connections can only read; use a write connection to create, change or delete events.');
+    for (const name of ['calendar_create_event', 'calendar_update_event', 'calendar_delete_event']) {
+      expect(byName[name], name).toContain('tier_read_only means this connection cannot change events: use another connection from list_calendar_integrations whose scope_tier is write. Tell the user only if none accepts the change.');
+    }
+    for (const name of ['calendar_list_calendars', 'calendar_list_events', 'calendar_get_event', 'calendar_availability']) {
+      expect(byName[name], name).not.toContain('tier_read_only');
+    }
+  });
+
   it('reports a conflict answer and audit status', async () => {
     const api = { callCalendarTool: vi.fn(async () => ({ outcome: 'conflict', event_id: 'event', calendar_id: 'primary', audit_written: false })) };
     const result = await calendar.handleCalendarUpdateEvent(api as never, { integration_id: 3, calendar_id: 'primary', event_id: 'event', apply_to: 'this', title: 'Changed' } as never);
