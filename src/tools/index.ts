@@ -195,6 +195,14 @@ import { uploadTextDocumentToolDef, handleUploadTextDocument } from './upload-te
 import { uploadImageToolDef, handleUploadImage } from './upload-image.js';
 import { listFilesToolDef, handleListFiles } from './list-files.js';
 import { deleteImageToolDef, handleDeleteImage } from './delete-image.js';
+import {
+  generateImageToolDef,
+  editImageToolDef,
+  readImageToolDef,
+  handleGenerateImage,
+  handleEditImage,
+  handleReadImage,
+} from './connected-images.js';
 import { uploadDocumentFromUrlToolDef, handleUploadDocumentFromUrl } from './upload-document-from-url.js';
 import { moveDocumentToCategoryToolDef, handleMoveDocumentToCategory } from './move-document-to-category.js';
 import { transferDocumentOwnershipToolDef, handleTransferDocumentOwnership } from './transfer-document-ownership.js';
@@ -546,6 +554,9 @@ export const tools = [
   uploadImageToolDef,
   listFilesToolDef,
   deleteImageToolDef,
+  generateImageToolDef,
+  editImageToolDef,
+  readImageToolDef,
   uploadDocumentFromUrlToolDef,
   moveDocumentToCategoryToolDef,
   transferDocumentOwnershipToolDef,
@@ -1271,6 +1282,15 @@ export async function dispatchToolCall(
 
       case 'delete_image':
         return handleDeleteImage(api, args as { id: number });
+
+      case 'generate_image':
+        return handleGenerateImage(api, args as unknown as Parameters<typeof handleGenerateImage>[1]);
+
+      case 'edit_image':
+        return handleEditImage(api, args as unknown as Parameters<typeof handleEditImage>[1]);
+
+      case 'read_image':
+        return handleReadImage(api, args as unknown as Parameters<typeof handleReadImage>[1]);
 
       case 'upload_document_from_url':
         return handleUploadDocumentFromUrl(api, args as {
